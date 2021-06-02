@@ -1,15 +1,7 @@
-# new idea
-### the iteration process
-- calculate transform matrix according to designed orbit(X=0), 
-- then solve X along line, 
-- then renew transform matrix according to X
-
-so the Element class should have ability to renew its matrix according to its X
+## 待验证的几个问题
+- [ ]  track 7X7 和 track with e loss 6X6 粒子是否相等
+- [ ] track 7X7 和 symplectic track 矩阵是否相同
+- [ ] track 和 SAMM结果比较
 
 # next
-verify Cr and other physical parameters, \
-verify matrix
-
-# Important
-
-If attribute is matrix, don't change single element of matrix, but reassign the attribute.
+看代码很不爽，想重新改一下项目结构

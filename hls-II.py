@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+import solve_transfer_matrix
 from main import *
 import time
 
@@ -58,18 +59,20 @@ np.set_printoptions(precision=8, suppress=True, linewidth=100)
 
 slim_lattice = SlimRing(segment1 + segment2 + segment3 + segment4)
 # end = time.time()
-print(rf_ca.voltage * np.sin(rf_ca.phase))
+# print(rf_ca.voltage * np.sin(rf_ca.phase))
 # print(2 * rf_ca.voltage * np.sin(rf_ca.phase) / Particle.energy)
-slim_lattice.track_close_orbit()
+print('\n------------------------------------------\n----------------------------------------\ntrack:\n')
+# slim_lattice.track_close_orbit()
+# solve_transfer_matrix.solve_transfer_matrix([BEND], [0, 0, 0, 0, 0, 0])
 # slim_lattice.output_equilibrium_beam()
 # print(f'\nslim run time: {end - start}')
 # start = time.time()
-# cs_lattice = CSLattice(segment1 + segment2 + segment3 + segment4, 1, 0.01)
+cs_lattice = CSLattice(segment1 + segment2 + segment3 + segment4, 1, 0.01)
 # end = time.time()
 # print(f'\ncs run time: {end - start}')
-# print(cs_lattice)
+print(cs_lattice)
 # print('\n-------------------------------\n')
-print(np.sqrt(slim_lattice.ele_slices[0].beam[5, 5]))
+print(f'slim sigma_delta = {np.sqrt(slim_lattice.ele_slices[0].beam[5, 5])}')
 
 
 # def emmit_x_beta(current_beam):
@@ -77,15 +80,15 @@ print(np.sqrt(slim_lattice.ele_slices[0].beam[5, 5]))
 #                    - (current_beam[0, 1] - current_beam[0, 5] * current_beam[1, 5] / current_beam[5, 5]) ** 2)
 
 
-# beam = slim_lattice.ele_slices[0].beam
+beam = slim_lattice.ele_slices[0].beam
 # emmitx = np.sqrt(beam[0, 0] * beam[1, 1] - beam[0, 1] ** 2)
 # print(f'emmit x = {emmitx}')
-# emmitx_beta = np.sqrt((beam[0, 0] - beam[0, 5] ** 2 / beam[5, 5]) * (beam[1, 1] - beam[1, 5] ** 2 / beam[5, 5])
-#                       - (beam[0, 1] - beam[0, 5] * beam[1, 5] / beam[5, 5]) ** 2)
+emmitx_beta = np.sqrt((beam[0, 0] - beam[0, 5] ** 2 / beam[5, 5]) * (beam[1, 1] - beam[1, 5] ** 2 / beam[5, 5])
+                      - (beam[0, 1] - beam[0, 5] * beam[1, 5] / beam[5, 5]) ** 2)
 # # emmity = np.sqrt(beam[2, 2] * beam[3, 3] - beam[2, 3] ** 2)
 # emmity_beta = np.sqrt((beam[2, 2] - beam[2, 5] ** 2 / beam[5, 5]) * (beam[3, 3] - beam[3, 5] ** 2 / beam[5, 5])
 #                       - (beam[2, 3] - beam[2, 5] * beam[3, 5] / beam[5, 5]) ** 2)
-# print(f'emmit x beta = {emmitx_beta}')
+print(f'emmit x beta = {emmitx_beta}')
 # print(f'emmit xy = {emmity * emmitx}')
 # # print(np.sqrt(beam[4, 4] * beam[5, 5] - beam[4, 5] ** 2))
 # slim_eta = []

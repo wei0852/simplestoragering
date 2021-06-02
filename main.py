@@ -10,7 +10,6 @@ from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.constants import pi, physical_constants, c
 
 LENGTH_PRECISION = 10
@@ -18,6 +17,7 @@ LENGTH_PRECISION = 10
 
 def calculate_constants():
     """Andrzej Wolski (2014)"""
+
     h_bar = physical_constants['natural unit of action in eV s'][0]
     re = physical_constants['classical electron radius'][0]
     me = physical_constants['electron mass energy equivalent in MeV'][0]
@@ -87,6 +87,12 @@ class Beam(object):
         for i in range(6):
             x.append(self.matrix[i, :])
         return [x[i] for i in range(6)]
+
+    def get_particle_array(self):
+        p = np.zeros(6)
+        for i in range(6):
+            p[i] = self.matrix[i, 6]
+        return p
 
     def set_dp(self, dp):
         self.matrix[5, :] = dp
@@ -177,11 +183,13 @@ class Element(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def track(self, beam: Beam) -> Beam:
+    def symplectic_track(self, beam: Beam) -> Beam:
+        """assuming that the energy is constant, the result is symplectic."""
         pass
 
     @abstractmethod
-    def track_with_e_loss(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam) -> Beam:
+        """tracking with energy loss, the result is not symplectic"""
         pass
 
     def slice(self, initial_s, identifier):
@@ -302,11 +310,11 @@ class Mark(Element):
     def next_closed_orbit(self):
         return self.closed_orbit
 
-    def track(self, beam: Beam) -> Beam:
+    def symplectic_track(self, beam: Beam) -> Beam:
         assert isinstance(beam, Beam)
         return beam
 
-    def track_with_e_loss(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam) -> Beam:
         return beam
 
 
@@ -337,10 +345,10 @@ class LineEnd(Element):
     def next_closed_orbit(self):
         return self.closed_orbit
 
-    def track(self, beam):
+    def symplectic_track(self, beam):
         return beam
 
-    def track_with_e_loss(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam) -> Beam:
         return beam
 
 
@@ -373,7 +381,7 @@ class Drift(Element):
         matrix7[0:6, 0:6] = matrix
         return matrix7
 
-    def track(self, beam):
+    def symplectic_track(self, beam):
         assert isinstance(beam, Beam)
         [x0, px0, y0, py0, z0, dp0] = beam.get_particle()
         ds = self.length
@@ -384,8 +392,8 @@ class Drift(Element):
         beam.set_particle([x1, px0, y1, py0, z1, dp0])
         return beam
 
-    def track_with_e_loss(self, beam: Beam) -> Beam:
-        return self.track(beam)
+    def real_track(self, beam: Beam) -> Beam:
+        return self.symplectic_track(beam)
 
 
 class HBend(Element):
@@ -399,17 +407,14 @@ class HBend(Element):
         self.h = theta / self.length
         self.theta_in = theta_in
         self.theta_out = theta_out
-        self.n_slices = max(n_slices, 2)
+        self.n_slices = n_slices
 
     @property
     def theta(self):
         return self.h * self.length
 
     def set_slices(self, n_slices):
-        if n_slices < 3:
-            print('Bend must have 3 slices at least')
-        else:
-            self.n_slices = n_slices
+        self.n_slices = n_slices
 
     @property
     def matrix(self):
@@ -464,7 +469,7 @@ class HBend(Element):
         matrix7[1, 6] = self.h * self.length * m67 / 2
         return matrix7
 
-    def track(self, beam):
+    def symplectic_track(self, beam):
         [x0, px0, y0, py0, z0, dp0] = beam.get_particle()
         d1 = np.sqrt(1 + 2 * dp0 / Particle.beta + dp0 ** 2)
         ds = self.length
@@ -514,13 +519,13 @@ class HBend(Element):
 
         z1 = (z0 + c0 + c1 * x0 + c2 * px1 + c11 * x0 * x0 + c12 * x0 * px1 + c22 * px1 * px1 + c33 * y0 * y0 +
               c34 * y0 * py1 + c44 * py1 * py1)
-        '''exit'''
-        px3 = px2 + np.tan(self.theta_out) * x2
-        py3 = py2 - np.tan(self.theta_out) * y2
+        # exit
+        px3 = px2 + self.h * np.tan(self.theta_out) * x2
+        py3 = py2 - self.h * np.tan(self.theta_out) * y2
         beam.set_particle([x2, px3, y2, py3, z1, dp0])
         return beam
 
-    def track_with_e_loss(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam) -> Beam:
         [x0, px0, y0, py0, z0, dp0] = beam.get_particle()
         dp1 = dp0 - (dp0 + 1) ** 2 * Cr * Particle.energy ** 3 * self.theta ** 2 / 2 / pi / self.length
         # use average energy
@@ -574,8 +579,8 @@ class HBend(Element):
         z1 = (z0 + c0 + c1 * x0 + c2 * px1 + c11 * x0 * x0 + c12 * x0 * px1 + c22 * px1 * px1 + c33 * y0 * y0 +
               c34 * y0 * py1 + c44 * py1 * py1)
         '''exit'''
-        px3 = px2 + np.tan(self.theta_out) * x2
-        py3 = py2 - np.tan(self.theta_out) * y2
+        px3 = px2 + self.h * np.tan(self.theta_out) * x2
+        py3 = py2 - self.h * np.tan(self.theta_out) * y2
         beam.set_particle([x2, px3, y2, py3, z1, dp1])
         return beam
 
@@ -590,6 +595,9 @@ class HBend(Element):
         ele.length = round(self.length / self.n_slices, LENGTH_PRECISION)
         ele_list.append(deepcopy(ele))
         current_s = round(current_s + ele.length, LENGTH_PRECISION)
+        if self.n_slices == 1:
+            ele_list[0].theta_out = self.theta_out
+            return [ele_list, current_s]
         for i in range(self.n_slices - 2):
             ele.s = current_s
             ele.theta_in = 0
@@ -649,10 +657,10 @@ class VBend(Element):
         matrix7[3, 6] = - m67 * self.theta / 2
         return matrix7
 
-    def track(self, beam):
+    def symplectic_track(self, beam):
         pass
 
-    def track_with_e_loss(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam) -> Beam:
         pass
 
 
@@ -718,13 +726,13 @@ class Quadrupole(Element):
         matrix7[5, 6] = m67
         return matrix7
 
-    def track(self, beam):
+    def symplectic_track(self, beam):
         if self.k1 > 0:
             return self.__track_fq(beam)
         elif self.k1 < 0:
             return self.__track_dq(beam)
         else:
-            return Drift(length=self.length).track(beam)
+            return Drift(length=self.length).symplectic_track(beam)
 
     def __track_fq(self, beam):
         [x0, px0, y0, py0, ct0, dp0] = beam.get_particle()
@@ -804,12 +812,12 @@ class Quadrupole(Element):
         beam.set_particle([x1, px1, y1, py1, ct1, dp0])
         return beam
 
-    def track_with_e_loss(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam) -> Beam:
         [x0, px0, y0, py0, z0, dp0] = beam.get_particle()
-        dp1 = dp0 - Cr * Particle.energy ** 3 * self.k1 ** 2 * self.length * (x0 ** 2 + y0 ** 2) / 2 / pi
+        dp1 = dp0 - (dp0 + 1)**2 * Cr * Particle.energy ** 3 * self.k1 ** 2 * self.length * (x0 ** 2 + y0 ** 2) / 2 / pi
         dp_ave = (dp1 + dp0) / 2
         beam.set_particle([x0, px0, y0, py0, z0, dp_ave])
-        beam = self.track(beam)
+        beam = self.symplectic_track(beam)
         beam.set_dp(dp1)
         return beam
 
@@ -842,10 +850,10 @@ class SKQuadrupole(Element):
     def closed_orbit_matrix(self):
         raise UnfinishedWork()
 
-    def track(self, beam):
+    def symplectic_track(self, beam):
         pass
 
-    def track_with_e_loss(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam) -> Beam:
         pass
 
 
@@ -885,7 +893,7 @@ class Sextupole(Element):
         k2l = self.k2 * self.length
         x0 = self.closed_orbit[0]
         y0 = self.closed_orbit[2]
-        lambda_s = Cr * Particle.energy ** 3 * k2l * (x0 ** 2 + y0 ** 2) / pi / self.length
+        lambda_s = Cr * Particle.energy ** 3 * k2l ** 2 * (x0 ** 2 + y0 ** 2) / pi / self.length
         matrix = self.matrix
         matrix[5, 0] = - lambda_s * x0
         matrix[5, 2] = - lambda_s * y0
@@ -911,23 +919,23 @@ class Sextupole(Element):
         matrix7[3, 6] = matrix7[4, 2]
         return matrix7
 
-    def track(self, beam):
+    def symplectic_track(self, beam):
         [x0, px0, y0, py0, ct0, dp0] = beam.get_particle()
 
         beta0 = Particle.beta
 
         ds = self.length
         k2 = self.k2
-
+        # drift
         d1 = np.sqrt(1 - px0 * px0 - py0 * py0 + 2 * dp0 / beta0 + dp0 * dp0)
 
         x1 = x0 + ds * px0 / d1 / 2
         y1 = y0 + ds * py0 / d1 / 2
         ct1 = ct0 + ds * (1 - (1 + beta0 * dp0) / d1) / beta0 / 2
-
+        # kick
         px1 = px0 - (x1 * x1 - y1 * y1) * k2 * ds / 2
         py1 = py0 + x1 * y1 * k2 * ds
-
+        # drift
         d1 = np.sqrt(1 - px1 * px1 - py1 * py1 + 2 * dp0 / beta0 + dp0 * dp0)
 
         x2 = x1 + ds * px1 / d1 / 2
@@ -937,12 +945,13 @@ class Sextupole(Element):
         beam.set_particle([x2, px1, y2, py1, ct2, dp0])
         return beam
 
-    def track_with_e_loss(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam) -> Beam:
         [x0, px0, y0, py0, ct0, dp0] = beam.get_particle()
-        dp1 = dp0 - (Cr * Particle.energy ** 3 * self.k2 ** 2 * self.length * (x0 ** 2 + y0 ** 2) ** 2 / 8 / pi)
+        dp1 = dp0 - (dp0 + 1)**2 * (Cr * Particle.energy ** 3 * self.k2 ** 2 * self.length *
+                                    (x0 ** 2 + y0 ** 2) ** 2 / 8 / pi)
         dp_ave = (dp1 + dp0) / 2
         beam.set_particle([x0, px0, y0, py0, ct0, dp_ave])
-        beam = self.track(beam)
+        beam = self.symplectic_track(beam)
         beam.set_dp(dp1)
         return beam
 
@@ -991,7 +1000,7 @@ class RFCavity(Element):
         matrix7[5, 6] = m67
         return matrix7
 
-    def track(self, beam):
+    def symplectic_track(self, beam):
         """rf cavity tracking is simplified by thin len approximation"""
         [x0, px0, y0, py0, z0, dp0] = beam.get_particle()
         temp_val = 2 * pi * self.f_rf / Particle.beta / c  # h / R
@@ -999,12 +1008,12 @@ class RFCavity(Element):
         beam.set_particle([x0, px0, y0, py0, z1, dp0])
         return beam
 
-    def track_with_e_loss(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam) -> Beam:
         [x0, px0, y0, py0, z0, dp0] = beam.get_particle()
-        dp1 = dp0 + self.voltage * np.sin(self.phase + self.omega_rf * z0 / c) / Particle.energy
+        dp1 = dp0 + self.voltage * np.sin(self.phase - self.omega_rf * z0 / c) / Particle.energy
         dp_ave = (dp1 + dp0) / 2
         beam.set_dp(dp_ave)
-        beam = self.track(beam)
+        beam = self.symplectic_track(beam)
         beam.set_dp(dp1)
         return beam
 
@@ -1301,7 +1310,7 @@ class SlimRing(object):
             coefficient_matrix = (matrix7 - np.identity(7))[0: 6, 0: 6]
             result_vec = -matrix7[0: 6, 6].T
             x0 = np.linalg.solve(coefficient_matrix, result_vec)
-            print(f'\niterated {i} times, current result is: \n    {x0}')
+            print(f'\niterated {i} times, current result is: \n    {x0}')  # TODO: this is not iteration
             i += 1
             if max(abs(x0 - self.ele_slices[0].closed_orbit)) < 1e-8:
                 break
@@ -1313,21 +1322,32 @@ class SlimRing(object):
         resdl = 1
         j = 1
         beam = Beam(xco)
-        while resdl > 1e-10:
+        while j <= 10 and resdl > 1e-16:
             beam = Beam(xco)
             for ele in self.ele_slices:
-                beam = ele.track_with_e_loss(beam)
+                ele.closed_orbit = np.array(beam.get_particle_array())
+                beam = ele.real_track(beam)
             for i in range(6):
                 matrix[:, i] = (beam.matrix[:, i] - beam.matrix[:, 6]) / beam.precision
-            print(matrix)
+            # print(matrix)
             d = beam.matrix[:, 6] - xco
-            dco = np.linalg.inv(matrix - np.identity(6)).dot(d)
+            dco = np.linalg.inv(np.identity(6) - matrix).dot(d)
             xco = xco + dco
+            # dco = np.linalg.inv(matrix).dot(beam.matrix[:, 6])# TODO: why not Newton method?
+            # xco = xco - dco
             resdl = dco.dot(dco.T)
-            beam = Beam(xco)
             print(f'iterated {j} times, current result is \n    {beam.matrix[:, 6]}\n')
             j += 1
         print(f'closed orbit at s=0 is \n    {beam.matrix[:, 6]}\n')
+        print(f'{matrix}\n')
+        eig_val, eig_matrix = np.linalg.eig(matrix)
+        self.damping = - np.log(np.abs(eig_val))
+        print(f'damping  = {self.damping}')
+        print(f'damping time = {1 / self.f_c / self.damping}')
+        print('\ncheck:')
+        print(f'sum damping = {self.damping[0] + self.damping[2] + self.damping[4]}, '
+              f'2U0/E0 = {2 * self.U0 / Particle.energy}')
+        print('\n--------------------------------------------\n')
 
     def solve_damping(self):
         matrix = np.identity(6)
@@ -1335,6 +1355,7 @@ class SlimRing(object):
             matrix = ele.damping_matrix.dot(matrix)
         eig_val, eig_matrix = np.linalg.eig(matrix)
         self.damping = - np.log(np.abs(eig_val))
+        print(f'{matrix}\n')
         print(f'damping  = {self.damping}')
         print(f'damping time = {1 / self.f_c / self.damping}')
         print('\ncheck:')
@@ -1360,8 +1381,8 @@ class SlimRing(object):
                     ave_deco_square[k] += abs(eig_matrix[4, k]) ** 2 * abs(ele.h) ** 3 * ele.length
                     sideways_photons[k] += abs(eig_matrix[2, k]) ** 2 * abs(ele.h) ** 3 * ele.length
         for k in range(6):
-            ave_deco_square[k] = ave_deco_square[k] * Cl * Particle.gamma ** 5 / c / self.damping[k] / self.length
-            sideways_photons[k] = sideways_photons[k] * Cl * Particle.gamma ** 3 / c / self.damping[k] / self.length / 2
+            ave_deco_square[k] = ave_deco_square[k] * Cl * Particle.gamma ** 5 / c / self.damping[k]
+            sideways_photons[k] = sideways_photons[k] * Cl * Particle.gamma ** 3 / c / self.damping[k] / 2
         # solve equilibrium beam
         eig_matrix = ring_eig_matrix
         for ele in self.ele_slices:
@@ -1458,23 +1479,4 @@ class SlimRing(object):
         file.close()
 
 
-def solve_transfer_matrix(comp_list, with_e_loss=False):
-    """return transfer matrix from com_i to com_f"""
 
-    beam = Beam([0, 0, 0, 0, 0, 0])
-    ele_slices = []
-    current_s = 0
-    current_identifier = 0
-    for ele in comp_list:
-        [new_list, current_s] = ele.slice(current_s, current_identifier)
-        ele_slices += new_list
-        current_identifier += 1
-    for ele in ele_slices:
-        if with_e_loss:
-            beam = ele.track_with_e_loss(beam)
-        else:
-            beam = ele.track(beam)
-    matrix = np.zeros([6, 6])
-    for i in range(6):
-        matrix[:, i] = (beam.matrix[:, i] - beam.matrix[:, 6]) / beam.precision
-    return matrix
