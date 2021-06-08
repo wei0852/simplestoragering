@@ -9,6 +9,7 @@ Energy in MeV !!!!!
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.constants import pi, physical_constants, c
 
@@ -27,9 +28,10 @@ def calculate_constants():
     # this part is to verify cl
     # Pr = (Cr * c / 2 / pi) * (\beta_0^4 * E_0^4 / \rho^2)    p.221
     # <\dot{N} u^2> = 2 Cq \gamma_0^2 E_0 P_r / \rho          p.232
+    # ==>  <\dot{N} u^2> = Cq Cr c E0^5 \gamma^2 \beta^4 / \pi \rho^3
     # <\dot{N} u^2 / E_0^2> = 2 Cl \gamma^5 / |\rho|^3  Slim Formalism orbit motion
     # therefore,
-    # cl = cq * cr * c * me ** 3 / 2 / pi
+    # cl = cq * cr * c * me ** 3 / 2 / pi  # \beta \approx 1
     cl = 55 * re * h_bar * c ** 2 / (48 * np.sqrt(3) * me * 1e6)
     return cr, cq, cl
 
@@ -79,6 +81,7 @@ class Beam(object):
             self.matrix[i, :] = self.matrix[i, :] + particle[i]
 
     def set_particle(self, particle):
+        particle[4] = -particle[4]
         for i in range(6):
             self.matrix[i, :] = particle[i]
 
@@ -86,6 +89,7 @@ class Beam(object):
         x = []
         for i in range(6):
             x.append(self.matrix[i, :])
+        x[4] = -x[4]
         return [x[i] for i in range(6)]
 
     def get_particle_array(self):
@@ -1003,18 +1007,46 @@ class RFCavity(Element):
     def symplectic_track(self, beam):
         """rf cavity tracking is simplified by thin len approximation"""
         [x0, px0, y0, py0, z0, dp0] = beam.get_particle()
-        temp_val = 2 * pi * self.f_rf / Particle.beta / c  # h / R
-        z1 = z0 + (self.voltage * temp_val * np.cos(self.phase) / Particle.energy) * dp0
-        beam.set_particle([x0, px0, y0, py0, z1, dp0])
+        beta0 = Particle.beta
+        ds = self.length
+        # First        apply        a        drift        through        ds / 2
+        d1 = np.sqrt(1 - px0 * px0 - py0 * py0 + 2 * dp0 / beta0 + dp0 * dp0)
+        x1 = x0 + ds * px0 / d1 / 2
+        y1 = y0 + ds * py0 / d1 / 2
+        z1 = z0 + ds * (1 - (1 + beta0 * dp0) / d1) / beta0 / 2
+        # Next, apply        an        rf        'kick'
+        vnorm = self.voltage / Particle.energy
+        dp1 = dp0 + vnorm * np.sin(self.phase - self.omega_rf * z1 / c)
+        # Finally, apply        a        second        drift        through        ds / 2
+        d1 = np.sqrt(1 - px0 * px0 - py0 * py0 + 2 * dp1 / beta0 + dp1 * dp1)
+        x2 = x1 + ds * px0 / d1 / 2
+        y2 = y1 + ds * py0 / d1 / 2
+        z2 = z1 + ds * (1 - (1 + beta0 * dp1) / d1) / beta0 / 2
+        beam.set_particle([x2, px0, y2, py0, z2, dp1])
         return beam
 
     def real_track(self, beam: Beam) -> Beam:
-        [x0, px0, y0, py0, z0, dp0] = beam.get_particle()
-        dp1 = dp0 + self.voltage * np.sin(self.phase - self.omega_rf * z0 / c) / Particle.energy
-        dp_ave = (dp1 + dp0) / 2
-        beam.set_dp(dp_ave)
-        beam = self.symplectic_track(beam)
-        beam.set_dp(dp1)
+        [x0, px0, y0, py0, z0, delta0] = beam.get_particle()
+        beta0 = Particle.beta
+        ds = self.length
+        # First        apply        a        drift        through        ds / 2
+        d1 = np.sqrt(1 - px0 * px0 - py0 * py0 + 2 * delta0 / beta0 + delta0 * delta0)
+        x1 = x0 + ds * px0 / d1 / 2
+        y1 = y0 + ds * py0 / d1 / 2
+        z1 = z0 + ds * (1 - (1 + beta0 * delta0) / d1) / beta0 / 2
+        # Next, apply        an        rf        'kick'
+        vnorm = self.voltage / Particle.energy
+        delta1 = delta0 + vnorm * np.sin(self.phase - self.omega_rf * z1 / c)
+        # Finally, apply        a        second        drift        through        ds / 2
+        d1 = np.sqrt(1 - px0 * px0 - py0 * py0 + 2 * delta1 / beta0 + delta1 * delta1)
+        x2 = x1 + ds * px0 / d1 / 2
+        y2 = y1 + ds * py0 / d1 / 2
+        z2 = z1 + ds * (1 - (1 + beta0 * delta1) / d1) / beta0 / 2
+        # damping
+        dp0_div_dp1 = (delta0 * Particle.beta + 1) / (delta1 * Particle.beta + 1)
+        px1 = px0 * dp0_div_dp1
+        py1 = py0 * dp0_div_dp1
+        beam.set_particle([x2, px1, y2, py1, z2, delta1])
         return beam
 
 
@@ -1269,8 +1301,8 @@ class SlimRing(object):
         self.__set_rf()
         self.__slice()
         self.solve_closed_orbit()
-        self.solve_damping()
-        self.along_ring()
+        # self.solve_damping()
+        # self.along_ring()
 
     def __set_rf(self):
         """solve U0 and set rf parameters"""
@@ -1317,6 +1349,7 @@ class SlimRing(object):
         print(f'\nclosed orbit at s=0 is \n    {x0}\n--------------')
 
     def track_close_orbit(self):
+        print('\n-------------------\ntracking closed orbit:')
         xco = np.zeros(6)
         matrix = np.zeros([6, 6])
         resdl = 1
@@ -1329,7 +1362,6 @@ class SlimRing(object):
                 beam = ele.real_track(beam)
             for i in range(6):
                 matrix[:, i] = (beam.matrix[:, i] - beam.matrix[:, 6]) / beam.precision
-            # print(matrix)
             d = beam.matrix[:, 6] - xco
             dco = np.linalg.inv(np.identity(6) - matrix).dot(d)
             xco = xco + dco
@@ -1341,12 +1373,17 @@ class SlimRing(object):
         print(f'closed orbit at s=0 is \n    {beam.matrix[:, 6]}\n')
         print(f'{matrix}\n')
         eig_val, eig_matrix = np.linalg.eig(matrix)
-        self.damping = - np.log(np.abs(eig_val))
-        print(f'damping  = {self.damping}')
-        print(f'damping time = {1 / self.f_c / self.damping}')
+        for eig in eig_val:
+            plt.scatter(np.real(eig), np.imag(eig), s=10, c='r')
+        print(f'eig_val = {eig_val}')
+        print(f'eig_vector = {eig_matrix[:, 4]}')
+        damping = - np.log(np.abs(eig_val))
+        print(f'damping  = {damping}')
+        print(f'damping time = {1 / self.f_c / damping}')
         print('\ncheck:')
-        print(f'sum damping = {self.damping[0] + self.damping[2] + self.damping[4]}, '
+        print(f'sum damping = {damping[0] + damping[2] + damping[4]}, '
               f'2U0/E0 = {2 * self.U0 / Particle.energy}')
+        print(f'\nring tune = {np.angle(eig_val) / 2 / pi}')
         print('\n--------------------------------------------\n')
 
     def solve_damping(self):
@@ -1354,8 +1391,12 @@ class SlimRing(object):
         for ele in self.ele_slices:
             matrix = ele.damping_matrix.dot(matrix)
         eig_val, eig_matrix = np.linalg.eig(matrix)
+        for eig in eig_val:
+            plt.scatter(np.real(eig), np.imag(eig), s=10, c='b')
         self.damping = - np.log(np.abs(eig_val))
         print(f'{matrix}\n')
+        print(f'eig_vals = {eig_val}')
+        print(f'eig_vector = {eig_matrix[:, 4]}')
         print(f'damping  = {self.damping}')
         print(f'damping time = {1 / self.f_c / self.damping}')
         print('\ncheck:')
