@@ -1,105 +1,13 @@
-# Wei, Bingfeng
-# wbf2016@mail.ustc.edu.cn
+"""Components:
+Drift:
+........."""
 
-"""Slim Storage Ring
-
-Energy in MeV !!!!!
-"""
-
+from .particles import Particle, Beam7
+import numpy as np
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
-
-import matplotlib.pyplot as plt
-import numpy as np
-from scipy.constants import pi, physical_constants, c
-
-LENGTH_PRECISION = 10
-
-
-def calculate_constants():
-    """Andrzej Wolski (2014)"""
-
-    h_bar = physical_constants['natural unit of action in eV s'][0]
-    re = physical_constants['classical electron radius'][0]
-    me = physical_constants['electron mass energy equivalent in MeV'][0]
-    # Cr = q ** 2 / (3 * epsilon_0 * (m * c**2) ** 4)   p.221
-    cr = 4 * pi * re / (3 * me ** 3)  # this is only for electrons. unit m/MeV**3
-    cq = 55 * h_bar * c / (32 * np.sqrt(3) * me * 1e6)  # p.232  unit s
-    # this part is to verify cl
-    # Pr = (Cr * c / 2 / pi) * (\beta_0^4 * E_0^4 / \rho^2)    p.221
-    # <\dot{N} u^2> = 2 Cq \gamma_0^2 E_0 P_r / \rho          p.232
-    # ==>  <\dot{N} u^2> = Cq Cr c E0^5 \gamma^2 \beta^4 / \pi \rho^3
-    # <\dot{N} u^2 / E_0^2> = 2 Cl \gamma^5 / |\rho|^3  Slim Formalism orbit motion
-    # therefore,
-    # cl = cq * cr * c * me ** 3 / 2 / pi  # \beta \approx
-    cl = 55 * re * h_bar * c ** 2 / (48 * np.sqrt(3) * me * 1e6)
-    return cr, cq, cl
-
-
-Cr, Cq, Cl = calculate_constants()
-
-
-class UnfinishedWork(Exception):
-    """user's exception for marking the unfinished work"""
-
-    def __init__(self, *args):
-        self.name = args[0]
-
-
-class Particle(object):
-    """set particle's type and energy"""
-    energy = None
-    gamma = None
-    beta = None
-
-    @classmethod
-    def set_energy(cls, energy):
-        cls.energy = energy
-        text = "electron mass energy equivalent in MeV"
-        mass = physical_constants[text][0]
-        cls.gamma = cls.energy / mass
-        cls.beta = np.sqrt(1 - 1 / cls.gamma ** 2)
-
-    @classmethod
-    def __str__(cls):
-        return "mass: %s MeV, gamma = %s" % (cls.energy / cls.gamma, cls.gamma)
-
-
-class Beam(object):
-    """beam"""
-
-    def __init__(self, particle=None):
-        self.matrix = None
-        self.precision = 1e-9  # the precision must be small
-        if particle is not None:
-            self.init_particle(particle)
-
-    def init_particle(self, particle):
-        assert len(particle) == 6
-        self.matrix = np.eye(6, 7) * self.precision
-        for i in range(6):
-            self.matrix[i, :] = self.matrix[i, :] + particle[i]
-
-    def set_particle(self, particle):
-        particle[4] = -particle[4]
-        for i in range(6):
-            self.matrix[i, :] = particle[i]
-
-    def get_particle(self):
-        x = []
-        for i in range(6):
-            x.append(self.matrix[i, :])
-        x[4] = -x[4]
-        return [x[i] for i in range(6)]
-
-    def get_particle_array(self):
-        p = np.zeros(6)
-        for i in range(6):
-            p[i] = self.matrix[i, 6]
-        return p
-
-    def set_dp(self, dp):
-        self.matrix[5, :] = dp
+from .constants import c, pi, Cr, LENGTH_PRECISION
+from .exceptions import UnfinishedWork
 
 
 def match_symbol(symbol):
@@ -113,13 +21,6 @@ def match_symbol(symbol):
         return symbol_dict[int(symbol / 100)]
     except KeyError:
         raise UnfinishedWork('symbol key error')
-
-
-class MatchSymbol(object):
-    """match symbol"""
-
-    def __init__(self):
-        raise UnfinishedWork()
 
 
 class Element(metaclass=ABCMeta):
@@ -187,14 +88,19 @@ class Element(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def symplectic_track(self, beam: Beam) -> Beam:
+    def symplectic_track(self, beam: Beam7) -> Beam7:
         """assuming that the energy is constant, the result is symplectic."""
         pass
 
     @abstractmethod
-    def real_track(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam7) -> Beam7:
         """tracking with energy loss, the result is not symplectic"""
         pass
+
+    def type(self):
+        """return the type of the component"""
+
+        return match_symbol(self.symbol)
 
     def slice(self, initial_s, identifier):
         """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
@@ -314,11 +220,11 @@ class Mark(Element):
     def next_closed_orbit(self):
         return self.closed_orbit
 
-    def symplectic_track(self, beam: Beam) -> Beam:
-        assert isinstance(beam, Beam)
+    def symplectic_track(self, beam: Beam7) -> Beam7:
+        assert isinstance(beam, Beam7)
         return beam
 
-    def real_track(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam7) -> Beam7:
         return beam
 
 
@@ -352,7 +258,7 @@ class LineEnd(Element):
     def symplectic_track(self, beam):
         return beam
 
-    def real_track(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam7) -> Beam7:
         return beam
 
 
@@ -386,7 +292,7 @@ class Drift(Element):
         return matrix7
 
     def symplectic_track(self, beam):
-        assert isinstance(beam, Beam)
+        assert isinstance(beam, Beam7)
         [x0, px0, y0, py0, z0, dp0] = beam.get_particle()
         ds = self.length
         d1 = np.sqrt(1 - px0 ** 2 - py0 ** 2 + 2 * dp0 / Particle.beta + dp0 ** 2)
@@ -396,7 +302,7 @@ class Drift(Element):
         beam.set_particle([x1, px0, y1, py0, z1, dp0])
         return beam
 
-    def real_track(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam7) -> Beam7:
         return self.symplectic_track(beam)
 
 
@@ -529,7 +435,7 @@ class HBend(Element):
         beam.set_particle([x2, px3, y2, py3, z1, dp0])
         return beam
 
-    def real_track(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam7) -> Beam7:
         [x0, px0, y0, py0, z0, dp0] = beam.get_particle()
         dp1 = dp0 - (dp0 + 1) ** 2 * Cr * Particle.energy ** 3 * self.theta ** 2 / 2 / pi / self.length
         # use average energy
@@ -664,7 +570,7 @@ class VBend(Element):
     def symplectic_track(self, beam):
         pass
 
-    def real_track(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam7) -> Beam7:
         pass
 
 
@@ -816,7 +722,7 @@ class Quadrupole(Element):
         beam.set_particle([x1, px1, y1, py1, ct1, dp0])
         return beam
 
-    def real_track(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam7) -> Beam7:
         [x0, px0, y0, py0, z0, dp0] = beam.get_particle()
         dp1 = dp0 - (dp0 + 1)**2 * Cr * Particle.energy ** 3 * self.k1 ** 2 * self.length * (x0 ** 2 + y0 ** 2) / 2 / pi
         dp_ave = (dp1 + dp0) / 2
@@ -857,7 +763,7 @@ class SKQuadrupole(Element):
     def symplectic_track(self, beam):
         pass
 
-    def real_track(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam7) -> Beam7:
         pass
 
 
@@ -949,7 +855,7 @@ class Sextupole(Element):
         beam.set_particle([x2, px1, y2, py1, ct2, dp0])
         return beam
 
-    def real_track(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam7) -> Beam7:
         [x0, px0, y0, py0, ct0, dp0] = beam.get_particle()
         dp1 = dp0 - (dp0 + 1)**2 * (Cr * Particle.energy ** 3 * self.k2 ** 2 * self.length *
                                     (x0 ** 2 + y0 ** 2) ** 2 / 8 / pi)
@@ -1025,7 +931,7 @@ class RFCavity(Element):
         beam.set_particle([x2, px0, y2, py0, z2, dp1])
         return beam
 
-    def real_track(self, beam: Beam) -> Beam:
+    def real_track(self, beam: Beam7) -> Beam7:
         [x0, px0, y0, py0, z0, delta0] = beam.get_particle()
         beta0 = Particle.beta
         ds = self.length
@@ -1048,476 +954,3 @@ class RFCavity(Element):
         py1 = py0 * dp0_div_dp1
         beam.set_particle([x2, px1, y2, py1, z2, delta1])
         return beam
-
-
-class CSLattice(object):
-    """lattice object, solve by Courant-Snyder method"""
-
-    def __init__(self, ele_list: list, periods_number: int, coupling=0.00):
-        self.length = 0
-        self.periods_number = periods_number
-        self.coup = coupling
-        self.elements = []
-        self.rf_cavity = None
-        for ele in ele_list:
-            # ele.s = self.length
-            if isinstance(ele, RFCavity):
-                self.rf_cavity = ele
-            self.elements.append(ele)
-            self.length = round(self.length + ele.length, LENGTH_PRECISION)
-        self.ele_slices = None
-        self.__slice()
-        # initialize twiss
-        self.twiss_x0 = None
-        self.twiss_y0 = None
-        self.eta_x0 = None
-        self.eta_y0 = None
-        self.__solve_initial_twiss()
-        # solve twiss
-        self.nux = None
-        self.nuy = None
-        self.__solve_along()
-        # integration
-        self.xi_x = None
-        self.xi_y = None
-        self.I1 = None
-        self.I2 = None
-        self.I3 = None
-        self.I4 = None
-        self.I5 = None
-        self.radiation_integrals()
-        # global parameters
-        self.Jx = None
-        self.Jy = None
-        self.Js = None
-        self.sigma_e = None
-        self.emittance = None
-        self.U0 = None
-        self.f_c = None
-        self.tau0 = None
-        self.tau_s = None
-        self.tau_x = None
-        self.tau_y = None
-        self.alpha = None
-        self.emitt_x = None
-        self.emitt_y = None
-        self.etap = None
-        self.sigma_z = None
-        self.global_parameters()
-
-    def __slice(self):
-        self.ele_slices = []
-        current_s = 0
-        current_identifier = 0
-        for ele in self.elements:
-            [new_list, current_s] = ele.slice(current_s, current_identifier)
-            self.ele_slices += new_list
-            current_identifier += 1
-        last_ele = LineEnd(s=self.length, identifier=current_identifier)
-        self.ele_slices.append(last_ele)
-
-    def __solve_initial_twiss(self):
-        matrix = np.identity(6)
-        for ele in self.elements:
-            matrix = ele.matrix.dot(matrix)
-        # x direction
-        cos_mu = (matrix[0, 0] + matrix[1, 1]) / 2
-        assert abs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
-        mu = np.arccos(cos_mu) * np.sign(matrix[0, 1])
-        beta = matrix[0, 1] / np.sin(mu)
-        alpha = (matrix[0, 0] - matrix[1, 1]) / (2 * np.sin(mu))
-        gamma = - matrix[1, 0] / np.sin(mu)
-        self.twiss_x0 = np.array([beta, alpha, gamma])
-        # y direction
-        cos_mu = (matrix[2, 2] + matrix[3, 3]) / 2
-        assert abs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
-        mu = np.arccos(cos_mu) * np.sign(matrix[2, 3])
-        beta = matrix[2, 3] / np.sin(mu)
-        alpha = (matrix[2, 2] - matrix[3, 3]) / (2 * np.sin(mu))
-        gamma = - matrix[3, 2] / np.sin(mu)
-        self.twiss_y0 = np.array([beta, alpha, gamma])
-        # solve eta
-        sub_matrix_x = matrix[0:2, 0:2]
-        matrix_etax = np.array([matrix[0, 5], matrix[1, 5]])
-        self.eta_x0 = np.linalg.inv(np.identity(2) - sub_matrix_x).dot(matrix_etax)
-        sub_matrix_y = matrix[2:4, 2:4]
-        matrix_etay = np.array([matrix[2, 5], matrix[3, 5]])
-        self.eta_y0 = np.linalg.inv(np.identity(2) - sub_matrix_y).dot(matrix_etay)
-
-    def __solve_along(self):
-        [betax, alphax, gammax] = self.twiss_x0
-        [betay, alphay, gammay] = self.twiss_y0
-        [etax, etaxp] = self.eta_x0
-        [etay, etayp] = self.eta_y0
-        psix = 0
-        psiy = 0
-        for ele in self.ele_slices:
-            ele.betax = betax
-            ele.betay = betay
-            ele.alphax = alphax
-            ele.alphay = alphay
-            ele.gammax = gammax
-            ele.gammay = gammay
-            ele.etax = etax
-            ele.etay = etay
-            ele.etaxp = etaxp
-            ele.etayp = etayp
-            ele.psix = psix
-            ele.psiy = psiy
-            ele.curl_H = ele.gammax * ele.etax ** 2 + 2 * ele.alphax * ele.etax * ele.etaxp + ele.betax * ele.etaxp ** 2
-            [betax, alphax, gammax] = ele.next_twiss('x')
-            [betay, alphay, gammay] = ele.next_twiss('y')
-            [etax, etaxp] = ele.next_eta_bag('x')
-            [etay, etayp] = ele.next_eta_bag('y')
-            psix, psiy = ele.next_phase()
-        self.nux = psix * self.periods_number / 2 / pi
-        self.nuy = psiy * self.periods_number / 2 / pi
-
-    def radiation_integrals(self):
-        integral1 = 0
-        integral2 = 0
-        integral3 = 0
-        integral4 = 0
-        integral5 = 0
-        chromaticity_x = 0
-        chromaticity_y = 0
-        for ele in self.ele_slices:
-            integral1 = integral1 + ele.length * ele.etax * ele.h
-            integral2 = integral2 + ele.length * ele.h ** 2
-            integral3 = integral3 + ele.length * abs(ele.h) ** 3
-            integral4 = integral4 + ele.length * (ele.h ** 2 + 2 * ele.k1) * ele.etax * ele.h
-            integral5 = integral5 + ele.length * ele.curl_H * abs(ele.h) ** 3
-            chromaticity_x = chromaticity_x - (ele.k1 + ele.h ** 2 - ele.etax * ele.k2) * ele.length * ele.betax
-            chromaticity_y = chromaticity_y + (ele.k1 - ele.etax * ele.k2) * ele.length * ele.betay
-            if 200 <= ele.symbol < 300:
-                integral4 = integral4 + (ele.h ** 2 * ele.etax * np.tan(ele.theta_in)
-                                         - ele.h ** 2 * ele.etax * np.tan(ele.theta_out))
-                chromaticity_x = chromaticity_x + ele.h * (np.tan(ele.theta_in) + np.tan(ele.theta_out)) * ele.betax
-                chromaticity_y = chromaticity_y - ele.h * (np.tan(ele.theta_in) + np.tan(ele.theta_out)) * ele.betay
-        self.I1 = integral1 * self.periods_number
-        self.I2 = integral2 * self.periods_number
-        self.I3 = integral3 * self.periods_number
-        self.I4 = integral4 * self.periods_number
-        self.I5 = integral5 * self.periods_number
-        self.xi_x = chromaticity_x * self.periods_number / (4 * pi)
-        self.xi_y = chromaticity_y * self.periods_number / (4 * pi)
-
-    def global_parameters(self):
-        self.Jx = 1 - self.I4 / self.I2
-        self.Jy = 1
-        self.Js = 2 + self.I4 / self.I2
-        self.sigma_e = Particle.gamma * np.sqrt(Cq * self.I3 / (self.Js * self.I2))
-        self.emittance = Cq * Particle.gamma * Particle.gamma * self.I5 / (self.Jx * self.I2)
-        self.U0 = Cr * Particle.energy ** 4 * self.I2 / (2 * pi)
-        self.f_c = c * Particle.beta / (self.length * self.periods_number)
-        if self.rf_cavity is not None:
-            self.rf_cavity.f_c = self.f_c
-        self.tau0 = 2 * Particle.energy / self.U0 / self.f_c
-        self.tau_s = self.tau0 / self.Js
-        self.tau_x = self.tau0 / self.Jx
-        self.tau_y = self.tau0 / self.Jy
-        self.alpha = self.I1 * self.f_c / c  # momentum compaction factor
-        self.emitt_x = self.emittance / (1 + self.coup)
-        self.emitt_y = self.emittance * self.coup / (1 + self.coup)
-        self.etap = self.alpha - 1 / Particle.gamma ** 2  # phase slip factor
-
-    def matrix_output(self, file_name: str = 'matrix.txt'):
-        """output uncoupled matrix for each element and contained matrix"""
-
-        matrix = np.identity(6)
-        file = open(file_name, 'w')
-        location = 0.0
-        for ele in self.elements:
-            file.write(f'{match_symbol(ele.symbol)} {ele.name} at s={location},  {ele.magnets_data()}\n')
-            location = round(location + ele.length, LENGTH_PRECISION)
-            file.write(str(ele.matrix) + '\n')
-            file.write('contained matrix:\n')
-            matrix = ele.matrix.dot(matrix)
-            file.write(str(matrix))
-            file.write('\n\n--------------------------\n\n')
-        file.close()
-
-    def output_twiss(self, file_name: str = 'twiss_data.txt'):
-        """output s, ElementName, betax, alphax, psix, betay, alphay, psiy, etax, etaxp"""
-
-        file1 = open(file_name, 'w')
-        file1.write('& s, ElementName, betax, alphax, psix, betay, alphay, psiy, etax, etaxp\n')
-        last_identifier = 123465
-        for ele in self.ele_slices:
-            if ele.identifier != last_identifier:
-                file1.write(f'{ele.s:.6e} {ele.name:10} {ele.betax:.6e}  {ele.alphax:.6e}  {ele.psix:.6e}  '
-                            f'{ele.betay:.6e}  {ele.alphay:.6e}  {ele.psiy:.6e}  {ele.etax:.6e}  {ele.etaxp:.6e}\n')
-                last_identifier = ele.identifier
-        file1.close()
-
-    def __str__(self):
-        val = ""
-        val += ("nux =       " + str(self.nux))
-        val += ("\nnuy =       " + str(self.nuy))
-        val += ("\ncurl_H =    " + str(self.ele_slices[0].curl_H))
-        val += ("\nI1 =        " + str(self.I1))
-        val += ("\nI2 =        " + str(self.I2))
-        val += ("\nI3 =        " + str(self.I3))
-        val += ("\nI4 =        " + str(self.I4))
-        val += ("\nI5 =        " + str(self.I5))
-        val += ("\nJs =        " + str(self.Js))
-        val += ("\nJx =        " + str(self.Jx))
-        val += ("\nJy =        " + str(self.Jy))
-        val += ("\nenergy =    " + str(Particle.energy) + "MeV")
-        val += ("\ngamma =     " + str(Particle.gamma))
-        val += ("\nsigma_e =   " + str(self.sigma_e))
-        val += ("\nemittance = " + str(self.emittance * 1e9) + " nm*rad")
-        val += ("\nLength =    " + str(self.length * self.periods_number) + " m")
-        val += ("\nU0 =        " + str(self.U0 * 1000) + "  keV")
-        val += ("\nTperiod =   " + str(1 / self.f_c * 1e9) + " nsec")
-        val += ("\nalpha =     " + str(self.alpha))
-        val += ("\neta_p =     " + str(self.etap))
-        val += ("\ntau0 =      " + str(self.tau0 * 1e3) + " msec")
-        val += ("\ntau_e =     " + str(self.tau_s * 1e3) + " msec")
-        val += ("\ntau_x =     " + str(self.tau_x * 1e3) + " msec")
-        val += ("\ntau_y =     " + str(self.tau_y * 1e3) + " msec")
-        val += ("\nxi_x =     " + str(self.xi_x))
-        val += ("\nxi_y =     " + str(self.xi_y))
-        if self.sigma_z is not None:
-            val += ("\nsigma_z =   " + str(self.sigma_z))
-        return val
-
-
-class SlimRing(object):
-    """lattice object, solve by slim method"""
-
-    def __init__(self, ele_list: list):
-        self.length = 0
-        self.elements = []
-        for ele in ele_list:
-            # ele.s = self.length
-            self.elements.append(ele)
-            self.length = round(self.length + ele.length, LENGTH_PRECISION)
-        self.rf_cavity = None
-        self.ele_slices = None
-        self.damping = None
-        self.U0 = 0
-        self.f_c = 0
-        self.__set_rf()
-        self.__slice()
-        self.solve_closed_orbit()
-        self.solve_damping()
-        self.along_ring()
-
-    def __set_rf(self):
-        """solve U0 and set rf parameters"""
-        i2 = 0
-        for ele in self.elements:
-            i2 = i2 + ele.length * ele.h ** 2
-            if isinstance(ele, RFCavity):
-                self.rf_cavity = ele
-        self.U0 = Cr * Particle.energy ** 4 * i2 / (2 * pi)
-        # self.T_period = self.length * self.periods_number / (c * Particle.beta)
-        self.f_c = c * Particle.beta / self.length
-        if self.rf_cavity is not None:
-            self.rf_cavity.f_c = self.f_c
-
-    def __slice(self):
-        self.ele_slices = []
-        current_s = 0
-        current_identifier = 0
-        for ele in self.elements:
-            [new_list, current_s] = ele.slice(current_s, current_identifier)
-            self.ele_slices += new_list
-            current_identifier += 1
-        last_ele = LineEnd(s=self.length, identifier=current_identifier)
-        self.ele_slices.append(last_ele)
-
-    def solve_closed_orbit(self):
-        """solve closed orbit, iterate to solve, renew the x0 and matrix"""
-        x0 = np.array([0, 0, 0, 0, 0, 0])
-        matrix7 = np.identity(7)
-        i = 1
-        print('\n-------------------\nsearching closed orbit:')
-        while i < 300:
-            for ele in self.ele_slices:
-                ele.closed_orbit = deepcopy(x0)
-                x0 = ele.next_closed_orbit
-                matrix7 = ele.closed_orbit_matrix.dot(matrix7)
-            coefficient_matrix = (matrix7 - np.identity(7))[0: 6, 0: 6]
-            result_vec = -matrix7[0: 6, 6].T
-            x0 = np.linalg.solve(coefficient_matrix, result_vec)
-            print(f'\niterated {i} times, current result is: \n    {x0}')  # TODO: this is not iteration
-            i += 1
-            if max(abs(x0 - self.ele_slices[0].closed_orbit)) < 1e-8:
-                break
-        print(f'\nclosed orbit at s=0 is \n    {x0}\n--------------')
-
-    def track_close_orbit(self):
-        print('\n-------------------\ntracking closed orbit:')
-        xco = np.zeros(6)
-        matrix = np.zeros([6, 6])
-        resdl = 1
-        j = 1
-        beam = Beam(xco)
-        while j <= 10 and resdl > 1e-16:
-            beam = Beam(xco)
-            for ele in self.ele_slices:
-                ele.closed_orbit = np.array(beam.get_particle_array())
-                beam = ele.real_track(beam)
-            for i in range(6):
-                matrix[:, i] = (beam.matrix[:, i] - beam.matrix[:, 6]) / beam.precision
-            d = beam.matrix[:, 6] - xco
-            dco = np.linalg.inv(np.identity(6) - matrix).dot(d)
-            xco = xco + dco
-            # dco = np.linalg.inv(matrix).dot(beam.matrix[:, 6])# TODO: why not Newton method?
-            # xco = xco - dco
-            resdl = dco.dot(dco.T)
-            print(f'iterated {j} times, current result is \n    {beam.matrix[:, 6]}\n')
-            j += 1
-        print(f'closed orbit at s=0 is \n    {beam.matrix[:, 6]}\n')
-        print(f'{matrix}\n')
-        eig_val, eig_matrix = np.linalg.eig(matrix)
-        for eig in eig_val:
-            plt.scatter(np.real(eig), np.imag(eig), s=10, c='r')
-        print(f'eig_val = {eig_val}')
-        print(f'eig_vector = {eig_matrix}')
-        damping = - np.log(np.abs(eig_val))
-        print(f'damping  = {damping}')
-        print(f'damping time = {1 / self.f_c / damping}')
-        print('\ncheck:')
-        print(f'sum damping = {damping[0] + damping[2] + damping[4]}, '
-              f'2U0/E0 = {2 * self.U0 / Particle.energy}')
-        print(f'\nring tune = {np.angle(eig_val) / 2 / pi}')
-        print('\n--------------------------------------------\n')
-
-    def solve_damping(self):
-        matrix = np.identity(6)
-        for ele in self.ele_slices:
-            matrix = ele.damping_matrix.dot(matrix)
-        eig_val, eig_matrix = np.linalg.eig(matrix)
-        for eig in eig_val:
-            plt.scatter(np.real(eig), np.imag(eig), s=10, c='b')
-        self.damping = - np.log(np.abs(eig_val))
-        print(f'{matrix}\n')
-        print(f'eig_vals = {eig_val}')
-        print(f'eig_vector = {eig_matrix}')
-        print(f'damping  = {self.damping}')
-        print(f'damping time = {1 / self.f_c / self.damping}')
-        print('\ncheck:')
-        print(f'sum damping = {self.damping[0] + self.damping[2] + self.damping[4]}, '
-              f'2U0/E0 = {2 * self.U0 / Particle.energy}')
-        print('\n--------------------------------------------\n')
-
-    def along_ring(self):
-        """solve tune along the ring"""
-        matrix = np.identity(6)
-        for ele in self.ele_slices:
-            matrix = ele.matrix.dot(matrix)
-        eig_val, ring_eig_matrix = np.linalg.eig(matrix)  # Ei is eig_matrix[:, i]  E_ki is eig_matrix[i, k]
-        print(f'ring tune = {np.angle(eig_val) / 2 / pi}\n')
-        # solve average decomposition and tune along the lattice
-        ave_deco_square = np.zeros(6)
-        sideways_photons = np.zeros(6)
-        eig_matrix = ring_eig_matrix
-        for ele in self.ele_slices:
-            eig_matrix = ele.matrix.dot(eig_matrix)
-            if ele.h != 0:
-                for k in range(6):
-                    ave_deco_square[k] += abs(eig_matrix[4, k]) ** 2 * abs(ele.h) ** 3 * ele.length
-                    sideways_photons[k] += abs(eig_matrix[2, k]) ** 2 * abs(ele.h) ** 3 * ele.length
-        for k in range(6):
-            ave_deco_square[k] = ave_deco_square[k] * Cl * Particle.gamma ** 5 / c / self.damping[k]
-            sideways_photons[k] = sideways_photons[k] * Cl * Particle.gamma ** 3 / c / self.damping[k] / 2
-        # solve equilibrium beam
-        eig_matrix = ring_eig_matrix
-        for ele in self.ele_slices:
-            equilibrium_beam = np.zeros((6, 6))
-            for j in range(6):
-                for i in range(j + 1):
-                    for k in range(6):
-                        equilibrium_beam[i, j] += ((ave_deco_square[k] + sideways_photons[k]) *
-                                                   np.real(eig_matrix[i, k] * np.conj(eig_matrix[j, k])))
-            for i in range(6):
-                for j in range(i):
-                    equilibrium_beam[i, j] = equilibrium_beam[j, i]
-            ele.beam = deepcopy(equilibrium_beam)
-            eig_matrix = ele.matrix.dot(eig_matrix)
-
-    def print_tune(self):
-        matrix = np.identity(6)
-        for ele in self.ele_slices:
-            matrix = ele.matrix.dot(matrix)
-        eig_val, eig_matrix = np.linalg.eig(matrix)
-        tune = np.angle(eig_val) / 2 / pi
-        print(f'tune  = {tune}')
-
-    def print_damping(self):
-        matrix = np.identity(6)
-        for ele in self.ele_slices:
-            matrix = ele.damping_matrix.dot(matrix)
-        eig_val, eig_matrix = np.linalg.eig(matrix)
-        damping = - np.log(np.abs(eig_val))
-        tune = np.angle(eig_val) / 2 / pi
-        print('\nin damping matrix')
-        print(f'tune = {tune}')
-        print(f'damping  = {damping}')
-        print('\n---------     assert ---------')
-        print(f'sum damping = {damping[0] + damping[2] + damping[4]}, 2U0/E0 = {2 * self.U0 / Particle.energy}')
-
-    def matrix_output(self, file_name: str = 'matrix.txt'):
-        """output uncoupled matrix for each element and contained matrix"""
-
-        matrix = np.identity(6)
-        file = open(file_name, 'w')
-        location = 0.0
-        for ele in self.elements:
-            file.write(f'{match_symbol(ele.symbol)} {ele.name} at s={location},  {ele.magnets_data()}\n')
-            location = round(location + ele.length, LENGTH_PRECISION)
-            file.write(str(ele.matrix) + '\n')
-            file.write('contained matrix:\n')
-            matrix = ele.matrix.dot(matrix)
-            file.write(str(matrix))
-            file.write('\n\n--------------------------\n\n')
-        file.close()
-
-    def coupled_matrix_output(self, filename: str = 'matrix.txt'):
-        matrix = np.identity(6)
-        element_matrix = np.identity(6)
-        file = open(filename, 'w')
-        location = 0.0
-        first_ele = self.ele_slices[0]
-        last_identifier = first_ele.identifier
-        file.write(f'{match_symbol(first_ele.symbol)} {first_ele.name} at s={location} \n')
-        file.write(f'closed orbit: \n    {first_ele.closed_orbit}\n')
-        for ele in self.ele_slices:
-            if ele.identifier != last_identifier:
-                matrix = element_matrix.dot(matrix)
-                file.write('element matrix:\n' + str(element_matrix) + '\n')
-                file.write('contained matrix:\n')
-                file.write(str(matrix))
-                element_matrix = np.identity(6)
-                file.write('\n\n--------------------------------------------\n\n')
-                file.write(f'{match_symbol(ele.symbol)} {ele.name} at s={location} \n')
-                file.write(f'closed orbit: {ele.closed_orbit}\n')
-            element_matrix = ele.matrix.dot(element_matrix)
-            location = round(location + ele.length, LENGTH_PRECISION)
-            last_identifier = ele.identifier
-        matrix = element_matrix.dot(matrix)
-        file.write(str(element_matrix) + '\n')
-        file.write('full matrix:\n')
-        file.write(str(matrix))
-        file.close()
-
-    def output_equilibrium_beam(self, filename: str = 'equilibrium_beam.txt'):
-        file = open(filename, 'w')
-        location = 0.0
-        last_identifier = 123465
-        for ele in self.ele_slices:
-            if ele.identifier != last_identifier:
-                file.write(f'{match_symbol(ele.symbol)} {ele.name} at s={location} \n')
-                file.write(f'closed orbit: {ele.closed_orbit}\n')
-                file.write('equilibrium beam:\n')
-                file.write(str(ele.beam))
-                file.write('\n\n--------------------------------------------\n\n')
-            location = round(location + ele.length, LENGTH_PRECISION)
-            last_identifier = ele.identifier
-        file.close()
-
-
-

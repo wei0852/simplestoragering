@@ -1,8 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-import solve_transfer_matrix
-from main import *
+from simplestoragering import *
 import time
 
 qua_slice = 23
@@ -54,35 +53,18 @@ segment4i = [DC1, BS1, S1, DC2, Q08, DC3, S2, DQS1, Q07, BQ2, DC4, BEND, DC5, BQ
              DC2, S4, BS1, DC6,  DC6, BS1, S4, DC2, Q04, DC3, S3, DQS2, Q03, BQ1, DC5, BEND, DC4, BQ2, Q02,
              DQS1, S2, DC3, Q01, DC2, S1, BS1, DC1]
 
-# start = time.time()
 np.set_printoptions(precision=8, suppress=True, linewidth=100)
 
 slim_lattice = SlimRing(segment1 + segment2 + segment3 + segment4)
-# end = time.time()
+print(Particle.gamma)
 # print(rf_ca.voltage * np.sin(rf_ca.phase))
 # print(2 * rf_ca.voltage * np.sin(rf_ca.phase) / Particle.energy)
-# print('\n------------------------------------------\n----------------------------------------\ntrack:\n')
-slim_lattice.solve_damping()
+# slim_lattice.solve_damping()
 slim_lattice.track_close_orbit()
-# unit circle
-theta = np.arange(0, 2 * pi, 0.001)
-x = np.cos(theta)
-y = np.sin(theta)
-plt.plot(x, y, color='#aaaaaa')
-plt.title('eigenvalues of damping matrix')
-plt.xlabel('real')
-plt.ylabel('imaginary')
-plt.show()
-# solve_transfer_matrix.solve_transfer_matrix([BEND], [0, 0, 0, 0, 0, 0])
-# slim_lattice.output_equilibrium_beam()
-# print(f'\nslim run time: {end - start}')
-# start = time.time()
-# cs_lattice = CSLattice(segment1 + segment2 + segment3 + segment4, 1, 0.01)
-# end = time.time()
-# print(f'\ncs run time: {end - start}')
-# print(cs_lattice)
-# print('\n-------------------------------\n')
-# print(f'slim sigma_delta = {np.sqrt(slim_lattice.ele_slices[0].beam[5, 5])}')
+cs_lattice = CSLattice(segment1 + segment2 + segment3 + segment4, 1, 0.01)
+print(cs_lattice)
+print('\n-------------------------------\n')
+print(f'slim sigma_delta = {np.sqrt(slim_lattice.ele_slices[0].beam[5, 5])}')
 
 
 # def emmit_x_beta(current_beam):
@@ -90,40 +72,40 @@ plt.show()
 #                    - (current_beam[0, 1] - current_beam[0, 5] * current_beam[1, 5] / current_beam[5, 5]) ** 2)
 
 
-# beam = slim_lattice.ele_slices[0].beam
-# emmitx = np.sqrt(beam[0, 0] * beam[1, 1] - beam[0, 1] ** 2)
-# print(f'emmit x = {emmitx}')
-# emmitx_beta = np.sqrt((beam[0, 0] - beam[0, 5] ** 2 / beam[5, 5]) * (beam[1, 1] - beam[1, 5] ** 2 / beam[5, 5])
-                      # - (beam[0, 1] - beam[0, 5] * beam[1, 5] / beam[5, 5]) ** 2)
+beam = slim_lattice.ele_slices[0].beam
+emmitx = np.sqrt(beam[0, 0] * beam[1, 1] - beam[0, 1] ** 2)
+print(f'emmit x = {emmitx}')
+emmitx_beta = np.sqrt((beam[0, 0] - beam[0, 5] ** 2 / beam[5, 5]) * (beam[1, 1] - beam[1, 5] ** 2 / beam[5, 5])
+                      - (beam[0, 1] - beam[0, 5] * beam[1, 5] / beam[5, 5]) ** 2)
 # # emmity = np.sqrt(beam[2, 2] * beam[3, 3] - beam[2, 3] ** 2)
 # emmity_beta = np.sqrt((beam[2, 2] - beam[2, 5] ** 2 / beam[5, 5]) * (beam[3, 3] - beam[3, 5] ** 2 / beam[5, 5])
 #                       - (beam[2, 3] - beam[2, 5] * beam[3, 5] / beam[5, 5]) ** 2)
-# print(f'emmit x beta = {emmitx_beta}')
+print(f'emmit x beta = {emmitx_beta}')
 # print(f'emmit xy = {emmity * emmitx}')
 # # print(np.sqrt(beam[4, 4] * beam[5, 5] - beam[4, 5] ** 2))
 # slim_eta = []
-# slim_betax = []
+slim_betax = []
 # sigma11 = []
 # sigma33 = []
-# s = []
-# for ele in slim_lattice.ele_slices:
+s = []
+for ele in slim_lattice.ele_slices:
 #     slim_eta.append(ele.beam[0, 5] / ele.beam[5, 5])
-#     slim_betax.append((ele.beam[0, 0] - ele.beam[0, 5]) / emmitx_beta)
+    slim_betax.append((ele.beam[0, 0] - ele.beam[0, 5]) / emmitx_beta)
 #     sigma11.append(ele.beam[0, 0])
 #     sigma33.append(ele.beam[2, 2])
-#     s.append(ele.s)
-# plt.plot(s, slim_betax, label='slim')
+    s.append(ele.s)
+plt.plot(s, slim_betax, label='slim')
 # # plt.plot(s, sigma33, label='sigma33')
-# betax = []
+betax = []
 # etax = []
-# s1 = []
-# for ele in cs_lattice.ele_slices:
-#     betax.append(ele.betax)
+s1 = []
+for ele in cs_lattice.ele_slices:
+    betax.append(ele.betax)
 #     etax.append(ele.etax)
-#     s1.append(ele.s)
-# plt.plot(s1, betax, label='cs')
-# plt.legend()
-# plt.title('betax')
-# plt.show()
+    s1.append(ele.s)
+plt.plot(s1, betax, label='cs')
+plt.legend()
+plt.title('betax')
+plt.show()
 
 
