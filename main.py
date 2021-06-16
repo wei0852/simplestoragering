@@ -432,11 +432,11 @@ class HBend(Element):
                                [0, 0, 0, 0, 1, 0],
                                [0, 0, 0, 0, 0, 1]])
         # middle_section = np.array([[cx, sin_theta / self.h, 0, 0, 0, (1 - cx) / h_beta],
-        #                            [-sin_theta * self.h, cx, 0, 0, 0, sin_theta / Particle.beta],
+        #                            [-sin_theta * self.h, cx, 0, 0, 0, sin_theta / RefParticle.beta],
         #                            [0, 0, 1, self.length, 0, 0],
         #                            [0, 0, 0, 1, 0, 0],
         #                            [- np.sin(self.theta), - (1 - cx) / h_beta, 0, 0, 1,
-        #                             - self.length + sin_theta / h_beta / Particle.beta],
+        #                             - self.length + sin_theta / h_beta / RefParticle.beta],
         #                            [0, 0, 0, 0, 0, 1]])
         # according to elegant result
         middle_section = np.array([[cx, sin_theta / self.h, 0, 0, 0, (1 - cx) / h_beta],
@@ -457,7 +457,7 @@ class HBend(Element):
     @property
     def damping_matrix(self):
         m66 = 1 - Cr * Particle.energy ** 3 * self.length * self.h ** 2 / pi
-        # delta_delta = - Cr * Particle.energy ** 3 * self.length * self.h ** 2 / pi / 2
+        # delta_delta = - Cr * RefParticle.energy ** 3 * self.length * self.h ** 2 / pi / 2
         matrix = self.matrix
         matrix[5, 5] = m66
         # matrix[1, 5] = matrix[1, 5] * (1 + delta_delta / self.closed_orbit[5] / 2)
@@ -465,7 +465,7 @@ class HBend(Element):
 
     @property
     def closed_orbit_matrix(self):
-        # m67 = -(self.closed_orbit[5] + 1) ** 2 * Cr * Particle.energy ** 3 * self.theta ** 2 / 2 / pi / self.length
+        # m67 = -(self.closed_orbit[5] + 1) ** 2 * Cr * RefParticle.energy ** 3 * self.theta ** 2 / 2 / pi / self.length
         m67 = -Cr * Particle.energy ** 3 * self.theta ** 2 / 2 / pi / self.length
         matrix7 = np.identity(7)
         matrix7[0:6, 0:6] = self.matrix  # Bend doesn't use thin len approximation, so
@@ -847,7 +847,7 @@ class SKQuadrupole(Element):
 
     @property
     def damping_matrix(self):
-        # lambda_q = Cr * Particle.energy ** 3 * self.k1 ** 2 * self.length / pi
+        # lambda_q = Cr * RefParticle.energy ** 3 * self.k1 ** 2 * self.length / pi
         raise UnfinishedWork()
 
     @property
@@ -961,7 +961,7 @@ class Sextupole(Element):
 
 
 class RFCavity(Element):
-    """thin len approximation, don't have length. The unit of voltage should be the same as Particle.energy, MeV"""
+    """thin len approximation, don't have length. The unit of voltage should be the same as RefParticle.energy, MeV"""
     symbol = 500
     length = 0
 
@@ -998,7 +998,7 @@ class RFCavity(Element):
     @property
     def closed_orbit_matrix(self):
         m67 = self.voltage * np.sin(self.phase) / Particle.energy
-        # m67 = self.voltage * np.sin(self.phase + self.omega_rf * self.closed_orbit[4] / c) / Particle.energy
+        # m67 = self.voltage * np.sin(self.phase + self.omega_rf * self.closed_orbit[4] / c) / RefParticle.energy
         matrix7 = np.identity(7)
         matrix7[0:6, 0:6] = self.matrix
         matrix7[5, 6] = m67
@@ -1312,7 +1312,7 @@ class SlimRing(object):
             if isinstance(ele, RFCavity):
                 self.rf_cavity = ele
         self.U0 = Cr * Particle.energy ** 4 * i2 / (2 * pi)
-        # self.T_period = self.length * self.periods_number / (c * Particle.beta)
+        # self.T_period = self.length * self.periods_number / (c * RefParticle.beta)
         self.f_c = c * Particle.beta / self.length
         if self.rf_cavity is not None:
             self.rf_cavity.f_c = self.f_c

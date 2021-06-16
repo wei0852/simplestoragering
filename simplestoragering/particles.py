@@ -1,20 +1,22 @@
-from scipy.constants import physical_constants
+from .constants import me, c
 import numpy as np
 
 
-class Particle(object):
+class RefParticle(object):
     """set particle's type and energy"""
     energy = None
     gamma = None
     beta = None
+    momentum = None
 
     @classmethod
     def set_energy(cls, energy):
         cls.energy = energy
-        text = "electron mass energy equivalent in MeV"
-        mass = physical_constants[text][0]
-        cls.gamma = cls.energy / mass
+        # text = "electron mass energy equivalent in MeV"
+        # mass = physical_constants[text][0]
+        cls.gamma = cls.energy / me
         cls.beta = np.sqrt(1 - 1 / cls.gamma ** 2)
+        cls.momentum = cls.gamma * me * cls.beta * c
 
     @classmethod
     def __str__(cls):

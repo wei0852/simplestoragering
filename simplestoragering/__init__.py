@@ -10,14 +10,18 @@ import simplestoragering.particles
 import simplestoragering.components
 import simplestoragering.cslattice
 import simplestoragering.slimlattice
+import simplestoragering.drift
+import simplestoragering.hbend
+import simplestoragering.quadrupole
+import simplestoragering.sextupole
+import simplestoragering.rfcavity
 
-Particle = simplestoragering.particles.Particle
-Drift = simplestoragering.components.Drift
-HBend = components.HBend
-Quadrupole = components.Quadrupole
-Sextupole = components.Sextupole
-LineEnd = components.LineEnd
-RFCavity = components.RFCavity
+Particle = simplestoragering.particles.RefParticle
+Drift = simplestoragering.drift.Drift
+HBend = simplestoragering.hbend.HBend
+Quadrupole = simplestoragering.quadrupole.Quadrupole
+Sextupole = simplestoragering.sextupole.Sextupole
+RFCavity = simplestoragering.rfcavity.RFCavity
 CSLattice = cslattice.CSLattice
 SlimRing = slimlattice.SlimRing
 

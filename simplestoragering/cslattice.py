@@ -1,7 +1,8 @@
 import numpy as np
-from .components import RFCavity, LENGTH_PRECISION, LineEnd
-from .constants import pi, c, Cq, Cr
-from .particles import Particle
+from .components import LineEnd
+from .rfcavity import RFCavity
+from .constants import pi, c, Cq, Cr, LENGTH_PRECISION
+from .particles import RefParticle
 
 
 class CSLattice(object):
@@ -160,20 +161,20 @@ class CSLattice(object):
         self.Jx = 1 - self.I4 / self.I2
         self.Jy = 1
         self.Js = 2 + self.I4 / self.I2
-        self.sigma_e = Particle.gamma * np.sqrt(Cq * self.I3 / (self.Js * self.I2))
-        self.emittance = Cq * Particle.gamma * Particle.gamma * self.I5 / (self.Jx * self.I2)
-        self.U0 = Cr * Particle.energy ** 4 * self.I2 / (2 * pi)
-        self.f_c = c * Particle.beta / (self.length * self.periods_number)
+        self.sigma_e = RefParticle.gamma * np.sqrt(Cq * self.I3 / (self.Js * self.I2))
+        self.emittance = Cq * RefParticle.gamma * RefParticle.gamma * self.I5 / (self.Jx * self.I2)
+        self.U0 = Cr * RefParticle.energy ** 4 * self.I2 / (2 * pi)
+        self.f_c = c * RefParticle.beta / (self.length * self.periods_number)
         if self.rf_cavity is not None:
             self.rf_cavity.f_c = self.f_c
-        self.tau0 = 2 * Particle.energy / self.U0 / self.f_c
+        self.tau0 = 2 * RefParticle.energy / self.U0 / self.f_c
         self.tau_s = self.tau0 / self.Js
         self.tau_x = self.tau0 / self.Jx
         self.tau_y = self.tau0 / self.Jy
         self.alpha = self.I1 * self.f_c / c  # momentum compaction factor
         self.emitt_x = self.emittance / (1 + self.coup)
         self.emitt_y = self.emittance * self.coup / (1 + self.coup)
-        self.etap = self.alpha - 1 / Particle.gamma ** 2  # phase slip factor
+        self.etap = self.alpha - 1 / RefParticle.gamma ** 2  # phase slip factor
 
     def matrix_output(self, file_name: str = 'matrix.txt'):
         """output uncoupled matrix for each element and contained matrix"""
@@ -217,8 +218,8 @@ class CSLattice(object):
         val += ("\nJs =        " + str(self.Js))
         val += ("\nJx =        " + str(self.Jx))
         val += ("\nJy =        " + str(self.Jy))
-        val += ("\nenergy =    " + str(Particle.energy) + "MeV")
-        val += ("\ngamma =     " + str(Particle.gamma))
+        val += ("\nenergy =    " + str(RefParticle.energy) + "MeV")
+        val += ("\ngamma =     " + str(RefParticle.gamma))
         val += ("\nsigma_e =   " + str(self.sigma_e))
         val += ("\nemittance = " + str(self.emittance * 1e9) + " nm*rad")
         val += ("\nLength =    " + str(self.length * self.periods_number) + " m")

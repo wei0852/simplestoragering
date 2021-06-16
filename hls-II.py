@@ -33,7 +33,7 @@ S2 = Sextupole('S2', 0.1172, -12.738)
 S3 = Sextupole('S3', 0.1172, 50.516)
 S4 = Sextupole('S4', 0.1240, -74.214)
 
-BEND = HBend('BEND', 1.7, 0.7853981634, 0.3926990817, 0.3926990817, n_slices=170)
+BEND = HBend('BEND', 1.7, 0.7853981634, 0.3926990817, 0.3926990817, n_slices=300)
 
 rf_ca = RFCavity('rf', voltage_in_MeV=0.26, frequency=204e6, phase=3.077164602543054)
 
@@ -58,18 +58,20 @@ np.set_printoptions(precision=8, suppress=True, linewidth=100)
 slim_lattice = SlimRing(segment1 + segment2 + segment3 + segment4)
 print(Particle.gamma)
 # print(rf_ca.voltage * np.sin(rf_ca.phase))
-# print(2 * rf_ca.voltage * np.sin(rf_ca.phase) / Particle.energy)
+# print(2 * rf_ca.voltage * np.sin(rf_ca.phase) / RefParticle.energy)
 # slim_lattice.solve_damping()
-slim_lattice.track_close_orbit()
+# slim_lattice.track_close_orbit()
 cs_lattice = CSLattice(segment1 + segment2 + segment3 + segment4, 1, 0.01)
 print(cs_lattice)
 print('\n-------------------------------\n')
 print(f'slim sigma_delta = {np.sqrt(slim_lattice.ele_slices[0].beam[5, 5])}')
 
 
-# def emmit_x_beta(current_beam):
-#     return np.sqrt((current_beam[0, 0] - current_beam[0, 5] ** 2 / ) * (current_beam[1, 1] - current_beam[1, 5])
-#                    - (current_beam[0, 1] - current_beam[0, 5] * current_beam[1, 5] / current_beam[5, 5]) ** 2)
+def emmit_x_beta(current_beam):
+    sigma_11_beta = current_beam[0, 0] - current_beam[0, 5] ** 2 / current_beam[5, 5]
+    sigma_22_beta = current_beam[1, 1] - current_beam[1, 5] ** 2 / current_beam[5, 5]
+    sigma_12_beta = current_beam[0, 1] - current_beam[0, 5] * current_beam[1, 5] / current_beam[5, 5]
+    return np.sqrt(sigma_11_beta * sigma_22_beta - sigma_12_beta ** 2)
 
 
 beam = slim_lattice.ele_slices[0].beam
@@ -85,16 +87,18 @@ print(f'emmit x beta = {emmitx_beta}')
 # # print(np.sqrt(beam[4, 4] * beam[5, 5] - beam[4, 5] ** 2))
 # slim_eta = []
 slim_betax = []
-# sigma11 = []
-# sigma33 = []
 s = []
 for ele in slim_lattice.ele_slices:
-#     slim_eta.append(ele.beam[0, 5] / ele.beam[5, 5])
-    slim_betax.append((ele.beam[0, 0] - ele.beam[0, 5]) / emmitx_beta)
-#     sigma11.append(ele.beam[0, 0])
-#     sigma33.append(ele.beam[2, 2])
+    slim_betax.append((ele.beam[0, 0] - ele.beam[0, 5]) / emmit_x_beta(ele.beam))
     s.append(ele.s)
-plt.plot(s, slim_betax, label='slim')
+plt.plot(s, slim_betax, label='slim matrix')
+slim_lattice.track_close_orbit()
+slim_betax = []
+s = []
+for ele in slim_lattice.ele_slices:
+    slim_betax.append((ele.beam[0, 0] - ele.beam[0, 5]) / emmit_x_beta(ele.beam))
+    s.append(ele.s)
+plt.plot(s, slim_betax, label='slim track')
 # # plt.plot(s, sigma33, label='sigma33')
 betax = []
 # etax = []

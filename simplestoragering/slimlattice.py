@@ -1,6 +1,7 @@
-from .components import LineEnd, LENGTH_PRECISION, RFCavity
-from .particles import Particle, Beam7
-from .constants import pi, c, Cl, Cr
+from .components import LineEnd
+from .rfcavity import RFCavity
+from .particles import RefParticle, Beam7
+from .constants import pi, c, Cl, Cr, LENGTH_PRECISION
 import numpy as np
 from copy import deepcopy
 
@@ -33,9 +34,9 @@ class SlimRing(object):
             i2 = i2 + ele.length * ele.h ** 2
             if isinstance(ele, RFCavity):
                 self.rf_cavity = ele
-        self.U0 = Cr * Particle.energy ** 4 * i2 / (2 * pi)
-        # self.T_period = self.length * self.periods_number / (c * Particle.beta)
-        self.f_c = c * Particle.beta / self.length
+        self.U0 = Cr * RefParticle.energy ** 4 * i2 / (2 * pi)
+        # self.T_period = self.length * self.periods_number / (c * RefParticle.beta)
+        self.f_c = c * RefParticle.beta / self.length
         if self.rf_cavity is not None:
             self.rf_cavity.f_c = self.f_c
 
@@ -91,14 +92,14 @@ class SlimRing(object):
             print(f'iterated {j} times, current result is \n    {beam.matrix[:, 6]}\n')
             j += 1
         print(f'closed orbit at s=0 is \n    {xco}\n')
-        print(f'{matrix}\n')
+        # print(f'{matrix}\n')
         eig_val, ring_eig_matrix = np.linalg.eig(matrix)
         self.damping = - np.log(np.abs(eig_val))
         print(f'damping  = {self.damping}')
         print(f'damping time = {1 / self.f_c / self.damping}')
         print('\ncheck:')
         print(f'sum damping = {self.damping[0] + self.damping[2] + self.damping[4]}, '
-              f'2U0/E0 = {2 * self.U0 / Particle.energy}')
+              f'2U0/E0 = {2 * self.U0 / RefParticle.energy}')
         print(f'\nring tune = {np.angle(eig_val) / 2 / pi}')
         print('\n--------------------------------------------\n')
         # solve coefficient
@@ -114,8 +115,8 @@ class SlimRing(object):
                     ave_deco_square[k] += abs(eig_matrix[4, k]) ** 2 * abs(ele.h) ** 3 * ele.length
                     sideways_photons[k] += abs(eig_matrix[2, k]) ** 2 * abs(ele.h) ** 3 * ele.length
         for k in range(6):
-            ave_deco_square[k] = ave_deco_square[k] * Cl * Particle.gamma ** 5 / c / self.damping[k]
-            sideways_photons[k] = sideways_photons[k] * Cl * Particle.gamma ** 3 / c / self.damping[k] / 2
+            ave_deco_square[k] = ave_deco_square[k] * Cl * RefParticle.gamma ** 5 / c / self.damping[k]
+            sideways_photons[k] = sideways_photons[k] * Cl * RefParticle.gamma ** 3 / c / self.damping[k] / 2
         # solve equilibrium beam
         eig_matrix = ring_eig_matrix
         beam = Beam7(xco)
@@ -139,21 +140,18 @@ class SlimRing(object):
             matrix = ele.damping_matrix.dot(matrix)
         eig_val, eig_matrix = np.linalg.eig(matrix)
         self.damping = - np.log(np.abs(eig_val))
-        # print(f'{matrix}\n')
-        # print(f'eig_vals = {eig_val}')
-        # print(f'eig_vector = {eig_matrix}')
         print(f'damping  = {self.damping}')
         print(f'damping time = {1 / self.f_c / self.damping}')
         print('\ncheck:')
         print(f'sum damping = {self.damping[0] + self.damping[2] + self.damping[4]}, '
-              f'2U0/E0 = {2 * self.U0 / Particle.energy}')
+              f'2U0/E0 = {2 * self.U0 / RefParticle.energy}')
         print('\n--------------------------------------------\n')
 
     def along_ring(self):
         """solve tune along the ring. use matrix"""
         matrix = np.identity(6)
         for ele in self.ele_slices:
-            matrix = ele.damping_matrix.dot(matrix)
+            matrix = ele.matrix.dot(matrix)
         eig_val, ring_eig_matrix = np.linalg.eig(matrix)  # Ei is eig_matrix[:, i]  E_ki is eig_matrix[i, k]
         print(f'ring tune = {np.angle(eig_val) / 2 / pi}\n')
         # solve average decomposition and tune along the lattice
@@ -161,14 +159,14 @@ class SlimRing(object):
         sideways_photons = np.zeros(6)
         eig_matrix = ring_eig_matrix
         for ele in self.ele_slices:
-            eig_matrix = ele.damping_matrix.dot(eig_matrix)
+            eig_matrix = ele.matrix.dot(eig_matrix)
             if ele.h != 0:
                 for k in range(6):
                     ave_deco_square[k] += abs(eig_matrix[4, k]) ** 2 * abs(ele.h) ** 3 * ele.length
                     sideways_photons[k] += abs(eig_matrix[2, k]) ** 2 * abs(ele.h) ** 3 * ele.length
         for k in range(6):
-            ave_deco_square[k] = ave_deco_square[k] * Cl * Particle.gamma ** 5 / c / self.damping[k]
-            sideways_photons[k] = sideways_photons[k] * Cl * Particle.gamma ** 3 / c / self.damping[k] / 2
+            ave_deco_square[k] = ave_deco_square[k] * Cl * RefParticle.gamma ** 5 / c / self.damping[k]
+            sideways_photons[k] = sideways_photons[k] * Cl * RefParticle.gamma ** 3 / c / self.damping[k] / 2
         # solve equilibrium beam
         eig_matrix = ring_eig_matrix
         for ele in self.ele_slices:
@@ -182,7 +180,7 @@ class SlimRing(object):
                 for j in range(i):
                     equilibrium_beam[i, j] = equilibrium_beam[j, i]
             ele.beam = deepcopy(equilibrium_beam)
-            eig_matrix = ele.damping_matrix.dot(eig_matrix)
+            eig_matrix = ele.matrix.dot(eig_matrix)
 
     def matrix_output(self, file_name: str = 'matrix.txt'):
         """output uncoupled matrix for each element and contained matrix"""

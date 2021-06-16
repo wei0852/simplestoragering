@@ -13,7 +13,6 @@ def calculate_constants():
 
     h_bar = physical_constants['natural unit of action in eV s'][0]
     re = physical_constants['classical electron radius'][0]
-    me = physical_constants['electron mass energy equivalent in MeV'][0]
     # Cr = q ** 2 / (3 * epsilon_0 * (m * c**2) ** 4)   p.221
     cr = 4 * pi * re / (3 * me ** 3)  # this is only for electrons. unit m/MeV**3
     cq = 55 * h_bar * c / (32 * 3 ** 0.5 * me * 1e6)  # p.232  unit s
@@ -28,6 +27,7 @@ def calculate_constants():
     return cr, cq, cl
 
 
+me = physical_constants['electron mass energy equivalent in MeV'][0]
 Cr, Cq, Cl = calculate_constants()
 LENGTH_PRECISION = 10
 
