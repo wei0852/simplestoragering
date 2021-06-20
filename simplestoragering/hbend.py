@@ -1,6 +1,6 @@
 from .components import Element
 from .constants import Cr, LENGTH_PRECISION, pi
-from .particles import RefParticle, Beam7
+from .particles import RefParticle, Beam7, calculate_beta
 from .exceptions import ParticleLost
 from copy import deepcopy
 import numpy as np
@@ -137,9 +137,11 @@ class HBend(Element):
 
     def real_track(self, beam: Beam7) -> Beam7:
         [x0, px0, y0, py0, z0, delta0] = beam.get_particle()
-        delta1 = delta0 - (delta0 + 1) ** 2 * Cr * RefParticle.energy ** 3 * self.theta ** 2 / 2 / pi / self.length
+        # delta1 = delta0 - (delta0 + 1) ** 2 * Cr * RefParticle.energy ** 3 * self.theta ** 2 / 2 / pi / self.length
+        # delta1 = (delta0 - (delta0 * RefParticle.beta + 1) ** 2 * Cr * RefParticle.energy ** 3 * self.theta ** 2 /
+        #           2 / pi / self.length / RefParticle.beta)
         # use average energy
-        delta01 = (delta0 + delta1) / 2
+        delta01 = (delta0 )
         d1 = np.sqrt(1 + 2 * delta01 / RefParticle.beta + delta01 ** 2)
         ds = self.length
         # entrance
@@ -189,7 +191,14 @@ class HBend(Element):
         z1 = (z0 + c0 + c1 * x0 + c2 * px1 + c11 * x0 * x0 + c12 * x0 * px1 + c22 * px1 * px1 + c33 * y0 * y0 +
               c34 * y0 * py1 + c44 * py1 * py1)
         # damping
-        e1_div_e0 = (delta1 + 1) / (delta0 + 1)
+        delta_ct = (self.length / RefParticle.beta - (z1 - z0))
+        current_beta = calculate_beta(delta0)
+        e_loss_div_e0 = ((delta0 * RefParticle.beta + 1) ** 2 * Cr * RefParticle.energy ** 3 * h ** 2 *
+                         RefParticle.beta ** 2 * current_beta ** 2 / 2 / pi) * delta_ct
+        delta1 = (delta0 - e_loss_div_e0 / RefParticle.beta)
+        # e1_div_e0 = (delta1 + 1) / (delta0 + 1)  # approx
+        e1_div_e0 = np.sqrt(((1 + delta1 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2) /
+                            ((1 + delta0 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2))
         px2 = px2 * e1_div_e0
         py2 = py2 * e1_div_e0
         # exit

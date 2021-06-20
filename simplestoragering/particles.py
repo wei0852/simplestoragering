@@ -28,7 +28,7 @@ class Beam7(object):
 
     def __init__(self, particle=None):
         self.matrix = None
-        self.precision = 1e-9  # the precision must be small
+        self.precision = 1e-8  # the precision must be small
         if particle is not None:
             self.init_particle(particle)
 
@@ -54,6 +54,7 @@ class Beam7(object):
         p = np.zeros(6)
         for i in range(6):
             p[i] = self.matrix[i, 6]
+        p[4] = - p[4]
         return p
 
     def set_dp(self, dp):
@@ -65,3 +66,11 @@ class Beam7(object):
         for i in range(6):
             matrix[:, i] = (self.matrix[:, i] - self.matrix[:, 6]) / self.precision
         return matrix
+
+
+def calculate_beta(delta):
+    """calculate beta of particle"""
+
+    gamma = RefParticle.gamma * (delta * RefParticle.beta + 1)
+    beta = np.sqrt(1 - 1 / gamma ** 2)
+    return beta

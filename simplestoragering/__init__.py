@@ -15,8 +15,10 @@ import simplestoragering.hbend
 import simplestoragering.quadrupole
 import simplestoragering.sextupole
 import simplestoragering.rfcavity
+import simplestoragering.plotlattice
+import simplestoragering.functions
 
-Particle = simplestoragering.particles.RefParticle
+RefParticle = simplestoragering.particles.RefParticle
 Drift = simplestoragering.drift.Drift
 HBend = simplestoragering.hbend.HBend
 Quadrupole = simplestoragering.quadrupole.Quadrupole
@@ -24,4 +26,12 @@ Sextupole = simplestoragering.sextupole.Sextupole
 RFCavity = simplestoragering.rfcavity.RFCavity
 CSLattice = cslattice.CSLattice
 SlimRing = slimlattice.SlimRing
+plot_lattice = plotlattice.plot_lattice
+plot_with_background = plotlattice.plot_with_background
+get_col = plotlattice.get_col
 
+# other function
+
+compute_twiss_of_slim_method = simplestoragering.slimlattice.compute_twiss_of_slim_method
+calculate_beta = simplestoragering.particles.calculate_beta
+compute_transfer_matrix_by_tracking = simplestoragering.functions.compute_transfer_matrix_by_tracking

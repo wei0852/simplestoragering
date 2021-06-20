@@ -6,7 +6,7 @@ import time
 
 qua_slice = 23
 
-Particle.set_energy(800.)
+RefParticle.set_energy(800.)
 DC1 = Drift('DC1', 1.943675)
 BS1 = Drift('BS1', 0.060040)
 DC2 = Drift('DC2', 0.116855)
@@ -56,60 +56,84 @@ segment4i = [DC1, BS1, S1, DC2, Q08, DC3, S2, DQS1, Q07, BQ2, DC4, BEND, DC5, BQ
 np.set_printoptions(precision=8, suppress=True, linewidth=100)
 
 slim_lattice = SlimRing(segment1 + segment2 + segment3 + segment4)
-print(Particle.gamma)
+# plot_lattice(slim_lattice, ['closed_orbit_z', 'closed_orbit_delta'])
+# slim_lattice.along_ring()
+# betax1, betay1, etax1 = compute_twiss_of_slim_method(slim_lattice)
+# slim_lattice.along_ring_damping_matrix()
+# betax2, betay2, eta2 = compute_twiss_of_slim_method(slim_lattice)
+slim_lattice.track_close_orbit()
+delta = get_col(slim_lattice, 'closed_orbit_delta')
+print(f'2U/E0 = {(max(delta) - min(delta)) * RefParticle.beta * 2}')
+betax1, betay1, etax1 = compute_twiss_of_slim_method(slim_lattice)
+s = get_col(slim_lattice, 's')
+plt.plot(s, betax1, label='betax of tracking')
+# plt.plot(s, betax2, label='damping betax')
+plt.plot(s, betay1, label='betay of tracking')
+# plt.plot(s, betay2, label='damping betay')
+plt.plot(s, [i * 10 for i in etax1], label='eta of track')
+# plt.plot(s, [i * 10 for i in eta2], label='damping eta')
+cs_lattice = CSLattice(segment1 + segment2 + segment3 + segment4i, 1, 0.01)
+plt.plot(get_col(cs_lattice, 's'), get_col(cs_lattice, 'betax'), label='cs betax')
+plt.plot(get_col(cs_lattice, 's'), get_col(cs_lattice, 'betay'), label='cs betay')
+plt.plot(get_col(cs_lattice, 's'), [i * 10 for i in get_col(cs_lattice, 'etax')], label='cs eta')
+plt.legend()
+plt.title('twiss')
+plt.show()
+# print(Particle.gamma)
 # print(rf_ca.voltage * np.sin(rf_ca.phase))
 # print(2 * rf_ca.voltage * np.sin(rf_ca.phase) / RefParticle.energy)
 # slim_lattice.solve_damping()
-# slim_lattice.track_close_orbit()
-cs_lattice = CSLattice(segment1 + segment2 + segment3 + segment4, 1, 0.01)
 print(cs_lattice)
 print('\n-------------------------------\n')
+plot_lattice(slim_lattice, ['closed_orbit_z', 'closed_orbit_delta'])
 print(f'slim sigma_delta = {np.sqrt(slim_lattice.ele_slices[0].beam[5, 5])}')
+# delta_list = get_col(slim_lattice, 'closed_orbit_delta')
+# print(2 * (max(delta_list) - min(delta_list)))
+# plot_lattice(slim_lattice, ['closed_orbit_x', 'closed_orbit_px', 'closed_orbit_delta'])
 
-
-def emmit_x_beta(current_beam):
-    sigma_11_beta = current_beam[0, 0] - current_beam[0, 5] ** 2 / current_beam[5, 5]
-    sigma_22_beta = current_beam[1, 1] - current_beam[1, 5] ** 2 / current_beam[5, 5]
-    sigma_12_beta = current_beam[0, 1] - current_beam[0, 5] * current_beam[1, 5] / current_beam[5, 5]
-    return np.sqrt(sigma_11_beta * sigma_22_beta - sigma_12_beta ** 2)
-
-
+# def emmit_x_beta(current_beam):
+#     sigma_11_beta = current_beam[0, 0] - current_beam[0, 5] ** 2 / current_beam[5, 5]
+#     sigma_22_beta = current_beam[1, 1] - current_beam[1, 5] ** 2 / current_beam[5, 5]
+#     sigma_12_beta = current_beam[0, 1] - current_beam[0, 5] * current_beam[1, 5] / current_beam[5, 5]
+#     return np.sqrt(sigma_11_beta * sigma_22_beta - sigma_12_beta ** 2)
+#
+#
 beam = slim_lattice.ele_slices[0].beam
-emmitx = np.sqrt(beam[0, 0] * beam[1, 1] - beam[0, 1] ** 2)
-print(f'emmit x = {emmitx}')
+# emmitx = np.sqrt(beam[0, 0] * beam[1, 1] - beam[0, 1] ** 2)
+# print(f'emmit x = {emmitx}')
 emmitx_beta = np.sqrt((beam[0, 0] - beam[0, 5] ** 2 / beam[5, 5]) * (beam[1, 1] - beam[1, 5] ** 2 / beam[5, 5])
                       - (beam[0, 1] - beam[0, 5] * beam[1, 5] / beam[5, 5]) ** 2)
-# # emmity = np.sqrt(beam[2, 2] * beam[3, 3] - beam[2, 3] ** 2)
-# emmity_beta = np.sqrt((beam[2, 2] - beam[2, 5] ** 2 / beam[5, 5]) * (beam[3, 3] - beam[3, 5] ** 2 / beam[5, 5])
-#                       - (beam[2, 3] - beam[2, 5] * beam[3, 5] / beam[5, 5]) ** 2)
+emmity = np.sqrt(beam[2, 2] * beam[3, 3] - beam[2, 3] ** 2)
+# # emmity_beta = np.sqrt((beam[2, 2] - beam[2, 5] ** 2 / beam[5, 5]) * (beam[3, 3] - beam[3, 5] ** 2 / beam[5, 5])
+# #                       - (beam[2, 3] - beam[2, 5] * beam[3, 5] / beam[5, 5]) ** 2)
 print(f'emmit x beta = {emmitx_beta}')
-# print(f'emmit xy = {emmity * emmitx}')
-# # print(np.sqrt(beam[4, 4] * beam[5, 5] - beam[4, 5] ** 2))
-# slim_eta = []
-slim_betax = []
-s = []
-for ele in slim_lattice.ele_slices:
-    slim_betax.append((ele.beam[0, 0] - ele.beam[0, 5]) / emmit_x_beta(ele.beam))
-    s.append(ele.s)
-plt.plot(s, slim_betax, label='slim matrix')
-slim_lattice.track_close_orbit()
-slim_betax = []
-s = []
-for ele in slim_lattice.ele_slices:
-    slim_betax.append((ele.beam[0, 0] - ele.beam[0, 5]) / emmit_x_beta(ele.beam))
-    s.append(ele.s)
-plt.plot(s, slim_betax, label='slim track')
-# # plt.plot(s, sigma33, label='sigma33')
-betax = []
-# etax = []
-s1 = []
-for ele in cs_lattice.ele_slices:
-    betax.append(ele.betax)
-#     etax.append(ele.etax)
-    s1.append(ele.s)
-plt.plot(s1, betax, label='cs')
-plt.legend()
-plt.title('betax')
-plt.show()
+print(f'emmit xy = {emmity + emmitx_beta}')
+# # # print(np.sqrt(beam[4, 4] * beam[5, 5] - beam[4, 5] ** 2))
+# # slim_eta = []
+# slim_betax = []
+# s = []
+# for ele in slim_lattice.ele_slices:
+#     slim_betax.append((ele.beam[0, 0] - ele.beam[0, 5]) / emmit_x_beta(ele.beam))
+#     s.append(ele.s)
+# plt.plot(s, slim_betax, label='slim matrix')
+# slim_lattice.track_close_orbit()
+# slim_betax = []
+# s = []
+# for ele in slim_lattice.ele_slices:
+#     slim_betax.append((ele.beam[0, 0] - ele.beam[0, 5]) / emmit_x_beta(ele.beam))
+#     s.append(ele.s)
+# plt.plot(s, slim_betax, label='slim track')
+# # # plt.plot(s, sigma33, label='sigma33')
+# betax = []
+# # etax = []
+# s1 = []
+# for ele in cs_lattice.ele_slices:
+#     betax.append(ele.betax)
+# #     etax.append(ele.etax)
+#     s1.append(ele.s)
+# plt.plot(s1, betax, label='cs')
+# plt.legend()
+# plt.title('betax')
+# plt.show()
 
 

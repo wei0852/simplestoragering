@@ -25,7 +25,7 @@ class SlimRing(object):
         self.__slice()
         self.solve_closed_orbit()
         self.solve_damping()
-        self.along_ring()
+        # self.along_ring()
 
     def __set_rf(self):
         """solve U0 and set rf parameters"""
@@ -182,6 +182,41 @@ class SlimRing(object):
             ele.beam = deepcopy(equilibrium_beam)
             eig_matrix = ele.matrix.dot(eig_matrix)
 
+    def along_ring_damping_matrix(self):
+        """solve tune along the ring. use matrix"""
+        matrix = np.identity(6)
+        for ele in self.ele_slices:
+            matrix = ele.damping_matrix.dot(matrix)
+        eig_val, ring_eig_matrix = np.linalg.eig(matrix)  # Ei is eig_matrix[:, i]  E_ki is eig_matrix[i, k]
+        print(f'ring tune = {np.angle(eig_val) / 2 / pi}\n')
+        # solve average decomposition and tune along the lattice
+        ave_deco_square = np.zeros(6)
+        sideways_photons = np.zeros(6)
+        eig_matrix = ring_eig_matrix
+        for ele in self.ele_slices:
+            eig_matrix = ele.damping_matrix.dot(eig_matrix)
+            if ele.h != 0:
+                for k in range(6):
+                    ave_deco_square[k] += abs(eig_matrix[4, k]) ** 2 * abs(ele.h) ** 3 * ele.length
+                    sideways_photons[k] += abs(eig_matrix[2, k]) ** 2 * abs(ele.h) ** 3 * ele.length
+        for k in range(6):
+            ave_deco_square[k] = ave_deco_square[k] * Cl * RefParticle.gamma ** 5 / c / self.damping[k]
+            sideways_photons[k] = sideways_photons[k] * Cl * RefParticle.gamma ** 3 / c / self.damping[k] / 2
+        # solve equilibrium beam
+        eig_matrix = ring_eig_matrix
+        for ele in self.ele_slices:
+            equilibrium_beam = np.zeros((6, 6))
+            for j in range(6):
+                for i in range(j + 1):
+                    for k in range(6):
+                        equilibrium_beam[i, j] += ((ave_deco_square[k] + sideways_photons[k]) *
+                                                   np.real(eig_matrix[i, k] * np.conj(eig_matrix[j, k])))
+            for i in range(6):
+                for j in range(i):
+                    equilibrium_beam[i, j] = equilibrium_beam[j, i]
+            ele.beam = deepcopy(equilibrium_beam)
+            eig_matrix = ele.damping_matrix.dot(eig_matrix)
+
     def matrix_output(self, file_name: str = 'matrix.txt'):
         """output uncoupled matrix for each element and contained matrix"""
 
@@ -240,3 +275,31 @@ class SlimRing(object):
             location = round(location + ele.length, LENGTH_PRECISION)
             last_identifier = ele.identifier
         file.close()
+
+
+def compute_twiss_of_slim_method(slim_ring: SlimRing):
+    """compute twiss parameters according to equilibrium beam matrix"""
+
+    betax_list = []
+    etax_list = []
+    betay_list = []
+    for ele in slim_ring.ele_slices:
+        betax, betay, etax = __compute_twiss_from_beam_matrix(ele.beam)
+        betax_list.append(betax)
+        betay_list.append(betay)
+        etax_list.append(etax)
+    return betax_list, betay_list, etax_list
+
+
+def __compute_twiss_from_beam_matrix(current_beam):
+    etax = current_beam[0, 5] / current_beam[5, 5]
+    etaxp = current_beam[1, 5] / current_beam[5, 5]
+    sigma_11_beta = current_beam[0, 0] - current_beam[5, 5] * etax ** 2
+    sigma_22_beta = current_beam[1, 1] - current_beam[5, 5] * etaxp ** 2
+    sigma_12_beta = current_beam[0, 1] - current_beam[5, 5] * etaxp * etax
+    emitt_x_beta = np.sqrt(sigma_11_beta * sigma_22_beta - sigma_12_beta ** 2)
+    betax = sigma_11_beta / emitt_x_beta
+    # vertical
+    emitt_y = np.sqrt(current_beam[2, 2] * current_beam[3, 3] - current_beam[2, 3] ** 2)
+    betay = current_beam[2, 2] / emitt_y
+    return betax, betay, etax

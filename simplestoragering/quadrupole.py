@@ -98,10 +98,12 @@ class Quadrupole(Element):
         # kick
         px1 = px0 - self.k1 * x1 * self.length
         py1 = py0 + self.k1 * y1 * self.length
-        # damping  ,  when beta approx 1
-        delta1 = (delta0 - (1 + delta0) ** 2 * Cr * RefParticle.energy ** 3 * self.k1 ** 2 *
-                  self.length * (x1 ** 2 + y1 ** 2) / 2 / pi)
-        e1_div_e0 = (delta1 + 1) / (delta0 + 1)
+        # damping
+        delta1 = (delta0 - (1 + delta0 * RefParticle.beta) ** 2 * Cr * RefParticle.energy ** 3 * self.k1 ** 2 *
+                  self.length * (x1 ** 2 + y1 ** 2) / 2 / pi / RefParticle.beta)
+        # e1_div_e0 = (delta1 + 1) / (delta0 + 1)
+        e1_div_e0 = np.sqrt(((1 + delta1 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2) /
+                            ((1 + delta0 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2))
         px1 = px1 * e1_div_e0
         py1 = py1 * e1_div_e0
         # drift
