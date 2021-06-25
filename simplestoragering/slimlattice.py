@@ -1,5 +1,4 @@
 from .components import LineEnd
-from .rfcavity import RFCavity
 from .particles import RefParticle, Beam7
 from .constants import pi, c, Cl, Cr, LENGTH_PRECISION
 import numpy as np
@@ -7,38 +6,31 @@ from copy import deepcopy
 
 
 class SlimRing(object):
-    """lattice object, solve by slim method"""
+    """lattice object, solved by slim method"""
 
     def __init__(self, ele_list: list):
         self.length = 0
         self.elements = []
         for ele in ele_list:
-            # ele.s = self.length
             self.elements.append(ele)
             self.length = round(self.length + ele.length, LENGTH_PRECISION)
-        self.rf_cavity = None
         self.ele_slices = None
         self.damping = None
         self.U0 = 0
         self.f_c = 0
-        self.__set_rf()
+        self.__set_u0_and_fc()
         self.__slice()
         self.solve_closed_orbit()
         self.solve_damping()
         # self.along_ring()
 
-    def __set_rf(self):
+    def __set_u0_and_fc(self):
         """solve U0 and set rf parameters"""
         i2 = 0
         for ele in self.elements:
             i2 = i2 + ele.length * ele.h ** 2
-            if isinstance(ele, RFCavity):
-                self.rf_cavity = ele
         self.U0 = Cr * RefParticle.energy ** 4 * i2 / (2 * pi)
-        # self.T_period = self.length * self.periods_number / (c * RefParticle.beta)
         self.f_c = c * RefParticle.beta / self.length
-        if self.rf_cavity is not None:
-            self.rf_cavity.f_c = self.f_c
 
     def __slice(self):
         self.ele_slices = []
@@ -65,7 +57,7 @@ class SlimRing(object):
             coefficient_matrix = (matrix7 - np.identity(7))[0: 6, 0: 6]
             result_vec = -matrix7[0: 6, 6].T
             x0 = np.linalg.solve(coefficient_matrix, result_vec)
-            print(f'\niterated {i} times, current result is: \n    {x0}')  # TODO: this is not iteration
+            print(f'\niterated {i} times, current result is: \n    {x0}')
             i += 1
             if max(abs(x0 - self.ele_slices[0].closed_orbit)) < 1e-8:
                 break
@@ -77,7 +69,6 @@ class SlimRing(object):
         matrix = np.zeros([6, 6])
         resdl = 1
         j = 1
-        beam = Beam7(xco)
         while j <= 10 and resdl > 1e-16:
             beam = Beam7(xco)
             for ele in self.ele_slices:

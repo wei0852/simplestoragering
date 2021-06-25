@@ -28,7 +28,7 @@ class Beam7(object):
 
     def __init__(self, particle=None):
         self.matrix = None
-        self.precision = 1e-8  # the precision must be small
+        self.precision = 1e-9  # the precision must be small
         if particle is not None:
             self.init_particle(particle)
 

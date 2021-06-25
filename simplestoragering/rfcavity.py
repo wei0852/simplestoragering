@@ -16,11 +16,6 @@ class RFCavity(Element):
         self.f_rf = frequency
         self.phase = phase
         self.omega_rf = 2 * pi * self.f_rf
-        self.f_c = 0
-
-    @property
-    def harmonic_number(self):
-        return self.f_rf / self.f_c
 
     @property
     def matrix(self):
