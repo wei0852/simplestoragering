@@ -20,8 +20,8 @@ class SlimRing(object):
         self.f_c = 0
         self.__set_u0_and_fc()
         self.__slice()
-        self.solve_closed_orbit()
-        self.solve_damping()
+        # self.solve_closed_orbit()
+        # self.solve_damping()
         # self.along_ring()
 
     def __set_u0_and_fc(self):

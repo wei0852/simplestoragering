@@ -5,6 +5,7 @@ from simplestoragering import *
 import time
 
 qua_slice = 23
+sext_lice = 1
 
 RefParticle.set_energy(800.)
 DC1 = Drift('DC1', 1.943675)
@@ -28,10 +29,10 @@ Q06 = Quadrupole('Q06', 0.317220, 2.7206, n_slices=qua_slice)
 Q07 = Quadrupole('Q07', 0.217370, -2.7852, n_slices=qua_slice)
 Q08 = Quadrupole('Q08', 0.217370, 3.6109, n_slices=qua_slice)
 
-S1 = Sextupole('S1', 0.1240, 8.006)
-S2 = Sextupole('S2', 0.1172, -12.738)
-S3 = Sextupole('S3', 0.1172, 50.516)
-S4 = Sextupole('S4', 0.1240, -74.214)
+S1 = Sextupole('S1', 0.1240, 8.006, n_slices=sext_lice)
+S2 = Sextupole('S2', 0.1172, -12.738, n_slices=sext_lice)
+S3 = Sextupole('S3', 0.1172, 50.516, n_slices=sext_lice)
+S4 = Sextupole('S4', 0.1240, -74.214, n_slices=sext_lice)
 
 BEND = HBend('BEND', 1.7, 0.7853981634, 0.3926990817, 0.3926990817, n_slices=300)
 
@@ -72,7 +73,7 @@ plt.plot(s, betay1, label='betay of tracking')
 # plt.plot(s, betay2, label='damping betay')
 plt.plot(s, [i * 10 for i in etax1], label='eta of track')
 # plt.plot(s, [i * 10 for i in eta2], label='damping eta')
-cs_lattice = CSLattice(segment1 + segment2 + segment3 + segment4i, 1, 0.01)
+cs_lattice = CSLattice(segment1 + segment2 + segment3 + segment4, 1, 0.01)
 plt.plot(get_col(cs_lattice, 's'), get_col(cs_lattice, 'betax'), label='cs betax')
 plt.plot(get_col(cs_lattice, 's'), get_col(cs_lattice, 'betay'), label='cs betay')
 plt.plot(get_col(cs_lattice, 's'), [i * 10 for i in get_col(cs_lattice, 'etax')], label='cs eta')

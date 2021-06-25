@@ -31,6 +31,7 @@ class CSLattice(object):
         # solve twiss
         self.nux = None
         self.nuy = None
+        self.nuz = None
         self.__solve_along()
         # integration
         self.xi_x = None
@@ -165,8 +166,6 @@ class CSLattice(object):
         self.emittance = Cq * RefParticle.gamma * RefParticle.gamma * self.I5 / (self.Jx * self.I2)
         self.U0 = Cr * RefParticle.energy ** 4 * self.I2 / (2 * pi)
         self.f_c = c * RefParticle.beta / (self.length * self.periods_number)
-        if self.rf_cavity is not None:
-            self.rf_cavity.f_c = self.f_c
         self.tau0 = 2 * RefParticle.energy / self.U0 / self.f_c
         self.tau_s = self.tau0 / self.Js
         self.tau_x = self.tau0 / self.Jx
@@ -175,6 +174,11 @@ class CSLattice(object):
         self.emitt_x = self.emittance / (1 + self.coup)
         self.emitt_y = self.emittance * self.coup / (1 + self.coup)
         self.etap = self.alpha - 1 / RefParticle.gamma ** 2  # phase slip factor
+        if self.rf_cavity is not None:
+            self.rf_cavity.f_c = self.f_c
+            self.nuz = (self.rf_cavity.voltage * self.rf_cavity.omega_rf * abs(np.cos(self.rf_cavity.phase) * self.etap)
+                        * self.length / RefParticle.energy / c) ** 0.5 / 2 / pi
+            self.sigma_z = self.sigma_e * abs(self.etap) * self.length / (2 * pi * self.nuz)
 
     def matrix_output(self, file_name: str = 'matrix.txt'):
         """output uncoupled matrix for each element and contained matrix"""
@@ -231,9 +235,10 @@ class CSLattice(object):
         val += ("\ntau_e =     " + str(self.tau_s * 1e3) + " msec")
         val += ("\ntau_x =     " + str(self.tau_x * 1e3) + " msec")
         val += ("\ntau_y =     " + str(self.tau_y * 1e3) + " msec")
-        val += ("\nxi_x =     " + str(self.xi_x))
-        val += ("\nxi_y =     " + str(self.xi_y))
+        val += ("\nxi_x =      " + str(self.xi_x))
+        val += ("\nxi_y =      " + str(self.xi_y))
         if self.sigma_z is not None:
+            val += ("\nnuz =       " + str(self.nuz))
             val += ("\nsigma_z =   " + str(self.sigma_z))
         return val
 
