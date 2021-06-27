@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from .particles import Beam7
 from numpy import zeros
 

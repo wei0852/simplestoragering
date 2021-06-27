@@ -1,4 +1,6 @@
-"""this file is unnecessary, I use these functions to quickly visualize lattice data when developing my code.
+# -*- coding: utf-8 -*-
+"""
+this file is unnecessary, I use these functions to quickly visualize lattice data when developing my code.
 """
 
 import matplotlib.pyplot as plt

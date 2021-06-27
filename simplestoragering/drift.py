@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from .components import Element
 from .particles import RefParticle, Beam7
 import numpy as np

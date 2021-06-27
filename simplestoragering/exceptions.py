@@ -1,6 +1,4 @@
-"""exceptions"""
-
-
+# -*- coding: utf-8 -*-
 class UnfinishedWork(Exception):
     """user's exception for marking the unfinished work"""
 

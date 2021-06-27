@@ -1,4 +1,6 @@
-"""simple storage ring
+# -*- coding: utf-8 -*-
+"""
+simple storage ring
 define different components:
     Drift, HBend, Quadrupole, Sextupole, RFCavity
 two method to solve lattice:

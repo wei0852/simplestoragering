@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from .constants import me, c
 import numpy as np
 

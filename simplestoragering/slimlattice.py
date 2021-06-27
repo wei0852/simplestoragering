@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from .components import LineEnd
 from .particles import RefParticle, Beam7
 from .constants import pi, c, Cl, Cr, LENGTH_PRECISION

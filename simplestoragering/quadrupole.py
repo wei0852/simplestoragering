@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from .components import Element
 from .constants import Cr, pi
 from .particles import RefParticle, Beam7

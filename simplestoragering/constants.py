@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """constants:
 pi
 c: speed of light
