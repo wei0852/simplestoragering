@@ -1,7 +1,6 @@
 from .components import Element
 from .constants import Cr, LENGTH_PRECISION, pi
 from .particles import RefParticle, Beam7, calculate_beta
-from .exceptions import ParticleLost
 from copy import deepcopy
 import numpy as np
 
@@ -37,14 +36,6 @@ class HBend(Element):
                                [0, 0, -np.tan(self.theta_in) * self.h, 1, 0, 0],
                                [0, 0, 0, 0, 1, 0],
                                [0, 0, 0, 0, 0, 1]])
-        # middle_section = np.array([[cx, sin_theta / self.h, 0, 0, 0, (1 - cx) / h_beta],
-        #                            [-sin_theta * self.h, cx, 0, 0, 0, sin_theta / RefParticle.beta],
-        #                            [0, 0, 1, self.length, 0, 0],
-        #                            [0, 0, 0, 1, 0, 0],
-        #                            [- np.sin(self.theta), - (1 - cx) / h_beta, 0, 0, 1,
-        #                             - self.length + sin_theta / h_beta / RefParticle.beta],
-        #                            [0, 0, 0, 0, 0, 1]])
-        # according to elegant result
         middle_section = np.array([[cx, sin_theta / self.h, 0, 0, 0, (1 - cx) / h_beta],
                                    [-sin_theta * self.h, cx, 0, 0, 0, sin_theta / RefParticle.beta],
                                    [0, 0, 1, self.length, 0, 0],
@@ -208,7 +199,10 @@ class HBend(Element):
         return beam
 
     def slice(self, initial_s, identifier):
-        """slice component to element list, return [ele_list, final_z]"""
+        """slice component to element list, return [ele_list, final_z]
+
+        this method is rewritten because of the edge angles."""
+
         ele_list = []
         current_s = initial_s
         ele = deepcopy(self)

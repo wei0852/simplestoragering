@@ -15,7 +15,6 @@ class CSLattice(object):
         self.elements = []
         self.rf_cavity = None
         for ele in ele_list:
-            # ele.s = self.length
             if isinstance(ele, RFCavity):
                 self.rf_cavity = ele
             self.elements.append(ele)
@@ -241,4 +240,3 @@ class CSLattice(object):
             val += ("\nnuz =       " + str(self.nuz))
             val += ("\nsigma_z =   " + str(self.sigma_z))
         return val
-

@@ -1,3 +1,6 @@
+"""this file is unnecessary, I use these functions to quickly visualize lattice data when developing my code.
+"""
+
 import matplotlib.pyplot as plt
 from .slimlattice import SlimRing
 from .cslattice import CSLattice
@@ -147,6 +150,7 @@ def plot_with_layout(lattice, parameters):
 
 
 def plot_with_background(s, y: dict, lattice):
+    """plot with layout background."""
     layout_s, layout_data = get_layout(lattice)
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
@@ -156,4 +160,3 @@ def plot_with_background(s, y: dict, lattice):
     plt.legend()
     ax1.fill(layout_s, layout_data, color='#cccccc')
     plt.show()
-

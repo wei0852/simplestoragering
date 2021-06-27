@@ -111,10 +111,10 @@ class Sextupole(Element):
         py1 = py0 + x1 * y1 * k2 * ds * 2
         # damping, when beta approx 1
         # delta1 = delta0 - (delta0 + 1) ** 2 * (Cr * RefParticle.energy ** 3 * self.k2 ** 2 * self.length *
-        #                                        (x1 ** 2 + y1 ** 2) ** 2 / 8 / pi)
+        #                                        (x1 ** 2 + y1 ** 2) ** 2 / 8 / pi)     # beta0 \approx 1
         delta1 = (delta0 - (delta0 * RefParticle.beta + 1) ** 2 * Cr * RefParticle.energy ** 3 * self.k2 ** 2 *
                   self.length * (x1 ** 2 + y1 ** 2) ** 2 / 8 / pi / RefParticle.beta)
-        # e1_div_e0 = (delta1 + 1) / (delta0 + 1)
+        # e1_div_e0 = (delta1 + 1) / (delta0 + 1)  # approximation
         e1_div_e0 = np.sqrt(((1 + delta1 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2) /
                             ((1 + delta0 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2))
         px1 = px1 * e1_div_e0

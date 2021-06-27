@@ -4,8 +4,8 @@ import numpy as np
 from simplestoragering import *
 import time
 
-qua_slice = 23
-sext_lice = 1
+qua_slice = 230
+sext_lice = 100
 
 RefParticle.set_energy(800.)
 DC1 = Drift('DC1', 1.943675)
@@ -58,24 +58,24 @@ np.set_printoptions(precision=8, suppress=True, linewidth=100)
 
 slim_lattice = SlimRing(segment1 + segment2 + segment3 + segment4)
 # plot_lattice(slim_lattice, ['closed_orbit_z', 'closed_orbit_delta'])
-slim_lattice.solve_closed_orbit()
-slim_lattice.solve_damping()
-slim_lattice.along_ring()
-betax2, betay2, etax2 = compute_twiss_of_slim_method(slim_lattice)
+slim_lattice.compute_closed_orbit_by_matrix()
+slim_lattice.damping_by_matrix()
+slim_lattice.equilibrium_beam_by_matrix()
+# betax2, betay2, etax2 = compute_twiss_of_slim_method(slim_lattice)
 # slim_lattice.along_ring_damping_matrix()
 # betax2, betay2, eta2 = compute_twiss_of_slim_method(slim_lattice)
-slim_lattice.track_closed_orbit()
-slim_lattice.track_equilibrium_beam_symplectic()
+# slim_lattice.track_closed_orbit()
+slim_lattice.equilibrium_beam_by_tracking()
 delta = get_col(slim_lattice, 'closed_orbit_delta')
 print(f'2U/E0 = {(max(delta) - min(delta)) * RefParticle.beta * 2}')
 betax1, betay1, etax1 = compute_twiss_of_slim_method(slim_lattice)
 s = get_col(slim_lattice, 's')
 plt.plot(s, betax1, label='betax of tracking')
-plt.plot(s, betax2, label='matrix betax')
+# plt.plot(s, betax2, label='matrix betax')
 plt.plot(s, betay1, label='betay of tracking')
-plt.plot(s, betay2, label='matrix betay')
+# plt.plot(s, betay2, label='matrix betay')
 plt.plot(s, [i * 10 for i in etax1], label='eta of track')
-plt.plot(s, [i * 10 for i in etax2], label='matrix eta')
+# plt.plot(s, [i * 10 for i in etax2], label='matrix eta')
 cs_lattice = CSLattice(segment1 + segment2 + segment3 + segment4, 1, 0.01)
 plt.plot(get_col(cs_lattice, 's'), get_col(cs_lattice, 'betax'), label='cs betax')
 plt.plot(get_col(cs_lattice, 's'), get_col(cs_lattice, 'betay'), label='cs betay')

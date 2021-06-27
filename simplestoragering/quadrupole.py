@@ -101,7 +101,7 @@ class Quadrupole(Element):
         # damping
         delta1 = (delta0 - (1 + delta0 * RefParticle.beta) ** 2 * Cr * RefParticle.energy ** 3 * self.k1 ** 2 *
                   self.length * (x1 ** 2 + y1 ** 2) / 2 / pi / RefParticle.beta)
-        # e1_div_e0 = (delta1 + 1) / (delta0 + 1)
+        # e1_div_e0 = (delta1 + 1) / (delta0 + 1)  # approximation
         e1_div_e0 = np.sqrt(((1 + delta1 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2) /
                             ((1 + delta0 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2))
         px1 = px1 * e1_div_e0

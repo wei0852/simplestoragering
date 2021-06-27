@@ -30,7 +30,7 @@ plot_lattice = plotlattice.plot_lattice
 plot_with_background = plotlattice.plot_with_background
 get_col = plotlattice.get_col
 
-# other function
+# other functions
 
 compute_twiss_of_slim_method = simplestoragering.slimlattice.compute_twiss_of_slim_method
 calculate_beta = simplestoragering.particles.calculate_beta

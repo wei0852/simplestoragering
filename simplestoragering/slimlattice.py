@@ -6,7 +6,9 @@ from copy import deepcopy
 
 
 class SlimRing(object):
-    """lattice object, solved by slim method"""
+    """lattice object, solved by slim method.
+
+    There are two different ways to compute transfer matrix."""
 
     def __init__(self, ele_list: list):
         self.length = 0
@@ -20,9 +22,9 @@ class SlimRing(object):
         self.f_c = 0
         self.__set_u0_and_fc()
         self.__slice()
-        # self.solve_closed_orbit()
-        # self.solve_damping()
-        # self.along_ring()
+        # self.compute_closed_orbit_by_matrix()
+        # self.compute_damping_by_matrix()
+        # self.compute_equilibrium_beam_by_matrix()
 
     def __set_u0_and_fc(self):
         """solve U0 and set rf parameters"""
@@ -43,13 +45,14 @@ class SlimRing(object):
         last_ele = LineEnd(s=self.length, identifier=current_identifier)
         self.ele_slices.append(last_ele)
 
-    def solve_closed_orbit(self):
-        """solve closed orbit, iterate to solve, renew the x0 and matrix"""
+    def compute_closed_orbit_by_matrix(self):
+        """Iteratively solve closed orbit by 7X7 transfer matrix."""
+
         x0 = np.array([0, 0, 0, 0, 0, 0])
         matrix7 = np.identity(7)
         i = 1
         print('\n-------------------\nsearching closed orbit:')
-        while i < 300:
+        while i < 20:
             for ele in self.ele_slices:
                 ele.closed_orbit = deepcopy(x0)
                 x0 = ele.next_closed_orbit
@@ -64,7 +67,7 @@ class SlimRing(object):
         print(f'\nclosed orbit at s=0 is \n    {x0}\n--------------')
 
     def track_closed_orbit(self):
-        """track closed orbit, solve damping"""
+        """tracking closed orbit and computing damping"""
         print('\n-------------------\ntracking closed orbit:\n')
         xco = np.zeros(6)
         matrix = np.zeros([6, 6])
@@ -94,41 +97,47 @@ class SlimRing(object):
               f'2U0/E0 = {2 * self.U0 / RefParticle.energy}')
         print(f'\nring tune = {np.angle(eig_val) / 2 / pi}')
         print('\n--------------------------------------------\n')
-        # solve coefficient
-        beam = Beam7(xco)
-        ave_deco_square = np.zeros(6)
-        sideways_photons = np.zeros(6)
-        for ele in self.ele_slices:
-            beam = ele.real_track(beam)
-            matrix = beam.solve_transfer_matrix()
-            eig_matrix = matrix.dot(ring_eig_matrix)
-            if ele.h != 0:
-                for k in range(6):
-                    ave_deco_square[k] += abs(eig_matrix[4, k]) ** 2 * abs(ele.h) ** 3 * ele.length
-                    sideways_photons[k] += abs(eig_matrix[2, k]) ** 2 * abs(ele.h) ** 3 * ele.length
-        for k in range(6):
-            ave_deco_square[k] = ave_deco_square[k] * Cl * RefParticle.gamma ** 5 / c / self.damping[k]
-            sideways_photons[k] = sideways_photons[k] * Cl * RefParticle.gamma ** 3 / c / self.damping[k] / 2
-        # solve equilibrium beam
-        eig_matrix = ring_eig_matrix
-        beam = Beam7(xco)
-        for ele in self.ele_slices:
-            equilibrium_beam = np.zeros((6, 6))
-            for j in range(6):
-                for i in range(j + 1):
-                    for k in range(6):
-                        equilibrium_beam[i, j] += ((ave_deco_square[k] + sideways_photons[k]) *
-                                                   np.real(eig_matrix[i, k] * np.conj(eig_matrix[j, k])))
-            for i in range(6):
-                for j in range(i):
-                    equilibrium_beam[i, j] = equilibrium_beam[j, i]
-            ele.beam = deepcopy(equilibrium_beam)
-            beam = ele.real_track(beam)
-            eig_matrix = beam.solve_transfer_matrix().dot(ring_eig_matrix)
+        '''the following part is wrong, the equilibrium beam should be computed by symplectic tracking.
+        but the results are similar and the following method is simpler.'''
+        # beam = Beam7(xco)
+        # ave_deco_square = np.zeros(6)
+        # sideways_photons = np.zeros(6)
+        # for ele in self.ele_slices:
+        #     beam = ele.real_track(beam)
+        #     matrix = beam.solve_transfer_matrix()
+        #     eig_matrix = matrix.dot(ring_eig_matrix)
+        #     if ele.h != 0:
+        #         for k in range(6):
+        #             ave_deco_square[k] += abs(eig_matrix[4, k]) ** 2 * abs(ele.h) ** 3 * ele.length
+        #             sideways_photons[k] += abs(eig_matrix[2, k]) ** 2 * abs(ele.h) ** 3 * ele.length
+        # for k in range(6):
+        #     ave_deco_square[k] = ave_deco_square[k] * Cl * RefParticle.gamma ** 5 / c / self.damping[k]
+        #     sideways_photons[k] = sideways_photons[k] * Cl * RefParticle.gamma ** 3 / c / self.damping[k] / 2
+        # # equilibrium beam matrices
+        # eig_matrix = ring_eig_matrix
+        # beam = Beam7(xco)
+        # for ele in self.ele_slices:
+        #     equilibrium_beam = np.zeros((6, 6))
+        #     for j in range(6):
+        #         for i in range(j + 1):
+        #             for k in range(6):
+        #                 equilibrium_beam[i, j] += ((ave_deco_square[k] + sideways_photons[k]) *
+        #                                            np.real(eig_matrix[i, k] * np.conj(eig_matrix[j, k])))
+        #     for i in range(6):
+        #         for j in range(i):
+        #             equilibrium_beam[i, j] = equilibrium_beam[j, i]
+        #     ele.beam = deepcopy(equilibrium_beam)
+        #     beam = ele.real_track(beam)
+        #     eig_matrix = beam.solve_transfer_matrix().dot(ring_eig_matrix)
 
-    def track_equilibrium_beam_symplectic(self):
-        """symplectic track"""
+    def equilibrium_beam_by_tracking(self):
+        """symplectic track
 
+        the closed orbit is computed by real_track(), which contains the effect of radiation.
+        the results of symplectic_track() is different from it. Therefore, we must restart symplectic tracking for each
+        element and then get the approximation symplectic matrix."""
+
+        # calculate one turn matrix and tunes.
         matrix = np.identity(6)
         for ele in self.ele_slices:
             beam = Beam7(ele.closed_orbit)
@@ -136,6 +145,7 @@ class SlimRing(object):
             matrix = beam.solve_transfer_matrix().dot(matrix)
         eig_val, ring_eig_matrix = np.linalg.eig(matrix)
         print(f'ring tune = {np.angle(eig_val) / 2 / pi}\n')
+        #
         ave_deco_square = np.zeros(6)
         sideways_photons = np.zeros(6)
         eig_matrix = ring_eig_matrix
@@ -151,7 +161,7 @@ class SlimRing(object):
         for k in range(6):
             ave_deco_square[k] = ave_deco_square[k] * Cl * RefParticle.gamma ** 5 / c / self.damping[k]
             sideways_photons[k] = sideways_photons[k] * Cl * RefParticle.gamma ** 3 / c / self.damping[k] / 2
-        # solve equilibrium beam
+        # compute equilibrium beam matrices
         eig_matrix = ring_eig_matrix
         for ele in self.ele_slices:
             beam = Beam7(ele.closed_orbit)
@@ -168,7 +178,9 @@ class SlimRing(object):
             beam = ele.symplectic_track(beam)
             eig_matrix = beam.solve_transfer_matrix().dot(eig_matrix)
 
-    def solve_damping(self):
+    def damping_by_matrix(self):
+        """compute damping by damping matrix. the energy loss has been considered."""
+
         matrix = np.identity(6)
         for ele in self.ele_slices:
             matrix = ele.damping_matrix.dot(matrix)
@@ -181,8 +193,9 @@ class SlimRing(object):
               f'2U0/E0 = {2 * self.U0 / RefParticle.energy}')
         print('\n--------------------------------------------\n')
 
-    def along_ring(self):
+    def equilibrium_beam_by_matrix(self):
         """solve tune along the ring. use matrix"""
+
         matrix = np.identity(6)
         for ele in self.ele_slices:
             matrix = ele.matrix.dot(matrix)
@@ -216,43 +229,8 @@ class SlimRing(object):
             ele.beam = deepcopy(equilibrium_beam)
             eig_matrix = ele.matrix.dot(eig_matrix)
 
-    def along_ring_damping_matrix(self):
-        """solve tune along the ring. use matrix"""
-        matrix = np.identity(6)
-        for ele in self.ele_slices:
-            matrix = ele.damping_matrix.dot(matrix)
-        eig_val, ring_eig_matrix = np.linalg.eig(matrix)  # Ei is eig_matrix[:, i]  E_ki is eig_matrix[i, k]
-        print(f'ring tune = {np.angle(eig_val) / 2 / pi}\n')
-        # solve average decomposition and tune along the lattice
-        ave_deco_square = np.zeros(6)
-        sideways_photons = np.zeros(6)
-        eig_matrix = ring_eig_matrix
-        for ele in self.ele_slices:
-            eig_matrix = ele.damping_matrix.dot(eig_matrix)
-            if ele.h != 0:
-                for k in range(6):
-                    ave_deco_square[k] += abs(eig_matrix[4, k]) ** 2 * abs(ele.h) ** 3 * ele.length
-                    sideways_photons[k] += abs(eig_matrix[2, k]) ** 2 * abs(ele.h) ** 3 * ele.length
-        for k in range(6):
-            ave_deco_square[k] = ave_deco_square[k] * Cl * RefParticle.gamma ** 5 / c / self.damping[k]
-            sideways_photons[k] = sideways_photons[k] * Cl * RefParticle.gamma ** 3 / c / self.damping[k] / 2
-        # solve equilibrium beam
-        eig_matrix = ring_eig_matrix
-        for ele in self.ele_slices:
-            equilibrium_beam = np.zeros((6, 6))
-            for j in range(6):
-                for i in range(j + 1):
-                    for k in range(6):
-                        equilibrium_beam[i, j] += ((ave_deco_square[k] + sideways_photons[k]) *
-                                                   np.real(eig_matrix[i, k] * np.conj(eig_matrix[j, k])))
-            for i in range(6):
-                for j in range(i):
-                    equilibrium_beam[i, j] = equilibrium_beam[j, i]
-            ele.beam = deepcopy(equilibrium_beam)
-            eig_matrix = ele.damping_matrix.dot(eig_matrix)
-
     def matrix_output(self, file_name: str = 'matrix.txt'):
-        """output uncoupled matrix for each element and contained matrix"""
+        """output uncoupled matrix for each element (the closed orbit is [0, 0, 0, 0, 0, 0])"""
 
         matrix = np.identity(6)
         file = open(file_name, 'w')
@@ -268,6 +246,8 @@ class SlimRing(object):
         file.close()
 
     def coupled_matrix_output(self, filename: str = 'matrix.txt'):
+        """output coupled matrices."""
+
         matrix = np.identity(6)
         element_matrix = np.identity(6)
         file = open(filename, 'w')
@@ -296,6 +276,8 @@ class SlimRing(object):
         file.close()
 
     def output_equilibrium_beam(self, filename: str = 'equilibrium_beam.txt'):
+        """output the equilibrium beam matrix along the ring to txt file."""
+
         file = open(filename, 'w')
         location = 0.0
         last_identifier = 123465

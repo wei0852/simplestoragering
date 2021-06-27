@@ -156,7 +156,7 @@ class Element(metaclass=ABCMeta):
             raise Exception("direction must be 'x' or 'y' !!!")
 
     def next_phase(self):
-        """:return dpsix, dpsiy"""
+        """:return psix, psiy"""
         dpsix = np.arctan(self.matrix[0, 1] / (self.matrix[0, 0] * self.betax - self.matrix[0, 1] * self.alphax))
         psix = self.psix + dpsix
         dpsiy = np.arctan(self.matrix[2, 3] / (self.matrix[2, 2] * self.betay - self.matrix[2, 3] * self.alphay))
