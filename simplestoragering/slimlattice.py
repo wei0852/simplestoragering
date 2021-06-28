@@ -96,7 +96,6 @@ class SlimRing(object):
         print('\ncheck:')
         print(f'sum damping = {self.damping[0] + self.damping[2] + self.damping[4]}, '
               f'2U0/E0 = {2 * self.U0 / RefParticle.energy}')
-        print(f'\nring tune = {np.angle(eig_val) / 2 / pi}')
         print('\n--------------------------------------------\n')
         '''the following part is wrong, the equilibrium beam should be computed by symplectic tracking.
         but the results are similar and the following method is simpler.'''
