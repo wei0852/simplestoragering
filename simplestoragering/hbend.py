@@ -11,13 +11,14 @@ class HBend(Element):
     symbol = 200
 
     def __init__(self, name: str = None, length: float = 0, theta: float = 0, theta_in: float = 0, theta_out: float = 0,
-                 n_slices: int = 3):
+                 k1: float = 0, n_slices: int = 3):
         self.name = name
         self.length = length
         self.h = theta / self.length
         self.theta_in = theta_in
         self.theta_out = theta_out
         self.n_slices = n_slices
+        self.k1 = k1
 
     @property
     def theta(self):
@@ -28,22 +29,27 @@ class HBend(Element):
 
     @property
     def matrix(self):
-        cx = np.cos(self.theta)
-        h_beta = self.h * RefParticle.beta
-        sin_theta = np.sin(self.theta)
+        h_beta = self.h / RefParticle.beta
         inlet_edge = np.array([[1, 0, 0, 0, 0, 0],
                                [np.tan(self.theta_in) * self.h, 1, 0, 0, 0, 0],
                                [0, 0, 1, 0, 0, 0],
                                [0, 0, -np.tan(self.theta_in) * self.h, 1, 0, 0],
                                [0, 0, 0, 0, 1, 0],
                                [0, 0, 0, 0, 0, 1]])
-        middle_section = np.array([[cx, sin_theta / self.h, 0, 0, 0, (1 - cx) / h_beta],
-                                   [-sin_theta * self.h, cx, 0, 0, 0, sin_theta / RefParticle.beta],
-                                   [0, 0, 1, self.length, 0, 0],
-                                   [0, 0, 0, 1, 0, 0],
-                                   [np.sin(self.theta), (1 - cx) / h_beta, 0, 0, 1,
-                                    self.length - sin_theta / h_beta / RefParticle.beta],
-                                   [0, 0, 0, 0, 0, 1]])
+        fx = self.k1 + self.h ** 2
+        [cx, sx, dx] = self.__calculate_csd(fx)
+        if fx != 0:
+            m56 = self.length / RefParticle.gamma ** 2 / RefParticle.beta ** 2 - self.h ** 2 * (self.length - sx) / fx
+        else:
+            m56 = self.length / RefParticle.gamma ** 2 / RefParticle.beta ** 2 - self.h ** 2 * self.length ** 3 / 6
+        fy = - self.k1
+        [cy, sy, dy] = self.__calculate_csd(fy)
+        middle_section = np.array([[cx, sx, 0, 0, 0, h_beta * dx],
+                                  [-fx * sx, cx, 0, 0, 0, h_beta * sx],
+                                  [0, 0, cy, sy, 0, 0],
+                                  [0, 0, -fy * sy, cy, 0, 0],
+                                  [h_beta * sx, h_beta * dx, 0, 0, 1, - m56],
+                                  [0, 0, 0, 0, 0, 1]])
         outlet_edge = np.array([[1, 0, 0, 0, 0, 0],
                                 [np.tan(self.theta_out) * self.h, 1, 0, 0, 0, 0],
                                 [0, 0, 1, 0, 0, 0],
@@ -51,6 +57,23 @@ class HBend(Element):
                                 [0, 0, 0, 0, 1, 0],
                                 [0, 0, 0, 0, 0, 1]])
         return outlet_edge.dot(middle_section).dot(inlet_edge)
+
+    def __calculate_csd(self, fu):
+        if fu > 0:
+            sqrt_fu_z = np.sqrt(fu) * self.length
+            cu = np.cos(sqrt_fu_z)
+            su = np.sin(sqrt_fu_z) / np.sqrt(fu)
+            du = (1 - cu) / fu
+        elif fu < 0:
+            sqrt_fu_z = np.sqrt(-fu) * self.length
+            cu = np.cosh(sqrt_fu_z)
+            su = np.sinh(sqrt_fu_z)
+            du = (1 - cu) / fu
+        else:
+            cu = 1
+            su = self.length
+            du = self.length ** 2 / 2
+        return [cu, su, du]
 
     @property
     def damping_matrix(self):
@@ -93,7 +116,7 @@ class HBend(Element):
         ys = ds
         ys2 = 2 * ds
 
-        if wy.any():
+        if wy.all():
             ys = np.sinh(wy * ds) / wy
             ys2 = np.sinh(2 * wy * ds) / wy
 
@@ -154,7 +177,7 @@ class HBend(Element):
         ys = ds
         ys2 = 2 * ds
 
-        if wy.any():
+        if wy.all():
             ys = np.sinh(wy * ds) / wy
             ys2 = np.sinh(2 * wy * ds) / wy
 
