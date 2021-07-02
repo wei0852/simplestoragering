@@ -12,6 +12,7 @@ class RefParticle(object):
 
     @classmethod
     def set_energy(cls, energy):
+        """MeV"""
         cls.energy = energy
         # text = "electron mass energy equivalent in MeV"
         # mass = physical_constants[text][0]

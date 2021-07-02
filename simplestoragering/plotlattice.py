@@ -114,6 +114,9 @@ def get_layout(lattice):
 
 
 def plot_lattice(lattice, parameters, with_layout=True):
+    """plot_lattice(lattice, 'betax', True)
+    plot_lattice(lattice, ['betax', 'betay'], True)
+    """
     if with_layout:
         return plot_with_layout(lattice, parameters)
     else:

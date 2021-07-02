@@ -67,7 +67,7 @@ class HBend(Element):
         elif fu < 0:
             sqrt_fu_z = np.sqrt(-fu) * self.length
             cu = np.cosh(sqrt_fu_z)
-            su = np.sinh(sqrt_fu_z)
+            su = np.sinh(sqrt_fu_z) / np.sqrt(-fu)
             du = (1 - cu) / fu
         else:
             cu = 1

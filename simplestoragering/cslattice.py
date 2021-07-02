@@ -36,6 +36,8 @@ class CSLattice(object):
         # integration
         self.xi_x = None
         self.xi_y = None
+        self.natural_xi_x = None
+        self.natural_xi_y = None
         self.I1 = None
         self.I2 = None
         self.I3 = None
@@ -60,6 +62,14 @@ class CSLattice(object):
         self.etap = None
         self.sigma_z = None
         self.global_parameters()
+
+    # def compute(self):
+    #     """calculate optical functions and ring parameters."""
+    #
+    #     self.__solve_initial_twiss()
+    #     self.__solve_along()
+    #     self.radiation_integrals()
+    #     self.global_parameters()
 
     def __slice(self):
         self.ele_slices = []
@@ -135,28 +145,34 @@ class CSLattice(object):
         integral3 = 0
         integral4 = 0
         integral5 = 0
-        chromaticity_x = 0
-        chromaticity_y = 0
+        natural_xi_x = 0
+        sextupole_part_xi_x = 0
+        natural_xi_y = 0
+        sextupole_part_xi_y = 0
         for ele in self.ele_slices:
             integral1 = integral1 + ele.length * ele.etax * ele.h
             integral2 = integral2 + ele.length * ele.h ** 2
             integral3 = integral3 + ele.length * abs(ele.h) ** 3
             integral4 = integral4 + ele.length * (ele.h ** 2 + 2 * ele.k1) * ele.etax * ele.h
             integral5 = integral5 + ele.length * ele.curl_H * abs(ele.h) ** 3
-            chromaticity_x = chromaticity_x - (ele.k1 + ele.h ** 2 - ele.etax * ele.k2) * ele.length * ele.betax
-            chromaticity_y = chromaticity_y + (ele.k1 - ele.etax * ele.k2) * ele.length * ele.betay
+            natural_xi_x = natural_xi_x - (ele.k1 + ele.h ** 2) * ele.length * ele.betax
+            sextupole_part_xi_x = sextupole_part_xi_x + ele.etax * ele.k2 * ele.length * ele.betax
+            natural_xi_y = natural_xi_y + ele.k1 * ele.length * ele.betay
+            sextupole_part_xi_y = sextupole_part_xi_y - ele.etax * ele.k2 * ele.length * ele.betay
             if 200 <= ele.symbol < 300:
                 integral4 = integral4 + (ele.h ** 2 * ele.etax * np.tan(ele.theta_in)
                                          - ele.h ** 2 * ele.etax * np.tan(ele.theta_out))
-                chromaticity_x = chromaticity_x + ele.h * (np.tan(ele.theta_in) + np.tan(ele.theta_out)) * ele.betax
-                chromaticity_y = chromaticity_y - ele.h * (np.tan(ele.theta_in) + np.tan(ele.theta_out)) * ele.betay
+                natural_xi_x = natural_xi_x + ele.h * (np.tan(ele.theta_in) + np.tan(ele.theta_out)) * ele.betax
+                natural_xi_y = natural_xi_y - ele.h * (np.tan(ele.theta_in) + np.tan(ele.theta_out)) * ele.betay
         self.I1 = integral1 * self.periods_number
         self.I2 = integral2 * self.periods_number
         self.I3 = integral3 * self.periods_number
         self.I4 = integral4 * self.periods_number
         self.I5 = integral5 * self.periods_number
-        self.xi_x = chromaticity_x * self.periods_number / (4 * pi)
-        self.xi_y = chromaticity_y * self.periods_number / (4 * pi)
+        self.natural_xi_x = natural_xi_x * self.periods_number / (4 * pi)
+        self.natural_xi_y = natural_xi_y * self.periods_number / (4 * pi)
+        self.xi_x = (natural_xi_x + sextupole_part_xi_x) * self.periods_number / (4 * pi)
+        self.xi_y = (natural_xi_y + sextupole_part_xi_y) * self.periods_number / (4 * pi)
 
     def global_parameters(self):
         self.Jx = 1 - self.I4 / self.I2
@@ -235,6 +251,8 @@ class CSLattice(object):
         val += ("\ntau_e =     " + str(self.tau_s * 1e3) + " msec")
         val += ("\ntau_x =     " + str(self.tau_x * 1e3) + " msec")
         val += ("\ntau_y =     " + str(self.tau_y * 1e3) + " msec")
+        val += ("\nnatural_xi_x =" + str(self.natural_xi_x))
+        val += ("\nnatural_xi_y =" + str(self.natural_xi_y))
         val += ("\nxi_x =      " + str(self.xi_x))
         val += ("\nxi_y =      " + str(self.xi_y))
         if self.sigma_z is not None:
