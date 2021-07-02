@@ -52,11 +52,11 @@ class Element(metaclass=ABCMeta):
     betax = None
     alphax = None
     gammax = None
-    psix = None
+    nux = None
     betay = None
     alphay = None
     gammay = None
-    psiy = None
+    nuy = None
     etax = None
     etaxp = None
     etay = None
@@ -157,12 +157,12 @@ class Element(metaclass=ABCMeta):
             raise Exception("direction must be 'x' or 'y' !!!")
 
     def next_phase(self):
-        """:return psix, psiy"""
+        """:return nux, nuy"""
         dpsix = np.arctan(self.matrix[0, 1] / (self.matrix[0, 0] * self.betax - self.matrix[0, 1] * self.alphax))
-        psix = self.psix + dpsix
+        nux = self.nux + dpsix / 2 / pi
         dpsiy = np.arctan(self.matrix[2, 3] / (self.matrix[2, 2] * self.betay - self.matrix[2, 3] * self.alphay))
-        psiy = self.psiy + dpsiy
-        return psix, psiy
+        nuy = self.nuy + dpsiy / 2 / pi
+        return nux, nuy
 
     def __repr__(self):
         return self.name

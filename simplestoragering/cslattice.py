@@ -115,8 +115,8 @@ class CSLattice(object):
         [betay, alphay, gammay] = self.twiss_y0
         [etax, etaxp] = self.eta_x0
         [etay, etayp] = self.eta_y0
-        psix = 0
-        psiy = 0
+        nux = 0
+        nuy = 0
         for ele in self.ele_slices:
             ele.betax = betax
             ele.betay = betay
@@ -128,16 +128,16 @@ class CSLattice(object):
             ele.etay = etay
             ele.etaxp = etaxp
             ele.etayp = etayp
-            ele.psix = psix
-            ele.psiy = psiy
+            ele.nux = nux
+            ele.nuy = nuy
             ele.curl_H = ele.gammax * ele.etax ** 2 + 2 * ele.alphax * ele.etax * ele.etaxp + ele.betax * ele.etaxp ** 2
             [betax, alphax, gammax] = ele.next_twiss('x')
             [betay, alphay, gammay] = ele.next_twiss('y')
             [etax, etaxp] = ele.next_eta_bag('x')
             [etay, etayp] = ele.next_eta_bag('y')
-            psix, psiy = ele.next_phase()
-        self.nux = psix * self.periods_number / 2 / pi
-        self.nuy = psiy * self.periods_number / 2 / pi
+            nux, nuy = ele.next_phase()
+        self.nux = nux * self.periods_number
+        self.nuy = nuy * self.periods_number
 
     def radiation_integrals(self):
         integral1 = 0
@@ -213,15 +213,15 @@ class CSLattice(object):
         file.close()
 
     def output_twiss(self, file_name: str = 'twiss_data.txt'):
-        """output s, ElementName, betax, alphax, psix, betay, alphay, psiy, etax, etaxp"""
+        """output s, ElementName, betax, alphax, nux, betay, alphay, nuy, etax, etaxp"""
 
         file1 = open(file_name, 'w')
-        file1.write('& s, ElementName, betax, alphax, psix, betay, alphay, psiy, etax, etaxp\n')
+        file1.write('& s, ElementName, betax, alphax, nux, betay, alphay, nuy, etax, etaxp\n')
         last_identifier = 123465
         for ele in self.ele_slices:
             if ele.identifier != last_identifier:
-                file1.write(f'{ele.s:.6e} {ele.name:10} {ele.betax:.6e}  {ele.alphax:.6e}  {ele.psix:.6e}  '
-                            f'{ele.betay:.6e}  {ele.alphay:.6e}  {ele.psiy:.6e}  {ele.etax:.6e}  {ele.etaxp:.6e}\n')
+                file1.write(f'{ele.s:.6e} {ele.name:10} {ele.betax:.6e}  {ele.alphax:.6e}  {ele.nux:.6e}  '
+                            f'{ele.betay:.6e}  {ele.alphay:.6e}  {ele.nuy:.6e}  {ele.etax:.6e}  {ele.etaxp:.6e}\n')
                 last_identifier = ele.identifier
         file1.close()
 

@@ -71,6 +71,18 @@ def get_col(lattice, parameter: str):
             __col.append(ele.etax)
         return __col
 
+    def __get_nux():
+        __col = []
+        for ele in lattice.ele_slices:
+            __col.append(ele.nux)
+        return __col
+
+    def __get_nuy():
+        __col = []
+        for ele in lattice.ele_slices:
+            __col.append(ele.nuy)
+        return __col
+
     assert isinstance(lattice, CSLattice) or isinstance(lattice, SlimRing)
     if parameter == 's':
         col_data = __get_s()
@@ -92,6 +104,10 @@ def get_col(lattice, parameter: str):
         col_data = __get_betay()
     elif parameter == 'etax':
         col_data = __get_etax()
+    elif parameter == 'nux':
+        col_data = __get_nux()
+    elif parameter == 'nuy':
+        col_data = __get_nuy()
     else:
         raise UnfinishedWork(f'cannot get {parameter} data')
     return col_data
