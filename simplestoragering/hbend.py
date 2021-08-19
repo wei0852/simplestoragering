@@ -264,4 +264,6 @@ class HBend(Element):
         text += ',   theta = ' + str(theta)
         text += ',   theta_in = ' + str(self.theta_in)
         text += ',   theta_out = ' + str(self.theta_out)
+        if self.k1 != 0:
+            text += ',   k1 = ' + str(self.k1)
         return text

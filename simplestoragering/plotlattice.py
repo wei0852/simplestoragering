@@ -65,10 +65,28 @@ def get_col(lattice, parameter: str):
             __col.append(ele.betay)
         return __col
 
+    def __get_alphax():
+        __col = []
+        for ele in lattice.ele_slices:
+            __col.append(ele.alphax)
+        return __col
+
+    def __get_alphay():
+        __col = []
+        for ele in lattice.ele_slices:
+            __col.append(ele.alphay)
+        return __col
+
     def __get_etax():
         __col = []
         for ele in lattice.ele_slices:
             __col.append(ele.etax)
+        return __col
+
+    def __get_etaxp():
+        __col = []
+        for ele in lattice.ele_slices:
+            __col.append(ele.etaxp)
         return __col
 
     def __get_nux():
@@ -83,7 +101,7 @@ def get_col(lattice, parameter: str):
             __col.append(ele.nuy)
         return __col
 
-    assert isinstance(lattice, CSLattice) or isinstance(lattice, SlimRing)
+    # assert isinstance(lattice, CSLattice) or isinstance(lattice, SlimRing)
     if parameter == 's':
         col_data = __get_s()
     elif parameter == 'closed_orbit_delta':
@@ -102,8 +120,17 @@ def get_col(lattice, parameter: str):
         col_data = __get_betax()
     elif parameter == 'betay':
         col_data = __get_betay()
+    elif parameter == 'alphax':
+        col_data = __get_alphax()
+    elif parameter == 'alphay':
+        col_data = __get_alphay()
     elif parameter == 'etax':
         col_data = __get_etax()
+    elif parameter == '100etax':
+        col_data = __get_etax()
+        col_data = [100 * i for i in col_data]
+    elif parameter == 'etaxp':
+        col_data = __get_etaxp()
     elif parameter == 'nux':
         col_data = __get_nux()
     elif parameter == 'nuy':

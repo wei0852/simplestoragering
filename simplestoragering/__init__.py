@@ -19,6 +19,7 @@ import simplestoragering.sextupole
 import simplestoragering.rfcavity
 import simplestoragering.plotlattice
 import simplestoragering.functions
+import simplestoragering.segment
 
 RefParticle = simplestoragering.particles.RefParticle
 Drift = simplestoragering.drift.Drift
@@ -28,6 +29,7 @@ Sextupole = simplestoragering.sextupole.Sextupole
 RFCavity = simplestoragering.rfcavity.RFCavity
 CSLattice = cslattice.CSLattice
 SlimRing = slimlattice.SlimRing
+Segment = segment.Segment
 plot_lattice = plotlattice.plot_lattice
 plot_with_background = plotlattice.plot_with_background
 get_col = plotlattice.get_col
