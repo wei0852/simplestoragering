@@ -1,5 +1,6 @@
 """this is almost the same as cslattice, but I don't want to change the code in cslattice.py because my holiday is coming,
 so I wrote a new class. Maybe someday I will merge these two files."""
+import copy
 
 from .constants import LENGTH_PRECISION, pi, Cq, Cr, c
 from .components import LineEnd
@@ -76,7 +77,7 @@ class Segment(object):
         betax2 = -matrix[0, 1] * matrix[1, 1] / matrix[0, 0] / matrix[1, 0]
         betay2 = -matrix[2, 3] * matrix[3, 3] / matrix[2, 2] / matrix[3, 2]
         if betax2 <= 0 or betay2 <= 0 or matrix[1, 0] == 0:
-            print(self.__str__())
+            # print(self.__str__())
             raise Exception
         betax = (betax2) ** 0.5
         alphax = 0
@@ -91,9 +92,9 @@ class Segment(object):
         self.eta_x0 = np.array([etax, etaxp])
 
     def set_twiss(self, twiss_x0, twiss_y0, eta_x0):
-        self.twiss_x0 = twiss_x0
-        self.twiss_y0 = twiss_y0
-        self.eta_x0 = eta_x0
+        self.twiss_x0 = copy.deepcopy(twiss_x0)
+        self.twiss_y0 = copy.deepcopy(twiss_y0)
+        self.eta_x0 = copy.deepcopy(eta_x0)
 
     def compute(self, straight=0):
         [betax, alphax, gammax] = self.twiss_x0
@@ -162,16 +163,16 @@ class Segment(object):
         self.Jx = 1 - self.I4 / self.I2
         self.Jy = 1
         self.Js = 2 + self.I4 / self.I2
-        self.sigma_e = RefParticle.gamma * np.sqrt(Cq * self.I3 / (self.Js * self.I2))
+        # self.sigma_e = RefParticle.gamma * np.sqrt(Cq * self.I3 / (self.Js * self.I2))
         self.emittance = Cq * RefParticle.gamma * RefParticle.gamma * self.I5 / (self.Jx * self.I2)
-        self.U0 = Cr * RefParticle.energy ** 4 * self.I2 / (2 * pi)
-        self.f_c = c * RefParticle.beta / self.ring_length
-        self.tau0 = 2 * RefParticle.energy / self.U0 / self.f_c
-        self.tau_s = self.tau0 / self.Js
-        self.tau_x = self.tau0 / self.Jx
-        self.tau_y = self.tau0 / self.Jy
-        self.alpha = self.I1 * 98 * self.f_c / c  # momentum compaction factor
-        self.etap = self.alpha - 1 / RefParticle.gamma ** 2  # phase slip factor
+        # self.U0 = Cr * RefParticle.energy ** 4 * self.I2 / (2 * pi)
+        # self.f_c = c * RefParticle.beta / self.ring_length
+        # self.tau0 = 2 * RefParticle.energy / self.U0 / self.f_c
+        # self.tau_s = self.tau0 / self.Js
+        # self.tau_x = self.tau0 / self.Jx
+        # self.tau_y = self.tau0 / self.Jy
+        # self.alpha = self.I1 * 98 * self.f_c / c  # momentum compaction factor
+        # self.etap = self.alpha - 1 / RefParticle.gamma ** 2  # phase slip factor
 
     def __str__(self):
         return f'nux: {self.nux}\nnuy: {self.nuy}\nlength = {self.length}\nxi_x = {self.xi_x}\nxi_y = {self.xi_y}\n' \
