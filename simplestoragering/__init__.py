@@ -22,6 +22,7 @@ import simplestoragering.functions
 import simplestoragering.segment
 
 RefParticle = simplestoragering.particles.RefParticle
+Mark = simplestoragering.components.Mark
 Drift = simplestoragering.drift.Drift
 HBend = simplestoragering.hbend.HBend
 Quadrupole = simplestoragering.quadrupole.Quadrupole

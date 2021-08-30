@@ -221,6 +221,15 @@ class Mark(Element):
     def next_closed_orbit(self):
         return self.closed_orbit
 
+    def slice(self, initial_s, identifier):
+        """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
+        ele_list = []
+        current_s = initial_s
+        self.identifier = identifier
+        self.s = current_s
+        ele_list.append(self)
+        return [ele_list, current_s]
+
     def symplectic_track(self, beam: Beam7) -> Beam7:
         assert isinstance(beam, Beam7)
         return beam
