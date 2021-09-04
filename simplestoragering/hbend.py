@@ -259,11 +259,11 @@ class HBend(Element):
         text += (' ' * max(0, 6 - len(self.name)))
         text += (': ' + str(self.type()))
         text += (':   s = ' + str(self.s))
-        text += (',   length = ' + str(self.length))
+        text += f',   length = {self.length: .6f}'
         theta = self.theta * 180 / pi
-        text += ',   theta = ' + str(theta)
-        text += ',   theta_in = ' + str(self.theta_in)
-        text += ',   theta_out = ' + str(self.theta_out)
+        text += f',   theta = {theta: .6f}'
+        text += f',   theta_in = {self.theta_in * 180 / pi: .6f}'
+        text += f',   theta_out = {self.theta_out * 180 / pi: .6f}'
         if self.k1 != 0:
-            text += ',   k1 = ' + str(self.k1)
+            text += f',   k1 = {self.k1: .6f}'
         return text

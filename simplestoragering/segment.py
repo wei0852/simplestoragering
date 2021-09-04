@@ -175,7 +175,7 @@ class Segment(object):
         # self.etap = self.alpha - 1 / RefParticle.gamma ** 2  # phase slip factor
 
     def __str__(self):
-        return f'nux: {self.nux}\nnuy: {self.nuy}\nlength = {self.length}\nxi_x = {self.xi_x}\nxi_y = {self.xi_y}\n' \
-               f'alpha = {self.alpha}\nJx = {self.Jx}\nemittance = {self.emittance} m rad\n' \
+        return f'nux: {self.nux: .6f}\nnuy: {self.nuy: .6f}\nlength = {self.length: .6f}\nxi_x = {self.xi_x: .6f}\nxi_y = {self.xi_y: .6f}\n' \
+               f'Jx = {self.Jx: .6f}\nemittance = {self.emittance * 1e9: .6f} nm rad\n' \
                f'    {self.elements[0]}\n    {self.elements[1]}\n    {self.elements[2]}\n    {self.elements[3]}'
 

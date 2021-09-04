@@ -2,6 +2,7 @@
 import copy
 from abc import ABCMeta, abstractmethod
 import random
+import multiprocessing
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -48,12 +49,12 @@ class AbstractIndividual(metaclass=ABCMeta):
 
     @abstractmethod
     def the_first_line(self):
-        """print to the first line"""
+        """describing the question, each line should start with &"""
 
     def mutate(self, min_vars, max_vars):
         """Routine for real polynomial mutation of an individual"""
 
-        p_mut = 0.2
+        p_mut = 0.3
         ETA_M = 5
         for i in range(len(self.vars)):
             rnd = get_random(0, 1)
@@ -112,11 +113,18 @@ class AbstractIndividual(metaclass=ABCMeta):
         else:
             return 0
 
-    @abstractmethod
-    def __copy__(self):
-        pass
+    def copy(self):
+        temp = copy.copy(self)
+        temp.vars = copy.deepcopy(self.vars)
+        temp.objs = copy.deepcopy(self.objs)
+        temp.constraint = copy.deepcopy(self.constraint)
+        temp.constraint_violation = self.constraint_violation
+        return temp
 
-
+# def _evaluate_one(current_ind):
+#     current_ind.evaluate()
+#     return current_ind
+#
 class Population(object):
     """population"""
 
@@ -143,6 +151,17 @@ class Population(object):
 
     def evaluate(self):
         """calculate the constraint"""
+
+        # result = []
+        # pool = multiprocessing.Pool(processes=15)
+        # for ind in self.individuals:
+        #     result.append(pool.apply_async(_evaluate_one, (ind,)))
+        # pool.close()
+        # pool.join()
+        # ind_res = []
+        # for res in result:
+        #     ind_res.append(res.get())
+        # self.individuals = ind_res
         for i in self.individuals:
             i.evaluate()
 
@@ -296,8 +315,8 @@ class Population(object):
             return idx2
 
     def __sbx_crossover(self, parent1, parent2):
-        child1 = copy.copy(parent1)
-        child2 = copy.copy(parent2)
+        child1 = parent1.copy()
+        child2 = parent2.copy()
         if get_random(0, 1) <= self.p_cross:
             for i in range(self.num_vars):
                 if get_random(0, 1) < 0.5:
@@ -385,7 +404,8 @@ class Population(object):
                 color.append(c3)
                 size.append(c4)
             plt.scatter(x, y, c=color, s=size, vmin=vmin, vmax=vmax)
-            plt.colorbar(label=colorbarlabel)
+            if colorbarlabel is not None:
+                plt.colorbar(label=colorbarlabel)
         plt.title(fig_name)
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)

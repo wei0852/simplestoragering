@@ -172,14 +172,14 @@ class Element(metaclass=ABCMeta):
         text += (' ' * max(0, 6 - len(str(self.name))))
         text += (': ' + str(match_symbol(self.symbol)))
         text += (':   s = ' + str(self.s))
-        text += (',   length = ' + str(self.length))
+        text += f',   length = {self.length: .6f}'
         if self.h != 0:
             theta = self.length * self.h * 180 / pi
-            text += ',   theta = ' + str(theta)
+            text += f',   theta = {theta: .6f}'
         if self.k1 != 0:
-            text += ',   k1 = ' + str(self.k1)
+            text += f',   k1 = {self.k1: .6f}'
         if self.k2 != 0:
-            text += ',   k2 = ' + str(self.k2)
+            text += f',   k2 = {self.k2: .6f}'
         return text
 
     def magnets_data(self):
