@@ -4,9 +4,11 @@ this file is unnecessary, I use these functions to quickly visualize lattice dat
 """
 
 import matplotlib.pyplot as plt
-from .slimlattice import SlimRing
-from .cslattice import CSLattice
-from .exceptions import UnfinishedWork
+
+import simplestoragering
+# from .slimlattice import SlimRing
+# from .cslattice import CSLattice
+from simplestoragering.exceptions import UnfinishedWork
 
 
 def get_col(lattice, parameter: str):
@@ -179,11 +181,29 @@ def plot_without_layout(lattice, parameters):
     plt.show()
 
 
+# def plot_with_layout(lattice, parameters):
+#     layout_s, layout_data = get_layout(lattice)
+#     fig = plt.figure()
+#     ax1 = fig.add_subplot(111)
+#     ax2 = ax1.twinx()
+#     s = get_col(lattice, 's')
+#     if isinstance(parameters, list):
+#         for para in parameters:
+#             ax2.plot(s, get_col(lattice, para), label=para)
+#     elif isinstance(parameters, str):
+#         ax2.plot(s, get_col(lattice, parameters), label=parameters)
+#     else:
+#         raise Exception('plot error')
+#     plt.legend()
+#     ax1.fill(layout_s, layout_data, color='#cccccc')
+#     plt.show()
+
+
 def plot_with_layout(lattice, parameters):
-    layout_s, layout_data = get_layout(lattice)
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
     ax2 = ax1.twinx()
+
     s = get_col(lattice, 's')
     if isinstance(parameters, list):
         for para in parameters:
@@ -192,9 +212,29 @@ def plot_with_layout(lattice, parameters):
         ax2.plot(s, get_col(lattice, parameters), label=parameters)
     else:
         raise Exception('plot error')
+    plot_layout_in_ax(lattice, ax1)
     plt.legend()
-    ax1.fill(layout_s, layout_data, color='#cccccc')
     plt.show()
+
+
+def plot_layout_in_ax(lattice, ax, ratio=0.05):
+    current_s = 0
+    for ele in lattice.elements:
+        if isinstance(ele, simplestoragering.Quadrupole):
+            layout_s = [current_s, current_s, current_s + ele.length / 2, current_s + ele.length, current_s + ele.length]
+            layout_data = [0, 1, 1 + 0.1 * ele.k1 / abs(ele.k1), 1, 0]
+            ax.fill(layout_s, layout_data, color='#cd3e3e')
+        if isinstance(ele, simplestoragering.HBend):
+            layout_s = [current_s, current_s, current_s + ele.length, current_s + ele.length]
+            layout_data = [0, 1, 1, 0]
+            ax.fill(layout_s, layout_data, color='#3d3dcd')
+        if isinstance(ele, simplestoragering.Sextupole):
+            layout_s = [current_s, current_s, current_s + ele.length / 2, current_s + ele.length, current_s + ele.length]
+            layout_data = [0, 1, 1 + 0.1 * ele.k2 / abs(ele.k2), 1, 0]
+            ax.fill(layout_s, layout_data, color='#3dcd3d')
+        current_s += ele.length
+    ax.set_ylim(0, 1/ratio)
+    ax.set_yticks([])
 
 
 def plot_with_background(s, y: dict, lattice):

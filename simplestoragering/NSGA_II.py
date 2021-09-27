@@ -2,7 +2,7 @@
 import copy
 from abc import ABCMeta, abstractmethod
 import random
-import multiprocessing
+import math
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -34,6 +34,8 @@ class AbstractIndividual(metaclass=ABCMeta):
         self.distance = 0
         self.rank = None
         self.ss = []
+        self.p_mut = 0.2
+        self.eta_mut = 20
         self.ndom = 0
 
     @abstractmethod
@@ -54,11 +56,9 @@ class AbstractIndividual(metaclass=ABCMeta):
     def mutate(self, min_vars, max_vars):
         """Routine for real polynomial mutation of an individual"""
 
-        p_mut = 0.3
-        ETA_M = 5
         for i in range(len(self.vars)):
             rnd = get_random(0, 1)
-            if rnd <= p_mut:
+            if rnd <= self.p_mut:
                 y = self.vars[i]
                 yl = min_vars[i]
                 yu = max_vars[i]
@@ -67,14 +67,14 @@ class AbstractIndividual(metaclass=ABCMeta):
                 delta2 = (yu - y) / (yu - yl)
 
                 rnd = get_random(0, 1)
-                mut_pow = 1 / (ETA_M + 1)
+                mut_pow = 1 / (self.eta_mut + 1)
                 if rnd <= 0.5:
                     xy = 1 - delta1
-                    val = 2.0 * rnd + (1.0 - 2.0 * rnd) * (pow(xy, (ETA_M + 1.0)))
+                    val = 2.0 * rnd + (1.0 - 2.0 * rnd) * (pow(xy, (self.eta_mut + 1.0)))
                     deltaq = pow(val, mut_pow) - 1.0
                 else:
                     xy = 1.0 - delta2
-                    val = 2.0 * (1.0 - rnd) + 2.0 * (rnd - 0.5) * (pow(xy, (ETA_M + 1.0)))
+                    val = 2.0 * (1.0 - rnd) + 2.0 * (rnd - 0.5) * (pow(xy, (self.eta_mut + 1.0)))
                     deltaq = 1.0 - (pow(val, mut_pow))
                 y = y + deltaq * (yu - yl)
                 if y < yl:
@@ -128,7 +128,7 @@ class AbstractIndividual(metaclass=ABCMeta):
 class Population(object):
     """population"""
 
-    def __init__(self, size: int, max_vars: list, min_vars: list, num_vars: int, num_objs: int):
+    def __init__(self, size: int, max_vars: list, min_vars: list, num_vars: int):
         self.individuals = []
         self.size = size
         self.p_cross = 0.9
@@ -136,7 +136,7 @@ class Population(object):
         self.max_vars = max_vars
         self.min_vars = min_vars
         self.num_vars = num_vars
-        self.num_objs = num_objs
+        self.num_objs = None
         self.rank_counter = 0
 
     def initialize(self,  individual: AbstractIndividual):
@@ -167,6 +167,7 @@ class Population(object):
 
     def non_dominated_sort(self):
         front = []
+        self.num_objs = len(self.individuals[0].objs)
         for ind in self.individuals:
             ind.ss = []
             ind.ndom = 0
@@ -260,11 +261,11 @@ class Population(object):
         while count < self.size:
             rand_idx1 = int(get_random(0, self.size))
             rand_idx2 = int(get_random(0, self.size))
-            parent_idx2 = parent_idx1 = self.__tournament(self.__tournament(rand_idx1, rand_idx2), int(get_random(0, self.size)))
+            parent_idx2 = parent_idx1 = self.__tournament(self.__tournament(self.__tournament(rand_idx1, rand_idx2), int(get_random(0, self.size))), int(get_random(0, self.size)))
             while parent_idx1 == parent_idx2:
                 rand_idx1 = int(get_random(0, self.size))
                 rand_idx2 = int(get_random(0, self.size))
-                parent_idx2 = self.__tournament(self.__tournament(rand_idx1, rand_idx2), int(get_random(0, self.size)))
+                parent_idx2 = self.__tournament(self.__tournament(self.__tournament(rand_idx1, rand_idx2), int(get_random(0, self.size))), int(get_random(0, self.size)))
             child1, child2 = self.__sbx_crossover(self.individuals[parent_idx1], self.individuals[parent_idx2])
             child1.mutate(self.min_vars, self.max_vars)
             child2.mutate(self.min_vars, self.max_vars)
@@ -276,7 +277,7 @@ class Population(object):
         self.non_dominated_sort()
 
         # generate new population
-        new_pop = Population(self.size, self.max_vars, self.min_vars, self.num_vars, self.num_objs)
+        new_pop = Population(self.size, self.max_vars, self.min_vars, self.num_vars)
         front = []
         front_counter = 1
         while True:
@@ -381,13 +382,16 @@ class Population(object):
         if num_data == 2:
             for ind in self.individuals:
                 [x, y] = ind.get_scatter_data()
-                plt.scatter(x, y, c='k', s=2)
+                if not math.isinf(x) or not math.isinf(y):
+                    plt.scatter(x, y, c='k', s=2)
         elif num_data == 3:
             x = []
             y = []
             z = []
             for ind in self.individuals:
                 [c1, c2, c3] = ind.get_scatter_data()
+                if math.isinf(c1) or math.isinf(c2) or math.isinf(c3):
+                    continue
                 x.append(c1)
                 y.append(c2)
                 z.append(c3)
@@ -399,6 +403,8 @@ class Population(object):
             size = []
             for ind in self.individuals:
                 [c1, c2, c3, c4] = ind.get_scatter_data()
+                if math.isinf(c1) or math.isinf(c2) or math.isinf(c3) or math.isinf(c4):
+                    continue
                 x.append(c1)
                 y.append(c2)
                 color.append(c3)
@@ -416,7 +422,7 @@ class Population(object):
         file1 = open(filename, 'w')
         file1.write(self.individuals[0].the_first_line())
         for i in range(self.rank_counter):
-            file1.write(f'\n\n----------------------------------------------\nrank {i + 1}\n')
+            file1.write(f'\n\n& ----------------------------------------------\n& rank {i + 1}\n')
             for ind in self.individuals:
                 if ind.rank == i + 1:
                     file1.write(f'{ind}\n')

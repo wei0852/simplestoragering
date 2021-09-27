@@ -3,7 +3,7 @@ so I wrote a new class. Maybe someday I will merge these two files."""
 import copy
 
 from .constants import LENGTH_PRECISION, pi, Cq, Cr, c
-from .components import LineEnd
+from .components import LineEnd, Mark
 from .particles import RefParticle
 import numpy as np
 
@@ -14,6 +14,7 @@ class Segment(object):
     def __init__(self, ele_list: list):
         self.length = 0
         self.elements = []
+        self.mark = []
         self.matrix = np.identity(6)
         for ele in ele_list:
             self.matrix = ele.matrix.dot(self.matrix)
@@ -66,6 +67,8 @@ class Segment(object):
         for ele in self.elements:
             [new_list, current_s] = ele.slice(current_s, current_identifier)
             self.ele_slices += new_list
+            if isinstance(new_list[0], Mark):
+                self.mark.append(new_list[0])
             current_identifier += 1
         last_ele = LineEnd(s=self.length, identifier=current_identifier)
         self.ele_slices.append(last_ele)
@@ -90,6 +93,19 @@ class Segment(object):
         self.twiss_x0 = np.array([betax, alphax, gammax])
         self.twiss_y0 = np.array([betay, alphay, gammay])
         self.eta_x0 = np.array([etax, etaxp])
+
+    def initialize_twiss_as_end_cell(self, twiss_x0, twiss_y0, eta_x0):
+        matrix = np.identity(6)
+        for ele in self.elements:
+            matrix = ele.matrix.dot(matrix)
+        alpha_xf = matrix[0, 0] * matrix[1, 0] * twiss_x0[0] + matrix[0, 1] * matrix[1, 1] * twiss_x0[2]
+        alpha_yf = matrix[2, 2] * matrix[3, 2] * twiss_y0[0] + matrix[2, 3] * matrix[3, 3] * twiss_y0[2]
+        eta_f = matrix[1, 0] * eta_x0[0] + matrix[1, 5]
+        if abs(alpha_xf) > 1e-5 or abs(alpha_yf) > 1e-5 or abs(eta_f) > 1e-5:
+            raise Exception
+        self.twiss_x0 = copy.deepcopy(twiss_x0)
+        self.twiss_y0 = copy.deepcopy(twiss_y0)
+        self.eta_x0 = copy.deepcopy(eta_x0)
 
     def set_twiss(self, twiss_x0, twiss_y0, eta_x0):
         self.twiss_x0 = copy.deepcopy(twiss_x0)

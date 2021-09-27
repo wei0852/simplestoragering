@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from .components import LineEnd
+from .components import LineEnd, Mark
 from .rfcavity import RFCavity
 from .constants import pi, c, Cq, Cr, LENGTH_PRECISION
 from .particles import RefParticle
@@ -14,6 +14,7 @@ class CSLattice(object):
         self.periods_number = periods_number
         self.coup = coupling
         self.elements = []
+        self.mark = []
         self.rf_cavity = None
         for ele in ele_list:
             if isinstance(ele, RFCavity):
@@ -78,6 +79,8 @@ class CSLattice(object):
         for ele in self.elements:
             [new_list, current_s] = ele.slice(current_s, current_identifier)
             self.ele_slices += new_list
+            if isinstance(new_list[0], Mark):
+                self.mark.append(new_list[0])
             current_identifier += 1
         last_ele = LineEnd(s=self.length, identifier=current_identifier)
         self.ele_slices.append(last_ele)
