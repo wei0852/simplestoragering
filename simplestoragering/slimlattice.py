@@ -88,8 +88,7 @@ class SlimRing(object):
             print(f'iterated {j} times, current result is \n    {beam.matrix[:, 6]}\n')
             j += 1
         print(f'closed orbit at s=0 is \n    {xco}\n')
-        # print(f'{matrix}\n')
-        eig_val, ring_eig_matrix = np.linalg.eig(matrix)
+        eig_val, ring_eig_matrix = self.__get_normalized_and_sorted_eigen(matrix)
         self.damping = - np.log(np.abs(eig_val))
         print(f'damping  = {self.damping}')
         print(f'damping time = {1 / self.f_c / self.damping}')
@@ -130,6 +129,39 @@ class SlimRing(object):
         #     beam = ele.real_track(beam)
         #     eig_matrix = beam.solve_transfer_matrix().dot(ring_eig_matrix)
 
+    def __get_normalized_and_sorted_eigen(self, matrix: np.ndarray) -> (np.ndarray, np.ndarray):
+        eig_val, v = np.linalg.eig(matrix)
+        # Sort the eigenvalues and eigenvectors into conjugate pairs
+        ind = np.argsort(abs(np.angle(eig_val)))
+        eig_val = np.take(eig_val, ind)
+        v = np.take(v, ind, axis=1)
+        # normalize the eigenvectors
+        conj_eig_t = np.conj(v.transpose())
+        s_matrix = np.array([[0, 1, 0, 0, 0, 0],
+                             [-1, 0, 0, 0, 0, 0],
+                             [0, 0, 0, 1, 0, 0],
+                             [0, 0, -1, 0, 0, 0],
+                             [0, 0, 0, 0, 0, 1],
+                             [0, 0, 0, 0, -1, 0]])
+        w = np.diagonal(conj_eig_t.dot(s_matrix).dot(v))
+        v = v.dot(np.eye(len(eig_val)) / np.sqrt(w))
+        # attempt to sort the eigenvectors into H, V, L
+        v_sort = np.zeros([3, 3])
+        for mi in np.arange(0, 5, 2):
+            norm_v = np.conj(v[:, mi].T).dot(v[:, mi])
+            for ni in np.arange(0, 5, 2):
+                v_sub = v[ni: ni+2, mi]
+                v_sort[int(ni / 2), int(mi / 2)] = np.real(np.conj(v_sub.T).dot(v_sub) / norm_v)
+                # Mathematically, the result must be a real number, the np.real() function is to avoid ComplexWarning.
+        ix = np.argsort(v_sort, axis=-1)
+        ix1 = np.zeros(6, dtype=int)
+        for i in range(3):
+            ix1[2 * i] = ix[i, 2] * 2
+            ix1[2 * i + 1] = ix[i, 2] * 2 + 1
+        v = np.take(v, ix1, axis=1)
+        eig_val = np.take(eig_val, ix1)
+        return eig_val, v
+
     def equilibrium_beam_by_tracking(self):
         """symplectic track
 
@@ -143,9 +175,8 @@ class SlimRing(object):
             beam = Beam7(ele.closed_orbit)
             beam = ele.symplectic_track(beam)
             matrix = beam.solve_transfer_matrix().dot(matrix)
-        eig_val, ring_eig_matrix = np.linalg.eig(matrix)
-        print(f'ring tune = {np.angle(eig_val) / 2 / pi}\n')
-        #
+        eig_val, ring_eig_matrix = self.__get_normalized_and_sorted_eigen(matrix)
+        print(f'ring tune = {np.angle(eig_val) / 2 / pi}')
         ave_deco_square = np.zeros(6)
         sideways_photons = np.zeros(6)
         eig_matrix = ring_eig_matrix
@@ -199,7 +230,7 @@ class SlimRing(object):
         matrix = np.identity(6)
         for ele in self.ele_slices:
             matrix = ele.matrix.dot(matrix)
-        eig_val, ring_eig_matrix = np.linalg.eig(matrix)  # Ei is eig_matrix[:, i]  E_ki is eig_matrix[i, k]
+        eig_val, ring_eig_matrix = self.__get_normalized_and_sorted_eigen(matrix)  # Ei is eig_matrix[:, i]  E_ki is eig_matrix[i, k]
         print(f'ring tune = {np.angle(eig_val) / 2 / pi}\n')
         # solve average decomposition and tune along the lattice
         ave_deco_square = np.zeros(6)
