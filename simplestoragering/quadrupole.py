@@ -117,3 +117,8 @@ class Quadrupole(Element):
         z2 = z1 + ds * (1 - (1 + RefParticle.beta * delta1) / d2) / RefParticle.beta
         beam.set_particle([x2, px1, y2, py1, z2, delta1])
         return beam
+
+    def radiation_integrals(self):
+        xi_x = - self.k1 * self.length * self.betax
+        xi_y = self.k1 * self.length * self.betay
+        return 0, 0, 0, 0, 0, xi_x, xi_y

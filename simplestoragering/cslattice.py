@@ -153,20 +153,18 @@ class CSLattice(object):
         natural_xi_y = 0
         sextupole_part_xi_y = 0
         for ele in self.ele_slices:
-            integral1 = integral1 + ele.length * ele.etax * ele.h
-            integral2 = integral2 + ele.length * ele.h ** 2
-            integral3 = integral3 + ele.length * abs(ele.h) ** 3
-            integral4 = integral4 + ele.length * (ele.h ** 2 + 2 * ele.k1) * ele.etax * ele.h
-            integral5 = integral5 + ele.length * ele.curl_H * abs(ele.h) ** 3
-            natural_xi_x = natural_xi_x - (ele.k1 + ele.h ** 2) * ele.length * ele.betax
-            sextupole_part_xi_x = sextupole_part_xi_x + ele.etax * ele.k2 * ele.length * ele.betax
-            natural_xi_y = natural_xi_y + ele.k1 * ele.length * ele.betay
-            sextupole_part_xi_y = sextupole_part_xi_y - ele.etax * ele.k2 * ele.length * ele.betay
-            if 200 <= ele.symbol < 300:
-                integral4 = integral4 + (ele.h ** 2 * ele.etax * np.tan(ele.theta_in)
-                                         - ele.h ** 2 * ele.etax * np.tan(ele.theta_out))
-                natural_xi_x = natural_xi_x + ele.h * (np.tan(ele.theta_in) + np.tan(ele.theta_out)) * ele.betax
-                natural_xi_y = natural_xi_y - ele.h * (np.tan(ele.theta_in) + np.tan(ele.theta_out)) * ele.betay
+            i1, i2, i3, i4, i5, xix, xiy = ele.radiation_integrals()
+            integral1 += i1
+            integral2 += i2
+            integral3 += i3
+            integral4 += i4
+            integral5 += i5
+            if 400 <= ele.symbol < 500:
+                sextupole_part_xi_x += xix
+                sextupole_part_xi_y += xiy
+            else:
+                natural_xi_x += xix
+                natural_xi_y += xiy
         self.I1 = integral1 * self.periods_number
         self.I2 = integral2 * self.periods_number
         self.I3 = integral3 * self.periods_number

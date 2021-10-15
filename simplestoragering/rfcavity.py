@@ -88,3 +88,6 @@ class RFCavity(Element):
         # py0 = py0 * dp0_div_dp1
         beam.set_particle([x2, px0, y2, py0, z2, delta1])
         return beam
+
+    def radiation_integrals(self):
+        return 0, 0, 0, 0, 0, 0, 0

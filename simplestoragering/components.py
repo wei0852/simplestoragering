@@ -98,6 +98,13 @@ class Element(metaclass=ABCMeta):
         """tracking with energy loss, the result is not symplectic"""
         pass
 
+    @abstractmethod
+    def radiation_integrals(self):
+        """calculate integral parameters
+
+        return: I1, I2, I3, I4, I5, xi_x, xi_y"""
+        pass
+
     def type(self):
         """return the type of the component"""
 
@@ -228,6 +235,9 @@ class Mark(Element):
     def real_track(self, beam: Beam7) -> Beam7:
         return beam
 
+    def radiation_integrals(self):
+        return 0, 0, 0, 0, 0, 0, 0
+
 
 class LineEnd(Element):
     """mark the end of a line, store the data at the end."""
@@ -262,6 +272,9 @@ class LineEnd(Element):
     def real_track(self, beam: Beam7) -> Beam7:
         return beam
 
+    def radiation_integrals(self):
+        return 0, 0, 0, 0, 0, 0, 0
+
 
 class VBend(Element):
     """vertical Bend"""
@@ -293,6 +306,9 @@ class VBend(Element):
         raise UnfinishedWork('VBend')
 
     def real_track(self, beam: Beam7) -> Beam7:
+        raise UnfinishedWork('VBend')
+
+    def radiation_integrals(self):
         raise UnfinishedWork('VBend')
 
 
@@ -328,4 +344,7 @@ class SKQuadrupole(Element):
         raise UnfinishedWork('SKQ')
 
     def real_track(self, beam: Beam7) -> Beam7:
+        raise UnfinishedWork('SKQ')
+
+    def radiation_integrals(self):
         raise UnfinishedWork('SKQ')

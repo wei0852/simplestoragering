@@ -46,3 +46,6 @@ class Drift(Element):
 
     def real_track(self, beam: Beam7) -> Beam7:
         return self.symplectic_track(beam)
+
+    def radiation_integrals(self):
+        return 0, 0, 0, 0, 0, 0, 0

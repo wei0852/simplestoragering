@@ -131,3 +131,8 @@ class Sextupole(Element):
 
         beam.set_particle([x2, px1, y2, py1, z2, delta1])
         return beam
+
+    def radiation_integrals(self):
+        xi_x = self.etax * self.k2 * self.length * self.betax
+        xi_y = - self.etax * self.k2 * self.length * self.betay
+        return 0, 0, 0, 0, 0, xi_x, xi_y

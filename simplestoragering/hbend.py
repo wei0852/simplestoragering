@@ -222,6 +222,17 @@ class HBend(Element):
         beam.set_particle([x2, px3, y2, py3, z1, delta1])
         return beam
 
+    def radiation_integrals(self):
+        integral1 = self.length * self.etax * self.h
+        integral2 = self.length * self.h ** 2
+        integral3 = self.length * abs(self.h) ** 3
+        integral4 = self.length * (self.h ** 2 + 2 * self.k1) * self.etax * self.h + (self.h ** 2 * self.etax * np.tan(self.theta_in)
+                                     - self.h ** 2 * self.etax * np.tan(self.theta_out))
+        integral5 = self.length * self.curl_H * abs(self.h) ** 3
+        xi_x = - (self.k1 + self.h ** 2) * self.length * self.betax + self.h * (np.tan(self.theta_in) + np.tan(self.theta_out)) * self.betax
+        xi_y = self.k1 * self.length * self.betay - self.h * (np.tan(self.theta_in) + np.tan(self.theta_out)) * self.betay
+        return integral1, integral2, integral3, integral4, integral5, xi_x, xi_y
+
     def slice(self, initial_s, identifier):
         """slice component to element list, return [ele_list, final_z]
 
