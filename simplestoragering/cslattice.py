@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+import copy
 from .components import LineEnd, Mark
 from .rfcavity import RFCavity
 from .constants import pi, c, Cq, Cr, LENGTH_PRECISION
@@ -28,12 +29,11 @@ class CSLattice(object):
         self.twiss_y0 = None
         self.eta_x0 = None
         self.eta_y0 = None
-        self.__solve_initial_twiss()
         # solve twiss
         self.nux = None
         self.nuy = None
         self.nuz = None
-        self.__solve_along()
+        # self.__solve_along()
         # integration
         self.xi_x = None
         self.xi_y = None
@@ -44,7 +44,7 @@ class CSLattice(object):
         self.I3 = None
         self.I4 = None
         self.I5 = None
-        self.radiation_integrals()
+        # self.radiation_integrals()
         # global parameters
         self.Jx = None
         self.Jy = None
@@ -62,15 +62,14 @@ class CSLattice(object):
         self.emitt_y = None
         self.etap = None
         self.sigma_z = None
-        self.global_parameters()
+        # self.global_parameters()
 
-    # def compute(self):
-    #     """calculate optical functions and ring parameters."""
-    #
-    #     self.__solve_initial_twiss()
-    #     self.__solve_along()
-    #     self.radiation_integrals()
-    #     self.global_parameters()
+    def compute(self):
+        """calculate optical functions and ring parameters."""
+
+        self.__solve_along()
+        self.__radiation_integrals()
+        self.__global_parameters()
 
     def __slice(self):
         self.ele_slices = []
@@ -85,7 +84,7 @@ class CSLattice(object):
         last_ele = LineEnd(s=self.length, identifier=current_identifier)
         self.ele_slices.append(last_ele)
 
-    def __solve_initial_twiss(self):
+    def find_the_periodic_solution(self):
         matrix = np.identity(6)
         for ele in self.elements:
             matrix = ele.matrix.dot(matrix)
@@ -112,6 +111,11 @@ class CSLattice(object):
         sub_matrix_y = matrix[2:4, 2:4]
         matrix_etay = np.array([matrix[2, 5], matrix[3, 5]])
         self.eta_y0 = np.linalg.inv(np.identity(2) - sub_matrix_y).dot(matrix_etay)
+
+    def set_initial_twiss(self, twiss_x0, twiss_y0, eta_x0):
+        self.twiss_x0 = copy.deepcopy(twiss_x0)
+        self.twiss_y0 = copy.deepcopy(twiss_y0)
+        self.eta_x0 = copy.deepcopy(eta_x0)
 
     def __solve_along(self):
         [betax, alphax, gammax] = self.twiss_x0
@@ -142,7 +146,7 @@ class CSLattice(object):
         self.nux = nux * self.periods_number
         self.nuy = nuy * self.periods_number
 
-    def radiation_integrals(self):
+    def __radiation_integrals(self):
         integral1 = 0
         integral2 = 0
         integral3 = 0
@@ -159,7 +163,7 @@ class CSLattice(object):
             integral3 += i3
             integral4 += i4
             integral5 += i5
-            if 400 <= ele.symbol < 500:
+            if ele.type == 'Sextupole':
                 sextupole_part_xi_x += xix
                 sextupole_part_xi_y += xiy
             else:
@@ -170,12 +174,12 @@ class CSLattice(object):
         self.I3 = integral3 * self.periods_number
         self.I4 = integral4 * self.periods_number
         self.I5 = integral5 * self.periods_number
-        self.natural_xi_x = natural_xi_x * self.periods_number / (4 * pi)
-        self.natural_xi_y = natural_xi_y * self.periods_number / (4 * pi)
-        self.xi_x = (natural_xi_x + sextupole_part_xi_x) * self.periods_number / (4 * pi)
-        self.xi_y = (natural_xi_y + sextupole_part_xi_y) * self.periods_number / (4 * pi)
+        self.natural_xi_x = natural_xi_x * self.periods_number
+        self.natural_xi_y = natural_xi_y * self.periods_number
+        self.xi_x = (natural_xi_x + sextupole_part_xi_x) * self.periods_number
+        self.xi_y = (natural_xi_y + sextupole_part_xi_y) * self.periods_number
 
-    def global_parameters(self):
+    def __global_parameters(self):
         self.Jx = 1 - self.I4 / self.I2
         self.Jy = 1
         self.Js = 2 + self.I4 / self.I2
@@ -197,7 +201,7 @@ class CSLattice(object):
                         * self.length / RefParticle.energy / c) ** 0.5 / 2 / pi
             self.sigma_z = self.sigma_e * abs(self.etap) * self.length / (2 * pi * self.nuz)
 
-    def matrix_output(self, file_name: str = 'matrix.txt'):
+    def output_matrix(self, file_name: str = 'matrix.txt'):
         """output uncoupled matrix for each element and contained matrix"""
 
         matrix = np.identity(6)

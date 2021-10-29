@@ -67,6 +67,33 @@ class SlimRing(object):
                 break
         print(f'\nclosed orbit at s=0 is \n    {x0}\n--------------')
 
+    def track_4d_closed_orbit(self, delta):
+        """4D track to compute closed orbit with energy deviation.
+
+        Just a simple test, the code should be verified !!! """
+        print('\n-------------------\ntracking 4D closed orbit:\n')
+        xco = np.zeros(6)
+        matrix = np.zeros([6, 6])
+        resdl = 1
+        j = 1
+        while j <= 10 and resdl > 1e-16:
+            beam = Beam7(xco)
+            for ele in self.ele_slices:
+                ele.closed_orbit = np.array(beam.get_particle_array())
+                beam = ele.symplectic_track(beam)
+            for i in range(7):
+                beam.matrix[4, i] = 0
+                beam.matrix[5, i] = delta
+            for i in range(6):
+                matrix[:, i] = (beam.matrix[:, i] - beam.matrix[:, 6]) / beam.precision
+            d = beam.matrix[:, 6] - xco
+            dco = np.linalg.inv(np.identity(6) - matrix).dot(d)
+            xco = xco + dco
+            resdl = dco.dot(dco.T)
+            print(f'iterated {j} times, current result is \n    {beam.matrix[:, 6]}\n')
+            j += 1
+        print(f'closed orbit at s=0 is \n    {xco}\n')
+
     def track_closed_orbit(self):
         """tracking closed orbit and computing damping"""
         print('\n-------------------\ntracking closed orbit:\n')
@@ -88,14 +115,14 @@ class SlimRing(object):
             print(f'iterated {j} times, current result is \n    {beam.matrix[:, 6]}\n')
             j += 1
         print(f'closed orbit at s=0 is \n    {xco}\n')
-        eig_val, ring_eig_matrix = self.__get_normalized_and_sorted_eigen(matrix)
-        self.damping = - np.log(np.abs(eig_val))
-        print(f'damping  = {self.damping}')
-        print(f'damping time = {1 / self.f_c / self.damping}')
-        print('\ncheck:')
-        print(f'sum damping = {self.damping[0] + self.damping[2] + self.damping[4]}, '
-              f'2U0/E0 = {2 * self.U0 / RefParticle.energy}')
-        print('\n--------------------------------------------\n')
+        # eig_val, ring_eig_matrix = self.__get_normalized_and_sorted_eigen(matrix)
+        # self.damping = - np.log(np.abs(eig_val))
+        # print(f'damping  = {self.damping}')
+        # print(f'damping time = {1 / self.f_c / self.damping}')
+        # print('\ncheck:')
+        # print(f'sum damping = {self.damping[0] + self.damping[2] + self.damping[4]}, '
+        #       f'2U0/E0 = {2 * self.U0 / RefParticle.energy}')
+        # print('\n--------------------------------------------\n')
         '''the following part is wrong, the equilibrium beam should be computed by symplectic tracking.
         but the results are similar and the following method is simpler.'''
         # beam = Beam7(xco)

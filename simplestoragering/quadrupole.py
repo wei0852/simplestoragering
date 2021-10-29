@@ -8,17 +8,12 @@ import numpy as np
 
 class Quadrupole(Element):
     """normal Quadrupole"""
-    symbol = 300
 
     def __init__(self, name: str = None, length: float = 0, k1: float = 0, n_slices: int = 1):
         self.name = name
         self.length = length
         self.k1 = k1
         self.n_slices = n_slices
-        if k1 > 0:
-            self.symbol = 320
-        else:
-            self.symbol = 310
 
     @property
     def matrix(self):
@@ -119,6 +114,6 @@ class Quadrupole(Element):
         return beam
 
     def radiation_integrals(self):
-        xi_x = - self.k1 * self.length * self.betax
-        xi_y = self.k1 * self.length * self.betay
+        xi_x = - self.k1 * self.length * self.betax / 4 / pi
+        xi_y = self.k1 * self.length * self.betay / 4 / pi
         return 0, 0, 0, 0, 0, xi_x, xi_y

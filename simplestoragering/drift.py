@@ -6,7 +6,6 @@ import numpy as np
 
 class Drift(Element):
     """drift class"""
-    symbol = 100
 
     def __init__(self, name: str = None, length: float = 0.0, n_slices: int = 1):
         self.name = name

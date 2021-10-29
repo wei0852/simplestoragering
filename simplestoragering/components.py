@@ -11,17 +11,17 @@ from .constants import pi, LENGTH_PRECISION
 from .exceptions import UnfinishedWork
 
 
-def match_symbol(symbol):
-    """:return the element type of the symbol
-
-    1: drift, 2: dipole, 3: quadrupole, 4: sextupole,
-    21: sector dipole, 22: rectangle dipole, 24: dipole edge
-    """
-    symbol_dict = {-1: 'end', 1: 'Drift     ', 2: 'Bend      ', 3: 'Quadrupole', 4: 'Sextupole ', 5: 'rf cavity'}
-    try:
-        return symbol_dict[int(symbol / 100)]
-    except KeyError:
-        raise UnfinishedWork('symbol key error')
+# def match_symbol(symbol):
+#     """:return the element type of the symbol
+#
+#     1: drift, 2: dipole, 3: quadrupole, 4: sextupole,
+#     21: sector dipole, 22: rectangle dipole, 24: dipole edge
+#     """
+#     symbol_dict = {-1: 'end', 1: 'Drift     ', 2: 'Bend      ', 3: 'Quadrupole', 4: 'Sextupole ', 5: 'rf cavity'}
+#     try:
+#         return symbol_dict[int(symbol / 100)]
+#     except KeyError:
+#         raise UnfinishedWork('symbol key error')
 
 
 class Element(metaclass=ABCMeta):
@@ -38,7 +38,7 @@ class Element(metaclass=ABCMeta):
         closed_orbit_matrix: transport matrix for solving closed orbit
     """
     name = None
-    symbol = None
+    # symbol = None
     length = 0
     s = None
     h = 0
@@ -105,10 +105,11 @@ class Element(metaclass=ABCMeta):
         return: I1, I2, I3, I4, I5, xi_x, xi_y"""
         pass
 
+    @property
     def type(self):
         """return the type of the component"""
 
-        return match_symbol(self.symbol)
+        return self.__class__.__name__
 
     def slice(self, initial_s, identifier):
         """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
@@ -166,8 +167,12 @@ class Element(metaclass=ABCMeta):
     def next_phase(self):
         """:return nux, nuy"""
         dpsix = np.arctan(self.matrix[0, 1] / (self.matrix[0, 0] * self.betax - self.matrix[0, 1] * self.alphax))
+        while dpsix < 0:
+            dpsix += pi
         nux = self.nux + dpsix / 2 / pi
         dpsiy = np.arctan(self.matrix[2, 3] / (self.matrix[2, 2] * self.betay - self.matrix[2, 3] * self.alphay))
+        while dpsiy < 0:
+            dpsiy += pi
         nuy = self.nuy + dpsiy / 2 / pi
         return nux, nuy
 
@@ -177,7 +182,7 @@ class Element(metaclass=ABCMeta):
     def __str__(self):
         text = str(self.name)
         text += (' ' * max(0, 6 - len(str(self.name))))
-        text += (': ' + str(match_symbol(self.symbol)))
+        text += (': ' + self.type)
         text += (':   s = ' + str(self.s))
         text += f',   length = {self.length: .6f}'
         if self.h != 0:

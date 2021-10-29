@@ -7,7 +7,6 @@ import numpy as np
 
 class RFCavity(Element):
     """thin len approximation, the length is 0. The unit of voltage should be the same as RefParticle.energy, MeV"""
-    symbol = 500
     length = 0
 
     def __init__(self, name: str = None, voltage_in_MeV: float = 0, frequency: float = 0, phase: float = 0):

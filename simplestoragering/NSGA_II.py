@@ -1,4 +1,26 @@
 # -*- coding: utf-8 -*-
+
+"""A module of NSGA-II algorithm.
+
+example:
+class Individual(AbstractIndividual):
+      def __init__(self):
+          super().__init__()
+          self.p_mut =
+          self.eta_mut =
+
+      ......
+
+
+ind = Individual()
+max_vars = list
+min_vars = list
+pop = Population(size, max_vars, min_vars)
+pop.initialize(ind)
+pop.evaluate()
+pop.
+
+"""
 import copy
 from abc import ABCMeta, abstractmethod
 import random
@@ -8,11 +30,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def get_random(min_data, max_data):
+def get_random(min_data, max_data, precision=6):
     """generate an random data in [min, max)"""
-    random_data = min_data + random.random()*(max_data - min_data)
+    random_data = round(min_data + random.random() * (max_data - min_data), precision)
     if random_data == max_data:
-        random_data = get_random(min_data, max_data)
+        random_data = get_random(min_data, max_data, precision=precision)
     return random_data
 
 
@@ -121,51 +143,57 @@ class AbstractIndividual(metaclass=ABCMeta):
         temp.constraint_violation = self.constraint_violation
         return temp
 
-# def _evaluate_one(current_ind):
-#     current_ind.evaluate()
-#     return current_ind
-#
+
 class Population(object):
     """population"""
 
-    def __init__(self, size: int, max_vars: list, min_vars: list, num_vars: int):
+    def __init__(self, size: int, max_vars: list, min_vars: list):
         self.individuals = []
         self.size = size
         self.p_cross = 0.9
-        assert len(max_vars) == len(min_vars) == num_vars
+        assert len(max_vars) == len(min_vars)
         self.max_vars = max_vars
         self.min_vars = min_vars
-        self.num_vars = num_vars
+        self.num_vars = len(max_vars)
         self.num_objs = None
         self.rank_counter = 0
 
-    def initialize(self,  individual: AbstractIndividual):
+    def initialize(self, individual: AbstractIndividual, file_name=None,
+                   population=None):
         """initialize population with random parameters."""
         self.individuals = []
         individual.vars = []
-        for i in range(self.size):
-            self.individuals.append(copy.deepcopy(individual))
-        for ind in self.individuals:
-            for i in range(self.num_vars):
-                ind.vars.append(get_random(self.min_vars[i], self.max_vars[i]))
+        if population is not None:
+            for i in range(len(population.individuals)):
+                individual.vars = population.individuals[i].vars
+                self.individuals.append(copy.deepcopy(individual))
+        elif file_name is not None:
+            pop_file = open(file_name, 'r')
+            i = 0
+            for line in pop_file.readlines():
+                line = line.strip()
+                if line == '' or line[0] == '&':
+                    continue
+                individual.vars = [float(i) for i in list(line.split('|')[0].split())]
+                self.individuals.append(copy.deepcopy(individual))
+                i = i + 1
+            print(f'Population initialized successfully, {i} individuals have been added.')
+            pop_file.close()
+        else:
+            for _ in range(self.size):
+                for i in range(self.num_vars):
+                    individual.vars.append(get_random(self.min_vars[i], self.max_vars[i]))
+                self.individuals.append(copy.deepcopy(individual))
+                individual.vars = []
 
     def evaluate(self):
         """calculate the constraint"""
 
-        # result = []
-        # pool = multiprocessing.Pool(processes=15)
-        # for ind in self.individuals:
-        #     result.append(pool.apply_async(_evaluate_one, (ind,)))
-        # pool.close()
-        # pool.join()
-        # ind_res = []
-        # for res in result:
-        #     ind_res.append(res.get())
-        # self.individuals = ind_res
         for i in self.individuals:
             i.evaluate()
+        self.__non_dominated_sort()
 
-    def non_dominated_sort(self):
+    def __non_dominated_sort(self):
         front = []
         self.num_objs = len(self.individuals[0].objs)
         for ind in self.individuals:
@@ -218,11 +246,11 @@ class Population(object):
             obj_range = front[-1].objs[i] - front[0].objs[i]  # obj_range = nan if both are inf.
             for j in range(len(front) - 2):
                 if obj_range == 0 or front[-1].objs[i] == np.Inf or front[0].objs[i] == np.Inf:
-                    front[j+1].distance = np.inf
+                    front[j + 1].distance = np.inf
                 else:
-                    next_obj = front[j+2].objs[i]
+                    next_obj = front[j + 2].objs[i]
                     pre_obj = front[j].objs[i]
-                    front[j+1].distance += (next_obj - pre_obj) / obj_range
+                    front[j + 1].distance += (next_obj - pre_obj) / obj_range
         for ind in front:  # normalize
             if ind.distance != np.inf:
                 ind.distance = ind.distance / self.num_objs
@@ -261,11 +289,15 @@ class Population(object):
         while count < self.size:
             rand_idx1 = int(get_random(0, self.size))
             rand_idx2 = int(get_random(0, self.size))
-            parent_idx2 = parent_idx1 = self.__tournament(self.__tournament(self.__tournament(rand_idx1, rand_idx2), int(get_random(0, self.size))), int(get_random(0, self.size)))
+            parent_idx2 = parent_idx1 = self.__tournament(
+                self.__tournament(self.__tournament(rand_idx1, rand_idx2), int(get_random(0, self.size))),
+                int(get_random(0, self.size)))
             while parent_idx1 == parent_idx2:
                 rand_idx1 = int(get_random(0, self.size))
                 rand_idx2 = int(get_random(0, self.size))
-                parent_idx2 = self.__tournament(self.__tournament(self.__tournament(rand_idx1, rand_idx2), int(get_random(0, self.size))), int(get_random(0, self.size)))
+                parent_idx2 = self.__tournament(
+                    self.__tournament(self.__tournament(rand_idx1, rand_idx2), int(get_random(0, self.size))),
+                    int(get_random(0, self.size)))
             child1, child2 = self.__sbx_crossover(self.individuals[parent_idx1], self.individuals[parent_idx2])
             child1.mutate(self.min_vars, self.max_vars)
             child2.mutate(self.min_vars, self.max_vars)
@@ -274,10 +306,10 @@ class Population(object):
             self.individuals.append(child1)
             self.individuals.append(child2)
             count = count + 2
-        self.non_dominated_sort()
+        self.__non_dominated_sort()
 
         # generate new population
-        new_pop = Population(self.size, self.max_vars, self.min_vars, self.num_vars)
+        new_pop = Population(self.size, self.max_vars, self.min_vars)
         front = []
         front_counter = 1
         while True:
@@ -376,7 +408,8 @@ class Population(object):
                             child2.vars[i] = c2
         return child1, child2
 
-    def scatter_population(self, fig_name='fig.png', vmin=None, vmax=None, xlabel=None, ylabel=None, colorbarlabel=None):
+    def scatter_population(self, fig_name='fig.png', vmin=None, vmax=None, xlabel=None, ylabel=None,
+                           colorbarlabel=None):
         num_data = len(self.individuals[0].get_scatter_data())
         plt.figure()
         if num_data == 2:

@@ -213,6 +213,8 @@ def plot_with_layout(lattice, parameters):
     else:
         raise Exception('plot error')
     plot_layout_in_ax(lattice, ax1)
+    ax1.set_xlim(s[0], s[-1])
+    ax2.yaxis.set_ticks_position('left')
     plt.legend()
     plt.show()
 

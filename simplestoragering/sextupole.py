@@ -9,17 +9,13 @@ import numpy as np
 
 class Sextupole(Element):
     """sextupole"""
-    symbol = 400
+    # symbol = 400
 
     def __init__(self, name: str = None, length: float = 0, k2: float = 0, n_slices: int = 1):
         self.name = name
         self.length = length
         self.k2 = k2
         self.n_slices = n_slices
-        if k2 > 0:
-            self.symbol = 420
-        else:
-            self.symbol = 410
 
     @property
     def matrix(self):
@@ -133,6 +129,6 @@ class Sextupole(Element):
         return beam
 
     def radiation_integrals(self):
-        xi_x = self.etax * self.k2 * self.length * self.betax
-        xi_y = - self.etax * self.k2 * self.length * self.betay
+        xi_x = self.etax * self.k2 * self.length * self.betax / 4 / pi
+        xi_y = - self.etax * self.k2 * self.length * self.betay / 4 / pi
         return 0, 0, 0, 0, 0, xi_x, xi_y

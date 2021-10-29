@@ -8,7 +8,6 @@ import numpy as np
 
 class HBend(Element):
     """horizontal Bend"""
-    symbol = 200
 
     def __init__(self, name: str = None, length: float = 0, theta: float = 0, theta_in: float = 0, theta_out: float = 0,
                  k1: float = 0, n_slices: int = 3):
@@ -45,11 +44,11 @@ class HBend(Element):
         fy = - self.k1
         [cy, sy, dy] = self.__calculate_csd(fy)
         middle_section = np.array([[cx, sx, 0, 0, 0, h_beta * dx],
-                                  [-fx * sx, cx, 0, 0, 0, h_beta * sx],
-                                  [0, 0, cy, sy, 0, 0],
-                                  [0, 0, -fy * sy, cy, 0, 0],
-                                  [h_beta * sx, h_beta * dx, 0, 0, 1, - m56],
-                                  [0, 0, 0, 0, 0, 1]])
+                                   [-fx * sx, cx, 0, 0, 0, h_beta * sx],
+                                   [0, 0, cy, sy, 0, 0],
+                                   [0, 0, -fy * sy, cy, 0, 0],
+                                   [h_beta * sx, h_beta * dx, 0, 0, 1, - m56],
+                                   [0, 0, 0, 0, 0, 1]])
         outlet_edge = np.array([[1, 0, 0, 0, 0, 0],
                                 [np.tan(self.theta_out) * self.h, 1, 0, 0, 0, 0],
                                 [0, 0, 1, 0, 0, 0],
@@ -156,7 +155,7 @@ class HBend(Element):
         # delta1 = (delta0 - (delta0 * RefParticle.beta + 1) ** 2 * Cr * RefParticle.energy ** 3 * self.theta ** 2 /
         #           2 / pi / self.length / RefParticle.beta)
         # use average energy
-        delta01 = (delta0 )
+        delta01 = (delta0)
         d1 = np.sqrt(1 + 2 * delta01 / RefParticle.beta + delta01 ** 2)
         ds = self.length
         # entrance
@@ -226,11 +225,15 @@ class HBend(Element):
         integral1 = self.length * self.etax * self.h
         integral2 = self.length * self.h ** 2
         integral3 = self.length * abs(self.h) ** 3
-        integral4 = self.length * (self.h ** 2 + 2 * self.k1) * self.etax * self.h + (self.h ** 2 * self.etax * np.tan(self.theta_in)
-                                     - self.h ** 2 * self.etax * np.tan(self.theta_out))
+        integral4 = self.length * (self.h ** 2 + 2 * self.k1) * self.etax * self.h + 2 * self.h ** 2 * self.etax * np.tan(self.theta_in)
+        if self.theta_out != 0:
+            eta = self.next_eta_bag('x')[0]
+            integral4 -= 2 * self.h ** 2 * eta * np.tan(self.theta_out)
         integral5 = self.length * self.curl_H * abs(self.h) ** 3
-        xi_x = - (self.k1 + self.h ** 2) * self.length * self.betax + self.h * (np.tan(self.theta_in) + np.tan(self.theta_out)) * self.betax
-        xi_y = self.k1 * self.length * self.betay - self.h * (np.tan(self.theta_in) + np.tan(self.theta_out)) * self.betay
+        xi_x = (- (self.k1 + self.h ** 2) * self.length * self.betax + self.h * (
+                    np.tan(self.theta_in) + np.tan(self.theta_out)) * self.betax) / 4 / pi
+        xi_y = (self.k1 * self.length * self.betay - self.h * (
+                    np.tan(self.theta_in) + np.tan(self.theta_out)) * self.betay) / 4 / pi
         return integral1, integral2, integral3, integral4, integral5, xi_x, xi_y
 
     def slice(self, initial_s, identifier):
