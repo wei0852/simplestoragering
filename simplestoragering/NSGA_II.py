@@ -147,16 +147,17 @@ class AbstractIndividual(metaclass=ABCMeta):
 class Population(object):
     """population"""
 
-    def __init__(self, size: int, max_vars: list, min_vars: list):
+    def __init__(self, size: int, max_vars: list, min_vars: list, compare_times: int = 3, p_cross=0.9):
         self.individuals = []
         self.size = size
-        self.p_cross = 0.9
+        self.p_cross = p_cross
         assert len(max_vars) == len(min_vars)
         self.max_vars = max_vars
         self.min_vars = min_vars
         self.num_vars = len(max_vars)
         self.num_objs = None
-        self.rank_counter = 0
+        self._rank_counter = 0
+        self.compare_times = compare_times
 
     def initialize(self, individual: AbstractIndividual, file_name=None,
                    population=None):
@@ -208,7 +209,7 @@ class Population(object):
             if ind.ndom == 0:
                 ind.rank = 1
                 front.append(ind)
-        self.rank_counter = 1
+        self._rank_counter = 1
         self.__calculate_crowding_distance(front)
         while front:
             q = []
@@ -216,10 +217,10 @@ class Population(object):
                 for dominated_ind in ind.ss:
                     dominated_ind.ndom -= 1
                     if dominated_ind.ndom == 0:
-                        dominated_ind.rank = self.rank_counter + 1
+                        dominated_ind.rank = self._rank_counter + 1
                         q.append(dominated_ind)
             if q:
-                self.rank_counter += 1
+                self._rank_counter += 1
                 front = q
                 self.__calculate_crowding_distance(front)
             else:
@@ -287,17 +288,9 @@ class Population(object):
 
         count = 0
         while count < self.size:
-            rand_idx1 = int(get_random(0, self.size))
-            rand_idx2 = int(get_random(0, self.size))
-            parent_idx2 = parent_idx1 = self.__tournament(
-                self.__tournament(self.__tournament(rand_idx1, rand_idx2), int(get_random(0, self.size))),
-                int(get_random(0, self.size)))
+            parent_idx1 = parent_idx2 = self.__pick_ind(self.compare_times)
             while parent_idx1 == parent_idx2:
-                rand_idx1 = int(get_random(0, self.size))
-                rand_idx2 = int(get_random(0, self.size))
-                parent_idx2 = self.__tournament(
-                    self.__tournament(self.__tournament(rand_idx1, rand_idx2), int(get_random(0, self.size))),
-                    int(get_random(0, self.size)))
+                parent_idx2 = self.__pick_ind(self.compare_times)
             child1, child2 = self.__sbx_crossover(self.individuals[parent_idx1], self.individuals[parent_idx2])
             child1.mutate(self.min_vars, self.max_vars)
             child2.mutate(self.min_vars, self.max_vars)
@@ -309,7 +302,7 @@ class Population(object):
         self.__non_dominated_sort()
 
         # generate new population
-        new_pop = Population(self.size, self.max_vars, self.min_vars)
+        new_pop = Population(self.size, self.max_vars, self.min_vars, compare_times=self.compare_times, p_cross=self.p_cross)
         front = []
         front_counter = 1
         while True:
@@ -327,8 +320,14 @@ class Population(object):
                     if len(new_pop.individuals) == new_pop.size:
                         break
                 break
-        new_pop.rank_counter = front_counter - 1
+        new_pop._rank_counter = front_counter - 1
         return new_pop
+
+    def __pick_ind(self, num=3):
+        if num == 2:
+            return self.__tournament(int(get_random(0, self.size)), int(get_random(0, self.size)))
+        else:
+            return self.__tournament(self.__pick_ind(num - 1), int(get_random(0, self.size)))
 
     def __tournament(self, idx1, idx2):
         """select a better parent"""
@@ -454,7 +453,7 @@ class Population(object):
     def output_population(self, filename):
         file1 = open(filename, 'w')
         file1.write(self.individuals[0].the_first_line())
-        for i in range(self.rank_counter):
+        for i in range(self._rank_counter):
             file1.write(f'\n\n& ----------------------------------------------\n& rank {i + 1}\n')
             for ind in self.individuals:
                 if ind.rank == i + 1:
