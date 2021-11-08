@@ -22,12 +22,15 @@ pop.
 
 """
 import copy
+import os
+import time
 from abc import ABCMeta, abstractmethod
 import random
 import math
 
 import matplotlib.pyplot as plt
 import numpy as np
+import multiprocessing as mp
 
 
 def get_random(min_data, max_data, precision=6):
@@ -52,7 +55,7 @@ class AbstractIndividual(metaclass=ABCMeta):
         self.constraint = []
         self.objs = []
         self.feasible = True
-        self.constraint_violation = None
+        self.constraint_violation = 0
         self.distance = 0
         self.rank = None
         self.ss = []
@@ -144,10 +147,15 @@ class AbstractIndividual(metaclass=ABCMeta):
         return temp
 
 
+def mul_process_evaluate(ind):
+    ind.evaluate()
+    return ind
+
+
 class Population(object):
     """population"""
 
-    def __init__(self, size: int, max_vars: list, min_vars: list, compare_times: int = 3, p_cross=0.9):
+    def __init__(self, size: int, max_vars: list, min_vars: list, compare_times: int = 3, p_cross=0.9, processes=os.cpu_count()):
         self.individuals = []
         self.size = size
         self.p_cross = p_cross
@@ -158,6 +166,7 @@ class Population(object):
         self.num_objs = None
         self._rank_counter = 0
         self.compare_times = compare_times
+        self.processes = processes
 
     def initialize(self, individual: AbstractIndividual, file_name=None,
                    population=None):
@@ -166,7 +175,8 @@ class Population(object):
         individual.vars = []
         if population is not None:
             for i in range(len(population.individuals)):
-                individual.vars = population.individuals[i].vars
+                # individual.vars = population.individuals[i].vars
+                individual.vars = [max(min(population.individuals[i].vars[j], self.max_vars[j]), self.min_vars[j]) for j in range(self.num_vars)]
                 self.individuals.append(copy.deepcopy(individual))
         elif file_name is not None:
             pop_file = open(file_name, 'r')
@@ -175,11 +185,18 @@ class Population(object):
                 line = line.strip()
                 if line == '' or line[0] == '&':
                     continue
-                individual.vars = [float(i) for i in list(line.split('|')[0].split())]
+                current_vars = [float(i) for i in list(line.split('|')[0].split())]
+                individual.vars = [max(min(current_vars[i], self.max_vars[i]), self.min_vars[i]) for i in range(self.num_vars)]
                 self.individuals.append(copy.deepcopy(individual))
                 i = i + 1
             print(f'Population initialized successfully, {i} individuals have been added.')
             pop_file.close()
+            individual.vars = []
+            while len(self.individuals) < self.size:
+                for i in range(self.num_vars):
+                    individual.vars.append(get_random(self.min_vars[i], self.max_vars[i]))
+                self.individuals.append(copy.deepcopy(individual))
+                individual.vars = []
         else:
             for _ in range(self.size):
                 for i in range(self.num_vars):
@@ -190,8 +207,9 @@ class Population(object):
     def evaluate(self):
         """calculate the constraint"""
 
-        for i in self.individuals:
-            i.evaluate()
+        with mp.Pool(processes=self.processes) as pool:
+            inds = pool.map(mul_process_evaluate, self.individuals)
+        self.individuals = inds
         self.__non_dominated_sort()
 
     def __non_dominated_sort(self):
@@ -281,6 +299,17 @@ class Population(object):
         swap(front, index + 1, right)
         return index + 1
 
+    def generate_children(self, num_count):
+        parent_idx1 = parent_idx2 = self.__pick_ind(self.compare_times)
+        while parent_idx1 == parent_idx2:
+            parent_idx2 = self.__pick_ind(self.compare_times)
+        child1, child2 = self.__sbx_crossover(self.individuals[parent_idx1], self.individuals[parent_idx2])
+        child1.mutate(self.min_vars, self.max_vars)
+        child2.mutate(self.min_vars, self.max_vars)
+        child1.evaluate()
+        child2.evaluate()
+        return [child1, child2]
+
     def next_generation(self):
 
         def __get_distance(ele):
@@ -299,10 +328,15 @@ class Population(object):
             self.individuals.append(child1)
             self.individuals.append(child2)
             count = count + 2
+        with mp.Pool(processes=self.processes) as pool:
+            results = pool.map(self.generate_children, range(int(self.size / 2)))
+        pool.join()
+        for res in results:
+            self.individuals += res
         self.__non_dominated_sort()
 
         # generate new population
-        new_pop = Population(self.size, self.max_vars, self.min_vars, compare_times=self.compare_times, p_cross=self.p_cross)
+        new_pop = Population(self.size, self.max_vars, self.min_vars, compare_times=self.compare_times, p_cross=self.p_cross, processes=self.processes)
         front = []
         front_counter = 1
         while True:

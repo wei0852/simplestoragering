@@ -271,7 +271,7 @@ class HBend(Element):
     def __str__(self):
         text = str(self.name)
         text += (' ' * max(0, 6 - len(self.name)))
-        text += (': ' + str(self.type()))
+        text += (': ' + str(self.type))
         text += (':   s = ' + str(self.s))
         text += f',   length = {self.length: .6f}'
         theta = self.theta * 180 / pi

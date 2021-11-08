@@ -8,21 +8,19 @@ class RefParticle(object):
     energy = None
     gamma = None
     beta = None
-    momentum = None
+    rigidity = None
 
     @classmethod
     def set_energy(cls, energy):
         """MeV"""
         cls.energy = energy
-        # text = "electron mass energy equivalent in MeV"
-        # mass = physical_constants[text][0]
-        cls.gamma = cls.energy / me
+        cls.gamma = cls.energy / me + 1
         cls.beta = np.sqrt(1 - 1 / cls.gamma ** 2)
-        cls.momentum = cls.gamma * me * cls.beta * c
+        cls.rigidity = cls.gamma * me * cls.beta * 1e6 / c
 
     @classmethod
     def __str__(cls):
-        return "mass: %s MeV, gamma = %s" % (cls.energy / cls.gamma, cls.gamma)
+        return f"Electron, gamma = {cls.gamma: .3f}"
 
 
 class Beam7(object):
