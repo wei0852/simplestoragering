@@ -189,7 +189,7 @@ class Population(object):
                 individual.vars = [max(min(current_vars[i], self.max_vars[i]), self.min_vars[i]) for i in range(self.num_vars)]
                 self.individuals.append(copy.deepcopy(individual))
                 i = i + 1
-            print(f'Population initialized successfully, {i} individuals have been added.')
+            print(f'{time.strftime("%H:%M:%S")}, Population initialized successfully, {i} individuals have been added.')
             pop_file.close()
             individual.vars = []
             while len(self.individuals) < self.size:
@@ -207,9 +207,11 @@ class Population(object):
     def evaluate(self):
         """calculate the constraint"""
 
-        with mp.Pool(processes=self.processes) as pool:
-            inds = pool.map(mul_process_evaluate, self.individuals)
-        self.individuals = inds
+        # with mp.Pool(processes=self.processes, maxtasksperchild=1) as pool:
+        #     inds = pool.map(mul_process_evaluate, self.individuals)
+        # self.individuals = inds
+        for ind in self.individuals:
+            ind.evaluate()
         self.__non_dominated_sort()
 
     def __non_dominated_sort(self):
@@ -243,6 +245,7 @@ class Population(object):
                 self.__calculate_crowding_distance(front)
             else:
                 break
+        print(f'    {time.strftime("%H:%M:%S")}, sorted.')
 
     def __calculate_crowding_distance(self, front):
         """calculating crowding distance
@@ -328,11 +331,15 @@ class Population(object):
             self.individuals.append(child1)
             self.individuals.append(child2)
             count = count + 2
-        with mp.Pool(processes=self.processes) as pool:
-            results = pool.map(self.generate_children, range(int(self.size / 2)))
-        pool.join()
-        for res in results:
-            self.individuals += res
+        # with mp.Pool(processes=self.processes) as pool:
+        #     results = pool.map(self.generate_children, range(int(self.size / 2)))
+            # for i in range(int(self.size / 2)):
+            #     results.append(pool.apply_async(self.generate_children, ))
+        # pool.join()
+        # for res in results:
+        #     self.individuals += res
+        # print(len(self.individuals))
+        print(f'    {time.strftime("%H:%M:%S")}, generate children.')
         self.__non_dominated_sort()
 
         # generate new population
@@ -355,6 +362,7 @@ class Population(object):
                         break
                 break
         new_pop._rank_counter = front_counter - 1
+        print(f'{time.strftime("%H:%M:%S")}, done one generation')
         return new_pop
 
     def __pick_ind(self, num=3):
