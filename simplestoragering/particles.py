@@ -35,6 +35,7 @@ class Beam7(object):
     def init_particle(self, particle):
         assert len(particle) == 6
         self.matrix = np.eye(6, 7) * self.precision
+        particle[4] = -particle[4]
         for i in range(6):
             self.matrix[i, :] = self.matrix[i, :] + particle[i]
 

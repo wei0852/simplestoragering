@@ -5,7 +5,10 @@ this file is unnecessary, I use these functions to quickly visualize lattice dat
 
 import matplotlib.pyplot as plt
 
-import simplestoragering
+from .sextupole import Sextupole
+from .quadrupole import Quadrupole
+from .hbend import HBend
+from .constants import pi
 # from .slimlattice import SlimRing
 # from .cslattice import CSLattice
 from simplestoragering.exceptions import UnfinishedWork
@@ -94,13 +97,13 @@ def get_col(lattice, parameter: str):
     def __get_nux():
         __col = []
         for ele in lattice.ele_slices:
-            __col.append(ele.nux)
+            __col.append(ele.psix / 2 / pi)
         return __col
 
     def __get_nuy():
         __col = []
         for ele in lattice.ele_slices:
-            __col.append(ele.nuy)
+            __col.append(ele.psiy / 2 / pi)
         return __col
 
     # assert isinstance(lattice, CSLattice) or isinstance(lattice, SlimRing)
@@ -133,9 +136,9 @@ def get_col(lattice, parameter: str):
         col_data = [100 * i for i in col_data]
     elif parameter == 'etaxp':
         col_data = __get_etaxp()
-    elif parameter == 'nux':
+    elif parameter == 'psix':
         col_data = __get_nux()
-    elif parameter == 'nuy':
+    elif parameter == 'psiy':
         col_data = __get_nuy()
     else:
         raise UnfinishedWork(f'cannot get {parameter} data')
@@ -222,15 +225,15 @@ def plot_with_layout(lattice, parameters):
 def plot_layout_in_ax(lattice, ax, ratio=0.05):
     current_s = 0
     for ele in lattice.elements:
-        if isinstance(ele, simplestoragering.Quadrupole):
+        if isinstance(ele, Quadrupole):
             layout_s = [current_s, current_s, current_s + ele.length / 2, current_s + ele.length, current_s + ele.length]
             layout_data = [0, 1, 1 + 0.1 * ele.k1 / abs(ele.k1), 1, 0]
             ax.fill(layout_s, layout_data, color='#cd3e3e')
-        if isinstance(ele, simplestoragering.HBend):
+        if isinstance(ele, HBend):
             layout_s = [current_s, current_s, current_s + ele.length, current_s + ele.length]
             layout_data = [0, 1, 1, 0]
             ax.fill(layout_s, layout_data, color='#3d3dcd')
-        if isinstance(ele, simplestoragering.Sextupole):
+        if isinstance(ele, Sextupole):
             layout_s = [current_s, current_s, current_s + ele.length / 2, current_s + ele.length, current_s + ele.length]
             layout_data = [0, 1, 1 + 0.1 * ele.k2 / abs(ele.k2), 1, 0]
             ax.fill(layout_s, layout_data, color='#3dcd3d')

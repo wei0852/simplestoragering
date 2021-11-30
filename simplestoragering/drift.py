@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from .components import Element
 from .particles import RefParticle, Beam7
+from .exceptions import ParticleLost
 import numpy as np
 
 
@@ -36,7 +37,11 @@ class Drift(Element):
         assert isinstance(beam, Beam7)
         [x0, px0, y0, py0, z0, delta0] = beam.get_particle()
         ds = self.length
-        d1 = np.sqrt(1 - px0 ** 2 - py0 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
+        np.seterr(all='raise')
+        try:
+            d1 = np.sqrt(1 - px0 ** 2 - py0 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
+        except FloatingPointError:
+            raise ParticleLost(self.s)
         x1 = x0 + ds * px0 / d1
         y1 = y0 + ds * py0 / d1
         z1 = z0 + ds * (1 - (1 + RefParticle.beta * delta0) / d1) / RefParticle.beta

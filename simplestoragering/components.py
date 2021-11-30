@@ -38,7 +38,6 @@ class Element(metaclass=ABCMeta):
         closed_orbit_matrix: transport matrix for solving closed orbit
     """
     name = None
-    # symbol = None
     length = 0
     s = None
     h = 0
@@ -52,11 +51,11 @@ class Element(metaclass=ABCMeta):
     betax = None
     alphax = None
     gammax = None
-    nux = None
+    psix = None
     betay = None
     alphay = None
     gammay = None
-    nuy = None
+    psiy = None
     etax = None
     etaxp = None
     etay = None
@@ -110,6 +109,14 @@ class Element(metaclass=ABCMeta):
         """return the type of the component"""
 
         return self.__class__.__name__
+
+    @property
+    def nux(self):
+        return self.psix / 2 / pi
+
+    @property
+    def nuy(self):
+        return self.psiy / 2 / pi
 
     def slice(self, initial_s, identifier):
         """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
@@ -165,16 +172,16 @@ class Element(metaclass=ABCMeta):
             raise Exception("direction must be 'x' or 'y' !!!")
 
     def next_phase(self):
-        """:return nux, nuy"""
+        """:return psix, psiy"""
         dpsix = np.arctan(self.matrix[0, 1] / (self.matrix[0, 0] * self.betax - self.matrix[0, 1] * self.alphax))
         while dpsix < 0:
             dpsix += pi
-        nux = self.nux + dpsix / 2 / pi
+        phix = self.psix + dpsix
         dpsiy = np.arctan(self.matrix[2, 3] / (self.matrix[2, 2] * self.betay - self.matrix[2, 3] * self.alphay))
         while dpsiy < 0:
             dpsiy += pi
-        nuy = self.nuy + dpsiy / 2 / pi
-        return nux, nuy
+        phiy = self.psiy + dpsiy
+        return phix, phiy
 
     def __repr__(self):
         return self.name
@@ -210,11 +217,11 @@ class Element(metaclass=ABCMeta):
 
 class Mark(Element):
     """mark class, only for marking"""
-    symbol = 0
 
     def __init__(self, name: str):
         self.name = name
         self.n_slices = 1
+        self.data = None
 
     @property
     def damping_matrix(self):
@@ -235,6 +242,10 @@ class Mark(Element):
 
     def symplectic_track(self, beam: Beam7) -> Beam7:
         assert isinstance(beam, Beam7)
+        if self.data is None:
+            self.data = beam.get_particle_array()
+        else:
+            self.data = np.vstack((self.data, beam.get_particle_array()))
         return beam
 
     def real_track(self, beam: Beam7) -> Beam7:
@@ -246,7 +257,6 @@ class Mark(Element):
 
 class LineEnd(Element):
     """mark the end of a line, store the data at the end."""
-    symbol = -100
 
     def __init__(self, s, identifier, name='_END_'):
         self.name = name
@@ -283,7 +293,6 @@ class LineEnd(Element):
 
 class VBend(Element):
     """vertical Bend"""
-    symbol = 250
 
     def __init__(self, name: str = None, length: float = 0, theta: float = 0, theta_in: float = 0, theta_out: float = 0,
                  n_slices: int = 3):
@@ -319,7 +328,6 @@ class VBend(Element):
 
 class SKQuadrupole(Element):
     """skew Quadrupole, b_x = - k1 x, b_y = k1 y"""
-    symbol = 350
 
     def __init__(self, name: str = None, length: float = 0, k1: float = 0, n_slices: int = 1):
         self.name = name

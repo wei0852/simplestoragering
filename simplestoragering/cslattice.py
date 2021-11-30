@@ -5,23 +5,31 @@ from .components import LineEnd, Mark
 from .rfcavity import RFCavity
 from .constants import pi, c, Cq, Cr, LENGTH_PRECISION
 from .particles import RefParticle
+from .hbend import HBend
 
 
 class CSLattice(object):
     """lattice object, solve by Courant-Snyder method"""
 
-    def __init__(self, ele_list: list, periods_number: int, coupling=0.00):
+    def __init__(self, ele_list: list, periods_number: int = 1, coupling: float = 0.00):
         self.length = 0
         self.periods_number = periods_number
         self.coup = coupling
         self.elements = []
         self.mark = {}
         self.rf_cavity = None
+        self.angle = 0
+        self.abs_angle = 0
         for ele in ele_list:
             if isinstance(ele, RFCavity):
                 self.rf_cavity = ele
             self.elements.append(ele)
             self.length = round(self.length + ele.length, LENGTH_PRECISION)
+            if isinstance(ele, HBend):
+                self.angle += ele.theta
+                self.abs_angle += abs(ele.theta)
+        self.angle = self.angle * 180 / pi * periods_number
+        self.abs_angle = self.abs_angle * 180 / pi * periods_number
         self.ele_slices = None
         self.__slice()
         # initialize twiss
@@ -88,6 +96,7 @@ class CSLattice(object):
         self.ele_slices.append(last_ele)
 
     def find_the_periodic_solution(self):
+        """compute periodic solution and initialize twiss"""
         matrix = np.identity(6)
         for ele in self.elements:
             matrix = ele.matrix.dot(matrix)
@@ -125,8 +134,8 @@ class CSLattice(object):
         [betay, alphay, gammay] = self.twiss_y0
         [etax, etaxp] = self.eta_x0
         [etay, etayp] = self.eta_y0
-        nux = 0
-        nuy = 0
+        psix = 0
+        psiy = 0
         for ele in self.ele_slices:
             ele.betax = betax
             ele.betay = betay
@@ -138,16 +147,16 @@ class CSLattice(object):
             ele.etay = etay
             ele.etaxp = etaxp
             ele.etayp = etayp
-            ele.nux = nux
-            ele.nuy = nuy
+            ele.psix = psix
+            ele.psiy = psiy
             ele.curl_H = ele.gammax * ele.etax ** 2 + 2 * ele.alphax * ele.etax * ele.etaxp + ele.betax * ele.etaxp ** 2
             [betax, alphax, gammax] = ele.next_twiss('x')
             [betay, alphay, gammay] = ele.next_twiss('y')
             [etax, etaxp] = ele.next_eta_bag('x')
             [etay, etayp] = ele.next_eta_bag('y')
-            nux, nuy = ele.next_phase()
-        self.nux = nux * self.periods_number
-        self.nuy = nuy * self.periods_number
+            psix, psiy = ele.next_phase()
+        self.nux = psix * self.periods_number / 2 / pi
+        self.nuy = psiy * self.periods_number / 2 / pi
 
     def __radiation_integrals(self):
         integral1 = 0
@@ -221,48 +230,47 @@ class CSLattice(object):
         file.close()
 
     def output_twiss(self, file_name: str = 'twiss_data.txt'):
-        """output s, ElementName, betax, alphax, nux, betay, alphay, nuy, etax, etaxp"""
+        """output s, ElementName, betax, alphax, psix, betay, alphay, psiy, etax, etaxp"""
 
         file1 = open(file_name, 'w')
-        file1.write('& s, ElementName, betax, alphax, nux, betay, alphay, nuy, etax, etaxp\n')
+        file1.write('& s, ElementName, betax, alphax, psix, betay, alphay, psiy, etax, etaxp\n')
         last_identifier = 123465
         for ele in self.ele_slices:
             if ele.identifier != last_identifier:
-                file1.write(f'{ele.s:.6e} {ele.name:10} {ele.betax:.6e}  {ele.alphax:.6e}  {ele.nux:.6e}  '
-                            f'{ele.betay:.6e}  {ele.alphay:.6e}  {ele.nuy:.6e}  {ele.etax:.6e}  {ele.etaxp:.6e}\n')
+                file1.write(f'{ele.s:.6e} {ele.name:10} {ele.betax:.6e}  {ele.alphax:.6e}  {ele.psix / 2 / pi:.6e}  '
+                            f'{ele.betay:.6e}  {ele.alphay:.6e}  {ele.psiy / 2 / pi:.6e}  {ele.etax:.6e}  {ele.etaxp:.6e}\n')
                 last_identifier = ele.identifier
         file1.close()
 
     def __str__(self):
         val = ""
-        val += ("nux =       " + str(self.nux))
-        val += ("\nnuy =       " + str(self.nuy))
-        val += ("\ncurl_H =    " + str(self.ele_slices[0].curl_H))
-        val += ("\nI1 =        " + str(self.I1))
-        val += ("\nI2 =        " + str(self.I2))
-        val += ("\nI3 =        " + str(self.I3))
-        val += ("\nI4 =        " + str(self.I4))
-        val += ("\nI5 =        " + str(self.I5))
-        val += ("\nJs =        " + str(self.Js))
-        val += ("\nJx =        " + str(self.Jx))
-        val += ("\nJy =        " + str(self.Jy))
-        val += ("\nenergy =    " + str(RefParticle.energy) + "MeV")
-        val += ("\ngamma =     " + str(RefParticle.gamma))
-        val += ("\nsigma_e =   " + str(self.sigma_e))
-        val += ("\nemittance = " + str(self.emittance * 1e9) + " nm*rad")
-        val += ("\nLength =    " + str(self.length * self.periods_number) + " m")
-        val += ("\nU0 =        " + str(self.U0 * 1000) + "  keV")
-        val += ("\nTperiod =   " + str(1 / self.f_c * 1e9) + " nsec")
-        val += ("\nalpha =     " + str(self.alpha))
-        val += ("\neta_p =     " + str(self.etap))
-        val += ("\ntau0 =      " + str(self.tau0 * 1e3) + " msec")
-        val += ("\ntau_e =     " + str(self.tau_s * 1e3) + " msec")
-        val += ("\ntau_x =     " + str(self.tau_x * 1e3) + " msec")
-        val += ("\ntau_y =     " + str(self.tau_y * 1e3) + " msec")
-        val += ("\nnatural_xi_x =" + str(self.natural_xi_x))
-        val += ("\nnatural_xi_y =" + str(self.natural_xi_y))
-        val += ("\nxi_x =      " + str(self.xi_x))
-        val += ("\nxi_y =      " + str(self.xi_y))
+        val += f'{str("angle ="):11} {self.angle:9.3f}'
+        val += f'\n{str("abs_angle ="):11} {self.abs_angle:9.3f}'
+        val += f'\n{str("nux ="):11} {self.nux:9.4f}'
+        val += f'\n{str("nuy ="):11} {self.nuy:9.4f}'
+        # val += f'\n{str("I1 ="):11} {self.I1:9.3e}'
+        # val += f'\n{str("I2 ="):11} {self.I2:9.3e}'
+        # val += f'\n{str("I3 ="):11} {self.I3:9.3e}'
+        # val += f'\n{str("I4 ="):11} {self.I4:9.3e}'
+        # val += f'\n{str("I5 ="):11} {self.I5:9.3e}'
+        # val += f'\n{str("Js ="):11} {self.Js:9.4f}'
+        val += f'\n{str("Jx ="):11} {self.Jx:9.4f}'
+        # val += f'\n{str("energy ="):11} {RefParticle.energy:9.2e} MeV'
+        # val += f'\n{str("gamma ="):11} {RefParticle.gamma:9.2f}'
+        val += f'\n{str("sigma_e ="):11} {self.sigma_e:9.3e}'
+        val += f'\n{str("emittance ="):11} {self.emittance:9.3e} m*rad'
+        # val += f'\n{str("Length ="):11} {self.length * self.periods_number:9.3f} m'
+        val += f'\n{str("U0 ="):11} {self.U0 * 1000:9.2f} keV'
+        # val += f'\n{str("Tperiod ="):11} {1 / self.f_c:9.3e} sec'
+        val += f'\n{str("alpha ="):11} {self.alpha:9.3e}'
+        # val += f'\n{str("eta_p ="):11} {self.etap:9.3e}'
+        # val += f'\n{str("tau_e ="):11} {self.tau_s * 1e3:9.2f} msec'
+        # val += f'\n{str("tau_x ="):11} {self.tau_x * 1e3:9.2f} msec'
+        val += f'\n{str("tau_y ="):11} {self.tau_y * 1e3:9.2f} msec'
+        # val += f'\n{str("natural_xi_x ="):11} {self.natural_xi_x:9.2f}'
+        # val += f'\n{str("natural_xi_y ="):11} {self.natural_xi_y:9.2f}'
+        val += f'\n{str("xi_x ="):11} {self.xi_x:9.2f}'
+        val += f'\n{str("xi_y ="):11} {self.xi_y:9.2f}'
         if self.sigma_z is not None:
             val += ("\nnuz =       " + str(self.nuz))
             val += ("\nsigma_z =   " + str(self.sigma_z))

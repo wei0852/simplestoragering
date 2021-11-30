@@ -59,10 +59,7 @@ class Quadrupole(Element):
         [x0, px0, y0, py0, z0, delta0] = beam.get_particle()
         # drift
         ds = self.length / 2
-        try:
-            d1 = np.sqrt(1 - px0 ** 2 - py0 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
-        except Exception:
-            raise ParticleLost(self.s)
+        d1 = np.sqrt(1 - px0 ** 2 - py0 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
         x1 = x0 + ds * px0 / d1
         y1 = y0 + ds * py0 / d1
         z1 = z0 + ds * (1 - (1 + RefParticle.beta * delta0) / d1) / RefParticle.beta
@@ -70,9 +67,10 @@ class Quadrupole(Element):
         px1 = px0 - self.k1 * x1 * self.length
         py1 = py0 + self.k1 * y1 * self.length
         # drift
+        np.seterr(all='raise')
         try:
             d2 = np.sqrt(1 - px1 ** 2 - py1 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
-        except Exception:
+        except FloatingPointError:
             raise ParticleLost(self.s)
         x2 = x1 + ds * px1 / d2
         y2 = y1 + ds * py1 / d2

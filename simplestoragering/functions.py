@@ -31,8 +31,8 @@ def compute_transfer_matrix_by_tracking(comp_list: list, beam: list, with_e_loss
 def output_opa_file(lattice, file_name=None):
     file_name = 'output_opa.opa' if file_name is None else file_name + '.opa'
     with open(file_name, 'w') as file:
-        file.write(f'energy = {ssr.RefParticle.energy / 1000: 6f};\n')
-        file.write('\n\n{------ table of elements -----------------------------}\n\n')
+        file.write(f'energy = {ssr.RefParticle.energy / 1000: 6f};\r\n')
+        file.write('\r\n\r\n{------ table of elements -----------------------------}\r\n\r\n')
         ele_list = []
         drift_list = []
         quad_list = []
@@ -41,29 +41,29 @@ def output_opa_file(lattice, file_name=None):
         for ele in lattice.elements:
             if ele.name not in ele_list:
                 if ele.type == 'Drift':
-                    drift_list.append(f'{ele.name:6}: drift, l = {ele.length:.6f};\n')
+                    drift_list.append(f'{ele.name:6}: drift, l = {ele.length:.6f};\r\n')
                 elif ele.type == 'Quadrupole':
-                    quad_list.append(f'{ele.name:6}: quadrupole, l = {ele.length:.6f}, k = {ele.k1:.6f};\n')
+                    quad_list.append(f'{ele.name:6}: quadrupole, l = {ele.length:.6f}, k = {ele.k1:.6f};\r\n')
                 elif ele.type == 'HBend':
                     bend_list.append(f'{ele.name:6}: bending, l = {ele.length:.6f}, t = {ele.theta * 180 / pi:.6f}, k '
-                                     f'= {ele.k1:.6f}, t1 = {ele.theta_in * 90 / pi:.6f}, t2 = '
-                                     f'{ele.theta_out * 90 / pi:.6f};\n')
+                                     f'= {ele.k1:.6f}, t1 = {ele.theta_in * 180 / pi:.6f}, t2 = '
+                                     f'{ele.theta_out * 180 / pi:.6f};\r\n')
                 elif ele.type == 'Sextupole':
-                    sext_list.append(f'{ele.name:6}: sextupole, l = {ele.length:.6f}, k = {ele.k2 / 2:.6f}, n = 4;\n')
+                    sext_list.append(f'{ele.name:6}: sextupole, l = {ele.length:.6f}, k = {ele.k2 / 2:.6f}, n = 4;\r\n')
             if ele.type == 'Drift' or ele.type == 'Quadrupole' or ele.type == 'HBend' or ele.type == 'Sextupole':
                 ele_list.append(ele.name)
         for ele in drift_list:
             file.write(ele)
-        file.write('\n')
+        file.write('\r\n')
         for ele in quad_list:
             file.write(ele)
-        file.write('\n')
+        file.write('\r\n')
         for ele in bend_list:
             file.write(ele)
-        file.write('\n')
+        file.write('\r\n')
         for ele in sext_list:
             file.write(ele)
-        file.write('\n\n{------ table of segments --------------------------}\n\n')
+        file.write('\r\n\r\n{------ table of segments --------------------------}\r\n\r\n')
         if lattice.periods_number == 1:
             file.write(f'ring : {ele_list[0]}')
             for i in range(len(ele_list)-1):
@@ -72,5 +72,5 @@ def output_opa_file(lattice, file_name=None):
             file.write(f'cell : {ele_list[0]}')
             for i in range(len(ele_list)-1):
                 file.write(f', {ele_list[i+1]}')
-            file.write(f';\nring : {lattice.periods_number}*cell')
-        file.write(';\n')
+            file.write(f';\r\nring : {lattice.periods_number}*cell')
+        file.write(';\r\n')

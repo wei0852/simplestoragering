@@ -70,10 +70,7 @@ class Sextupole(Element):
         ds = self.length / 2
         k2 = self.k2
         # drift
-        try:
-            d1 = np.sqrt(1 - px0 ** 2 - py0 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
-        except Exception:
-            raise ParticleLost(self.s)
+        d1 = np.sqrt(1 - px0 ** 2 - py0 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
         x1 = x0 + ds * px0 / d1
         y1 = y0 + ds * py0 / d1
         z1 = z0 + ds * (1 - (1 + RefParticle.beta * delta0) / d1) / RefParticle.beta
@@ -81,9 +78,10 @@ class Sextupole(Element):
         px1 = px0 - (x1 * x1 - y1 * y1) * k2 * ds
         py1 = py0 + x1 * y1 * k2 * ds * 2
         # drift
+        np.seterr(all='raise')
         try:
             d2 = np.sqrt(1 - px1 ** 2 - py1 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
-        except Exception:
+        except FloatingPointError:
             raise ParticleLost(self.s)
         x2 = x1 + ds * px1 / d2
         y2 = y1 + ds * py1 / d2
