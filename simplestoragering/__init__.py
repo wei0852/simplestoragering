@@ -19,4 +19,4 @@ from simplestoragering.rfcavity import RFCavity
 from simplestoragering.cslattice import CSLattice
 from simplestoragering.slimlattice import SlimRing, compute_twiss_of_slim_method
 from simplestoragering.plotlattice import plot_lattice, plot_layout_in_ax, plot_with_background, get_col
-from simplestoragering.functions import compute_transfer_matrix_by_tracking, output_opa_file
+from simplestoragering.functions import compute_transfer_matrix_by_tracking, output_opa_file, chromaticity_correction

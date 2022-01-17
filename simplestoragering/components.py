@@ -216,12 +216,13 @@ class Element(metaclass=ABCMeta):
 
 
 class Mark(Element):
-    """mark class, only for marking"""
+    """mark class. If record is True, the coordinates will be recorded every time the particle passes the Mark."""
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, record=True):
         self.name = name
         self.n_slices = 1
         self.data = None
+        self.record = record
 
     @property
     def damping_matrix(self):
@@ -242,14 +243,24 @@ class Mark(Element):
 
     def symplectic_track(self, beam: Beam7) -> Beam7:
         assert isinstance(beam, Beam7)
-        if self.data is None:
-            self.data = beam.get_particle_array()
-        else:
-            self.data = np.vstack((self.data, beam.get_particle_array()))
+        if self.record:
+            if self.data is None:
+                self.data = beam.get_particle_array()
+            else:
+                self.data = np.vstack((self.data, beam.get_particle_array()))
         return beam
 
     def real_track(self, beam: Beam7) -> Beam7:
+        if self.record:
+            if self.data is None:
+                self.data = beam.get_particle_array()
+            else:
+                self.data = np.vstack((self.data, beam.get_particle_array()))
         return beam
+
+    def clear(self):
+        """clear the particle coordinate data."""
+        self.data = None
 
     def radiation_integrals(self):
         return 0, 0, 0, 0, 0, 0, 0

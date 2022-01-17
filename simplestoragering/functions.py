@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from .particles import Beam7
-from numpy import zeros
+import numpy as np
+import time
 import simplestoragering as ssr
 from .constants import pi
 
@@ -22,7 +23,7 @@ def compute_transfer_matrix_by_tracking(comp_list: list, beam: list, with_e_loss
             beam = ele.real_track(beam)
         else:
             beam = ele.symplectic_track(beam)
-    matrix = zeros([6, 6])
+    matrix = np.zeros([6, 6])
     for i in range(6):
         matrix[:, i] = (beam.matrix[:, i] - beam.matrix[:, 6]) / beam.precision
     return matrix
@@ -74,3 +75,109 @@ def output_opa_file(lattice, file_name=None):
                 file.write(f', {ele_list[i+1]}')
             file.write(f';\r\nring : {lattice.periods_number}*cell')
         file.write(';\r\n')
+
+
+# def read_opa_file(filename):
+#     """read opa file and return cs_lattice, Only some components can be recognized
+#
+#     Only the file output by opa can be recognized. If the opening fails,
+#     you can try to open and save the file with opa first."""
+#
+#     with open(filename, 'r') as file:
+#         for line in file.readlines():
+#             item
+
+
+def output_elegant_file(lattice, filename=None):
+    filename = 'output_lte.lte' if filename is None else filename + '.lte'
+    with open(filename, 'w') as file:
+        file.write(f'! output from python code at {time.strftime("%m.%d,%H:%M")}\n')
+        file.write(f'\n!------------- table of elements ----------------\n\n')
+        ele_list = []
+        drift_list = []
+        quad_list = []
+        bend_list = []
+        sext_list = []
+        for ele in lattice.elements:
+            if ele.name not in ele_list:
+                if ele.type == 'Drift':
+                    drift_list.append(f'{ele.name:6}: EDRIFT, l = {ele.length:.6f}\n')
+                elif ele.type == 'Quadrupole':
+                    quad_list.append(f'{ele.name:6}: KQUAD, l = {ele.length:.6f}, k1 = {ele.k1:.6f}, N_SLICES = {ele.n_slices}\n')
+                elif ele.type == 'HBend':
+                    bend_list.append(f'{ele.name:6}: csbend, l = {ele.length:.6f}, angle = {ele.theta:.6f}, k1 '
+                                     f'= {ele.k1:.6f}, e1 = {ele.theta_in:.6f}, e2 = '
+                                     f'{ele.theta_out:.6f}\n')
+                elif ele.type == 'Sextupole':
+                    sext_list.append(f'{ele.name:6}: KSEXT, l = {ele.length:.6f}, k2 = {ele.k2:.6f}, N_SLICES = {ele.n_slices}\n')
+            if ele.type == 'Drift' or ele.type == 'Quadrupole' or ele.type == 'HBend' or ele.type == 'Sextupole':
+                ele_list.append(ele.name)
+        for ele in drift_list:
+            file.write(ele)
+        file.write('\n')
+        for ele in quad_list:
+            file.write(ele)
+        file.write('\n')
+        for ele in bend_list:
+            file.write(ele)
+        file.write('\n')
+        for ele in sext_list:
+            file.write(ele)
+        file.write('\n\n{------ table of segments --------------------------}\n\n')
+        if lattice.periods_number == 1:
+            file.write(f'ring : line=({ele_list[0]}')
+            for i in range(len(ele_list) - 1):
+                file.write(f', {ele_list[i + 1]}')
+        else:
+            file.write(f'cell : line=({ele_list[0]}')
+            for i in range(len(ele_list) - 1):
+                file.write(f', {ele_list[i + 1]}')
+            file.write(f')\nring : line=({lattice.periods_number}*cell')
+        file.write(')\n')
+
+
+def chromaticity_correction(lattice, sextupole_name_list: list, target=None, initial_k2=None, update_data=True):
+    """correct chromaticity. target = [xi_x, xi_y], initial_k2 should have the same length as sextupole_name_list."""
+
+    target = [1, 1] if target is None else target
+    num_sext = len(sextupole_name_list)
+    remaining_xi_x = lattice.natural_xi_x * 4 * pi
+    remaining_xi_y = lattice.natural_xi_y * 4 * pi
+    # initialize the weight
+    weight_x = {n: 0 for n in sextupole_name_list}
+    weight_y = {n: 0 for n in sextupole_name_list}
+    for ele in lattice.ele_slices:
+        if ele.type == 'Sextupole':
+            if ele.name not in sextupole_name_list:
+                remaining_xi_x += ele.betax * ele.etax * ele.length * ele.k2
+                remaining_xi_y += - ele.betay * ele.etax * ele.length * ele.k2
+            else:
+                weight_x[ele.name] += ele.betax * ele.etax * ele.length
+                weight_y[ele.name] += - ele.betay * ele.etax * ele.length
+    remaining_xi_x = remaining_xi_x / 4 / pi
+    remaining_xi_y = remaining_xi_y / 4 / pi
+    for ele_name in weight_x:
+        weight_x[ele_name] = weight_x[ele_name] / 4 / pi
+        weight_y[ele_name] = weight_y[ele_name] / 4 / pi
+    weight_matrix = np.zeros([2, len(sextupole_name_list)])
+    for i in range(len(sextupole_name_list)):
+        weight_matrix[0, i] = weight_x[sextupole_name_list[i]]
+        weight_matrix[1, i] = weight_y[sextupole_name_list[i]]
+    initial_k2 = [0 for _ in range(num_sext)] if initial_k2 is None else initial_k2
+    xi_x = remaining_xi_x
+    xi_y = remaining_xi_y
+    for i in range(num_sext):
+        xi_x += weight_x[sextupole_name_list[i]] * initial_k2[i]
+        xi_y += weight_y[sextupole_name_list[i]] * initial_k2[i]
+    delta_target = np.array([-xi_x + target[0], -xi_y + target[1]])
+    solution = np.linalg.pinv(weight_matrix).dot(delta_target)
+    initial_k2 = [initial_k2[i] + solution[i] for i in range(num_sext)]
+    print(f'result is\n{initial_k2}\n')
+    if update_data:
+        for ele in lattice.elements:
+            if ele.name in sextupole_name_list:
+                ele.k2 = initial_k2[sextupole_name_list.index(ele.name)]
+        for ele in lattice.ele_slices:
+            if ele.name in sextupole_name_list:
+                ele.k2 = initial_k2[sextupole_name_list.index(ele.name)]
+    # TODO: 如何控制六极磁铁强度上限

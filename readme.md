@@ -3,6 +3,12 @@ SimpleStorageRing is a python project to simulate simple storage ring and calcul
 
 You can sort the components to generate a lattice or a ring, and then calculate the data of storage ring by 
 **slim method** or Courant-Snyder method. 
+
+------------------
+已知存在的问题：
+存在二四极组合磁铁的时候，校正色品有误差。
+
+-------------------------
 ## components
 A storage ring consists of many magnets to guide electron beam,
 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import copy
+import time
 from .components import LineEnd, Mark
 from .rfcavity import RFCavity
 from .constants import pi, c, Cq, Cr, LENGTH_PRECISION
@@ -75,8 +76,14 @@ class CSLattice(object):
     def compute(self):
         """calculate optical functions and ring parameters."""
 
+        t1 = time.time()
         self.__solve_along()
+        t2 = time.time()
+        print(f'solve twiss, use {t2 - t1} seconds.')
+        t2 = time.time()
         self.__radiation_integrals()
+        t3 = time.time()
+        print(f'integral, use {t3 - t2} seconds.')
         self.__global_parameters()
 
     def __slice(self):
@@ -191,6 +198,33 @@ class CSLattice(object):
         self.xi_x = (natural_xi_x + sextupole_part_xi_x) * self.periods_number
         self.xi_y = (natural_xi_y + sextupole_part_xi_y) * self.periods_number
 
+    def compute_adts(self):
+        sext_list = []
+        Qxx = 0
+        Qyy = 0
+        Qxy = 0
+        pi_nux = pi * self.nux
+        pi_nuy = pi * self.nuy
+        for ele in self.ele_slices:
+            if ele.type == 'Sextupole':
+                sext_list.append(ele)
+        for j in range(len(sext_list)):
+            k2_l_j = sext_list[j].k2 * sext_list[j].length
+            beta_xj = sext_list[j].betax
+            beta_yj = sext_list[j].betay
+            phi_xj = sext_list[j].psix
+            phi_yj = sext_list[j].psiy
+            for k in range(len(sext_list)):
+                k2l = sext_list[k].k2 * sext_list[k].length * k2_l_j
+                beta_xjk = sext_list[k].betax * beta_xj
+                beta_yk = sext_list[k].betay
+                phi_jk_x = abs(sext_list[k].psix - phi_xj)
+                phi_jk_y = abs(sext_list[k].psiy - phi_yj)
+                Qxx += k2l * beta_xjk ** 1.5 * (3 * np.cos(phi_jk_x - pi_nux) / np.sin(pi_nux) + np.cos(3 * phi_jk_x - 3 * pi_nux) / np.sin(3 * pi_nux))
+                # Qxy += k2l * beta_xjk ** 0.5 * beta_yj * ()
+        Qxx = -Qxx / 64 / pi
+        print(f'Qxx = {Qxx}')
+
     def __global_parameters(self):
         self.Jx = 1 - self.I4 / self.I2
         self.Jy = 1
@@ -248,27 +282,27 @@ class CSLattice(object):
         val += f'\n{str("abs_angle ="):11} {self.abs_angle:9.3f}'
         val += f'\n{str("nux ="):11} {self.nux:9.4f}'
         val += f'\n{str("nuy ="):11} {self.nuy:9.4f}'
-        # val += f'\n{str("I1 ="):11} {self.I1:9.3e}'
-        # val += f'\n{str("I2 ="):11} {self.I2:9.3e}'
-        # val += f'\n{str("I3 ="):11} {self.I3:9.3e}'
-        # val += f'\n{str("I4 ="):11} {self.I4:9.3e}'
-        # val += f'\n{str("I5 ="):11} {self.I5:9.3e}'
-        # val += f'\n{str("Js ="):11} {self.Js:9.4f}'
+        val += f'\n{str("I1 ="):11} {self.I1:9.3e}'
+        val += f'\n{str("I2 ="):11} {self.I2:9.3e}'
+        val += f'\n{str("I3 ="):11} {self.I3:9.3e}'
+        val += f'\n{str("I4 ="):11} {self.I4:9.3e}'
+        val += f'\n{str("I5 ="):11} {self.I5:9.3e}'
+        val += f'\n{str("Js ="):11} {self.Js:9.4f}'
         val += f'\n{str("Jx ="):11} {self.Jx:9.4f}'
-        # val += f'\n{str("energy ="):11} {RefParticle.energy:9.2e} MeV'
+        val += f'\n{str("energy ="):11} {RefParticle.energy:9.2e} MeV'
         # val += f'\n{str("gamma ="):11} {RefParticle.gamma:9.2f}'
         val += f'\n{str("sigma_e ="):11} {self.sigma_e:9.3e}'
         val += f'\n{str("emittance ="):11} {self.emittance:9.3e} m*rad'
-        # val += f'\n{str("Length ="):11} {self.length * self.periods_number:9.3f} m'
+        val += f'\n{str("Length ="):11} {self.length * self.periods_number:9.3f} m'
         val += f'\n{str("U0 ="):11} {self.U0 * 1000:9.2f} keV'
-        # val += f'\n{str("Tperiod ="):11} {1 / self.f_c:9.3e} sec'
+        val += f'\n{str("Tperiod ="):11} {1 / self.f_c:9.3e} sec'
         val += f'\n{str("alpha ="):11} {self.alpha:9.3e}'
-        # val += f'\n{str("eta_p ="):11} {self.etap:9.3e}'
-        # val += f'\n{str("tau_e ="):11} {self.tau_s * 1e3:9.2f} msec'
-        # val += f'\n{str("tau_x ="):11} {self.tau_x * 1e3:9.2f} msec'
+        val += f'\n{str("eta_p ="):11} {self.etap:9.3e}'
+        val += f'\n{str("tau_e ="):11} {self.tau_s * 1e3:9.2f} msec'
+        val += f'\n{str("tau_x ="):11} {self.tau_x * 1e3:9.2f} msec'
         val += f'\n{str("tau_y ="):11} {self.tau_y * 1e3:9.2f} msec'
-        # val += f'\n{str("natural_xi_x ="):11} {self.natural_xi_x:9.2f}'
-        # val += f'\n{str("natural_xi_y ="):11} {self.natural_xi_y:9.2f}'
+        val += f'\n{str("natural_xi_x ="):11} {self.natural_xi_x:9.2f}'
+        val += f'\n{str("natural_xi_y ="):11} {self.natural_xi_y:9.2f}'
         val += f'\n{str("xi_x ="):11} {self.xi_x:9.2f}'
         val += f'\n{str("xi_y ="):11} {self.xi_y:9.2f}'
         if self.sigma_z is not None:
