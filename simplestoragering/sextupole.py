@@ -16,9 +16,9 @@ class Sextupole(Element):
         self.length = length
         self.k2 = k2
         self.n_slices = n_slices
+        self.cal_matrix()
 
-    @property
-    def matrix(self):
+    def cal_matrix(self):
         k2l = self.k2 * self.length
         x0 = self.closed_orbit[0]
         y0 = self.closed_orbit[2]
@@ -30,8 +30,7 @@ class Sextupole(Element):
                            [- k2l * x02_y02_2, 0, k2l * x0 * y0, 0, 1, 0],
                            [0, 0, 0, 0, 0, 1]])
         drift = Drift(length=self.length / 2).matrix
-        total = drift.dot(matrix).dot(drift)
-        return total
+        self.matrix = drift.dot(matrix).dot(drift)
 
     @property
     def damping_matrix(self):

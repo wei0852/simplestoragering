@@ -18,6 +18,7 @@ class HBend(Element):
         self.theta_out = theta_out
         self.n_slices = n_slices
         self.k1 = k1
+        self.cal_matrix()
 
     @property
     def theta(self):
@@ -26,8 +27,7 @@ class HBend(Element):
     def set_slices(self, n_slices):
         self.n_slices = n_slices
 
-    @property
-    def matrix(self):
+    def cal_matrix(self):
         h_beta = self.h / RefParticle.beta
         inlet_edge = np.array([[1, 0, 0, 0, 0, 0],
                                [np.tan(self.theta_in) * self.h, 1, 0, 0, 0, 0],
@@ -55,7 +55,7 @@ class HBend(Element):
                                 [0, 0, -np.tan(self.theta_out) * self.h, 1, 0, 0],
                                 [0, 0, 0, 0, 1, 0],
                                 [0, 0, 0, 0, 0, 1]])
-        return outlet_edge.dot(middle_section).dot(inlet_edge)
+        self.matrix = outlet_edge.dot(middle_section).dot(inlet_edge)
 
     def __calculate_csd(self, fu):
         if fu > 0:
@@ -255,6 +255,7 @@ class HBend(Element):
         ele.theta_out = 0
         ele.s = current_s
         ele.length = round(self.length / self.n_slices, LENGTH_PRECISION)
+        ele.cal_matrix()
         ele_list.append(deepcopy(ele))
         current_s = round(current_s + ele.length, LENGTH_PRECISION)
         if self.n_slices == 1:
@@ -265,12 +266,14 @@ class HBend(Element):
             ele.theta_in = 0
             ele.theta_out = 0
             ele.length = round(self.length / self.n_slices, LENGTH_PRECISION)
+            ele.cal_matrix()
             ele_list.append(deepcopy(ele))
             current_s = round(current_s + ele.length, LENGTH_PRECISION)
         ele.s = current_s
         ele.theta_in = 0
         ele.theta_out = self.theta_out
         ele.length = round(self.length + initial_s - current_s, LENGTH_PRECISION)
+        ele.cal_matrix()
         ele_list.append(deepcopy(ele))
         current_s = round(current_s + ele.length, LENGTH_PRECISION)
         return [ele_list, current_s]

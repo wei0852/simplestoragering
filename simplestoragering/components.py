@@ -8,20 +8,7 @@ import numpy as np
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 from .constants import pi, LENGTH_PRECISION
-from .exceptions import UnfinishedWork
-
-
-# def match_symbol(symbol):
-#     """:return the element type of the symbol
-#
-#     1: drift, 2: dipole, 3: quadrupole, 4: sextupole,
-#     21: sector dipole, 22: rectangle dipole, 24: dipole edge
-#     """
-#     symbol_dict = {-1: 'end', 1: 'Drift     ', 2: 'Bend      ', 3: 'Quadrupole', 4: 'Sextupole ', 5: 'rf cavity'}
-#     try:
-#         return symbol_dict[int(symbol / 100)]
-#     except KeyError:
-#         raise UnfinishedWork('symbol key error')
+from .particles import RefParticle
 
 
 class Element(metaclass=ABCMeta):
@@ -61,6 +48,7 @@ class Element(metaclass=ABCMeta):
     etay = None
     etayp = None
     curl_H = None
+    matrix = None
 
     @property
     @abstractmethod
@@ -68,10 +56,9 @@ class Element(metaclass=ABCMeta):
         """matrix with coupled effects and damping rates to calculate tune and damping rate"""
         pass
 
-    @property
-    @abstractmethod
-    def matrix(self):
+    def cal_matrix(self):
         """matrix with coupled effects to calculate tune and bunch distribution"""
+        self.matrix = np.identity(6)
 
     @property
     def next_closed_orbit(self):
@@ -127,10 +114,12 @@ class Element(metaclass=ABCMeta):
         for i in range(self.n_slices - 1):
             ele.s = current_s
             ele.length = round(self.length / self.n_slices, LENGTH_PRECISION)
+            ele.cal_matrix()
             ele_list.append(deepcopy(ele))
             current_s = round(current_s + ele.length, LENGTH_PRECISION)
         ele.s = current_s
         ele.length = round(self.length + initial_s - current_s, LENGTH_PRECISION)
+        ele.cal_matrix()
         ele_list.append(deepcopy(ele))
         current_s = round(current_s + ele.length, LENGTH_PRECISION)
         return [ele_list, current_s]
@@ -223,13 +212,10 @@ class Mark(Element):
         self.n_slices = 1
         self.data = None
         self.record = record
+        self.cal_matrix()
 
     @property
     def damping_matrix(self):
-        return np.identity(6)
-
-    @property
-    def matrix(self):
         return np.identity(6)
 
     @property
@@ -274,13 +260,10 @@ class LineEnd(Element):
         self.s = s
         self.identifier = identifier
         self.n_slices = 1
+        self.cal_matrix()
 
     @property
     def damping_matrix(self):
-        return np.identity(6)
-
-    @property
-    def matrix(self):
         return np.identity(6)
 
     @property
@@ -300,75 +283,3 @@ class LineEnd(Element):
 
     def radiation_integrals(self):
         return 0, 0, 0, 0, 0, 0, 0
-
-
-class VBend(Element):
-    """vertical Bend"""
-
-    def __init__(self, name: str = None, length: float = 0, theta: float = 0, theta_in: float = 0, theta_out: float = 0,
-                 n_slices: int = 3):
-        self.name = name
-        self.length = length
-        self.theta = theta
-        self.h = self.theta / self.length
-        self.theta_in = theta_in
-        self.theta_out = theta_out
-        self.n_slices = max(n_slices, 3)
-
-    @property
-    def damping_matrix(self):
-        raise UnfinishedWork()
-
-    @property
-    def matrix(self):
-        raise UnfinishedWork()
-
-    @property
-    def closed_orbit_matrix(self):
-        raise UnfinishedWork('VBend')
-
-    def symplectic_track(self, beam):
-        raise UnfinishedWork('VBend')
-
-    def real_track(self, beam: Beam7) -> Beam7:
-        raise UnfinishedWork('VBend')
-
-    def radiation_integrals(self):
-        raise UnfinishedWork('VBend')
-
-
-class SKQuadrupole(Element):
-    """skew Quadrupole, b_x = - k1 x, b_y = k1 y"""
-
-    def __init__(self, name: str = None, length: float = 0, k1: float = 0, n_slices: int = 1):
-        self.name = name
-        self.length = length
-        self.k1 = k1
-        self.n_slices = n_slices
-        if k1 > 0:
-            self.symbol = 370
-        else:
-            self.symbol = 360
-        raise UnfinishedWork()
-
-    @property
-    def matrix(self):
-        raise UnfinishedWork()
-
-    @property
-    def damping_matrix(self):
-        # lambda_q = Cr * RefParticle.energy ** 3 * self.k1 ** 2 * self.length / pi
-        raise UnfinishedWork()
-
-    @property
-    def closed_orbit_matrix(self):
-        raise UnfinishedWork()
-
-    def symplectic_track(self, beam):
-        raise UnfinishedWork('SKQ')
-
-    def real_track(self, beam: Beam7) -> Beam7:
-        raise UnfinishedWork('SKQ')
-
-    def radiation_integrals(self):
-        raise UnfinishedWork('SKQ')

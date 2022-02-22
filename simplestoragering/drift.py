@@ -12,10 +12,10 @@ class Drift(Element):
         self.name = name
         self.length = length
         self.n_slices = n_slices
+        self.cal_matrix()
 
-    @property
-    def matrix(self):
-        return np.array([[1, self.length, 0, 0, 0, 0],
+    def cal_matrix(self):
+        self.matrix = np.array([[1, self.length, 0, 0, 0, 0],
                          [0, 1, 0, 0, 0, 0],
                          [0, 0, 1, self.length, 0, 0],
                          [0, 0, 0, 1, 0, 0],

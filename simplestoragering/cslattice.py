@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import copy
-import time
 from .components import LineEnd, Mark
 from .rfcavity import RFCavity
 from .constants import pi, c, Cq, Cr, LENGTH_PRECISION
@@ -76,14 +75,8 @@ class CSLattice(object):
     def compute(self):
         """calculate optical functions and ring parameters."""
 
-        t1 = time.time()
         self.__solve_along()
-        t2 = time.time()
-        print(f'solve twiss, use {t2 - t1} seconds.')
-        t2 = time.time()
         self.__radiation_integrals()
-        t3 = time.time()
-        print(f'integral, use {t3 - t2} seconds.')
         self.__global_parameters()
 
     def __slice(self):

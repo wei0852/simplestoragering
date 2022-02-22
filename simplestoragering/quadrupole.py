@@ -14,13 +14,13 @@ class Quadrupole(Element):
         self.length = length
         self.k1 = k1
         self.n_slices = n_slices
+        self.cal_matrix()
 
-    @property
-    def matrix(self):
+    def cal_matrix(self):
         if self.k1 > 0:
             sqk = np.sqrt(self.k1)
             sqkl = sqk * self.length
-            return np.array([[np.cos(sqkl), np.sin(sqkl) / sqk, 0, 0, 0, 0],
+            self.matrix = np.array([[np.cos(sqkl), np.sin(sqkl) / sqk, 0, 0, 0, 0],
                              [- sqk * np.sin(sqkl), np.cos(sqkl), 0, 0, 0, 0],
                              [0, 0, np.cosh(sqkl), np.sinh(sqkl) / sqk, 0, 0],
                              [0, 0, sqk * np.sinh(sqkl), np.cosh(sqkl), 0, 0],
@@ -29,7 +29,7 @@ class Quadrupole(Element):
         else:
             sqk = np.sqrt(-self.k1)
             sqkl = sqk * self.length
-            return np.array([[np.cosh(sqkl), np.sinh(sqkl) / sqk, 0, 0, 0, 0],
+            self.matrix = np.array([[np.cosh(sqkl), np.sinh(sqkl) / sqk, 0, 0, 0, 0],
                              [sqk * np.sinh(sqkl), np.cosh(sqkl), 0, 0, 0, 0],
                              [0, 0, np.cos(sqkl), np.sin(sqkl) / sqk, 0, 0],
                              [0, 0, - sqk * np.sin(sqkl), np.cos(sqkl), 0, 0],
