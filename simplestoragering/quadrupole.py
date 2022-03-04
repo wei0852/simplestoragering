@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from .components import Element
-from .constants import Cr, pi
+from .constants import Cr, LENGTH_PRECISION
 from .particles import RefParticle, Beam7
 from .exceptions import ParticleLost
 import numpy as np
@@ -15,6 +15,25 @@ class Quadrupole(Element):
         self.k1 = k1
         self.n_slices = n_slices
         self.cal_matrix()
+
+    def slice(self, initial_s, identifier):
+        """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
+        ele_list = []
+        current_s = initial_s
+        length = round(self.length / self.n_slices, LENGTH_PRECISION)
+        for i in range(self.n_slices - 1):
+            ele = Quadrupole(self.name, length, self.k1)
+            ele.identifier = identifier
+            ele.s = current_s
+            ele_list.append(ele)
+            current_s = round(current_s + ele.length, LENGTH_PRECISION)
+        length = round(self.length + initial_s - current_s, LENGTH_PRECISION)
+        ele = Quadrupole(self.name, length, self.k1)
+        ele.identifier = identifier
+        ele.s = current_s
+        ele_list.append(ele)
+        current_s = round(current_s + ele.length, LENGTH_PRECISION)
+        return [ele_list, current_s]
 
     def cal_matrix(self):
         if self.k1 > 0:
@@ -38,7 +57,7 @@ class Quadrupole(Element):
 
     @property
     def damping_matrix(self):
-        lambda_q = Cr * RefParticle.energy ** 3 * self.k1 ** 2 * self.length / pi
+        lambda_q = Cr * RefParticle.energy ** 3 * self.k1 ** 2 * self.length / np.pi
         matrix = self.matrix
         matrix[5, 5] = 1 - lambda_q * (self.closed_orbit[0] ** 2 + self.closed_orbit[2] ** 2)
         matrix[5, 0] = - lambda_q * self.closed_orbit[0]
@@ -48,7 +67,7 @@ class Quadrupole(Element):
     @property
     def closed_orbit_matrix(self):
         m67 = - Cr * RefParticle.energy ** 3 * self.k1 ** 2 * self.length * (self.closed_orbit[0] ** 2 +
-                                                                             self.closed_orbit[2] ** 2) / 2 / pi
+                                                                             self.closed_orbit[2] ** 2) / 2 / np.pi
         # m67 = m67 * (1 + self.closed_orbit[5]) ** 2
         matrix7 = np.identity(7)
         matrix7[0:6, 0:6] = self.matrix
@@ -94,7 +113,7 @@ class Quadrupole(Element):
         py1 = py0 + self.k1 * y1 * self.length
         # damping
         delta1 = (delta0 - (1 + delta0 * RefParticle.beta) ** 2 * Cr * RefParticle.energy ** 3 * self.k1 ** 2 *
-                  self.length * (x1 ** 2 + y1 ** 2) / 2 / pi / RefParticle.beta)
+                  self.length * (x1 ** 2 + y1 ** 2) / 2 / np.pi / RefParticle.beta)
         # e1_div_e0 = (delta1 + 1) / (delta0 + 1)  # approximation
         e1_div_e0 = np.sqrt(((1 + delta1 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2) /
                             ((1 + delta0 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2))
@@ -112,6 +131,6 @@ class Quadrupole(Element):
         return beam
 
     def radiation_integrals(self):
-        xi_x = - self.k1 * self.length * self.betax / 4 / pi
-        xi_y = self.k1 * self.length * self.betay / 4 / pi
+        xi_x = - self.k1 * self.length * self.betax / 4 / np.pi
+        xi_y = self.k1 * self.length * self.betay / 4 / np.pi
         return 0, 0, 0, 0, 0, xi_x, xi_y

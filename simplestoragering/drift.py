@@ -2,6 +2,7 @@
 from .components import Element
 from .particles import RefParticle, Beam7
 from .exceptions import ParticleLost
+from .constants import LENGTH_PRECISION
 import numpy as np
 
 
@@ -13,6 +14,25 @@ class Drift(Element):
         self.length = length
         self.n_slices = n_slices
         self.cal_matrix()
+
+    def slice(self, initial_s, identifier):
+        """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
+        ele_list = []
+        current_s = initial_s
+        length = round(self.length / self.n_slices, LENGTH_PRECISION)
+        for i in range(self.n_slices - 1):
+            ele = Drift(self.name, length)
+            ele.identifier = identifier
+            ele.s = current_s
+            ele_list.append(ele)
+            current_s = round(current_s + ele.length, LENGTH_PRECISION)
+        length = round(self.length + initial_s - current_s, LENGTH_PRECISION)
+        ele = Drift(self.name, length)
+        ele.identifier = identifier
+        ele.s = current_s
+        ele_list.append(ele)
+        current_s = round(current_s + ele.length, LENGTH_PRECISION)
+        return [ele_list, current_s]
 
     def cal_matrix(self):
         self.matrix = np.array([[1, self.length, 0, 0, 0, 0],

@@ -92,16 +92,16 @@ def get_col(lattice, parameter: str):
             __col.append(ele.etaxp)
         return __col
 
-    def __get_nux():
+    def __get_psix():
         __col = []
         for ele in lattice.ele_slices:
-            __col.append(ele.psix / 2 / pi)
+            __col.append(ele.psix)
         return __col
 
-    def __get_nuy():
+    def __get_psiy():
         __col = []
         for ele in lattice.ele_slices:
-            __col.append(ele.psiy / 2 / pi)
+            __col.append(ele.psiy)
         return __col
 
     # assert isinstance(lattice, CSLattice) or isinstance(lattice, SlimRing)
@@ -135,9 +135,9 @@ def get_col(lattice, parameter: str):
     elif parameter == 'etaxp':
         col_data = __get_etaxp()
     elif parameter == 'psix':
-        col_data = __get_nux()
+        col_data = __get_psix()
     elif parameter == 'psiy':
-        col_data = __get_nuy()
+        col_data = __get_psiy()
     else:
         raise UnfinishedWork(f'cannot get {parameter} data')
     return col_data

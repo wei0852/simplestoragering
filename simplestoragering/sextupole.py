@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from .components import Element
-from .constants import Cr, pi
+from .constants import Cr, LENGTH_PRECISION
 from .particles import RefParticle, Beam7
 from .drift import Drift
 from .exceptions import ParticleLost
@@ -17,6 +17,25 @@ class Sextupole(Element):
         self.k2 = k2
         self.n_slices = n_slices
         self.cal_matrix()
+
+    def slice(self, initial_s, identifier):
+        """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
+        ele_list = []
+        current_s = initial_s
+        length = round(self.length / self.n_slices, LENGTH_PRECISION)
+        for i in range(self.n_slices - 1):
+            ele = Sextupole(self.name, length, self.k2)
+            ele.identifier = identifier
+            ele.s = current_s
+            ele_list.append(ele)
+            current_s = round(current_s + ele.length, LENGTH_PRECISION)
+        length = round(self.length + initial_s - current_s, LENGTH_PRECISION)
+        ele = Sextupole(self.name, length, self.k2)
+        ele.identifier = identifier
+        ele.s = current_s
+        ele_list.append(ele)
+        current_s = round(current_s + ele.length, LENGTH_PRECISION)
+        return [ele_list, current_s]
 
     def cal_matrix(self):
         k2l = self.k2 * self.length
@@ -38,7 +57,7 @@ class Sextupole(Element):
         k2l = self.k2 * self.length
         x0 = self.closed_orbit[0]
         y0 = self.closed_orbit[2]
-        lambda_s = Cr * RefParticle.energy ** 3 * k2l ** 2 * (x0 ** 2 + y0 ** 2) / pi / self.length
+        lambda_s = Cr * RefParticle.energy ** 3 * k2l ** 2 * (x0 ** 2 + y0 ** 2) / np.pi / self.length
         matrix = self.matrix
         matrix[5, 0] = - lambda_s * x0
         matrix[5, 2] = - lambda_s * y0
@@ -49,7 +68,7 @@ class Sextupole(Element):
     def closed_orbit_matrix(self):
         """it's different from its transform matrix, x is replaced by closed orbit x0"""
         m67 = - (Cr * RefParticle.energy ** 3 * self.k2 ** 2 * self.length *
-                 (self.closed_orbit[0] ** 2 + self.closed_orbit[2] ** 2) ** 2 / 8 / pi)
+                 (self.closed_orbit[0] ** 2 + self.closed_orbit[2] ** 2) ** 2 / 8 / np.pi)
         # m67 = m67 * (1 + self.closed_orbit[5]) ** 2
         matrix7 = np.identity(7)
         drift = Drift(length=self.length / 2).matrix
@@ -107,7 +126,7 @@ class Sextupole(Element):
         # delta1 = delta0 - (delta0 + 1) ** 2 * (Cr * RefParticle.energy ** 3 * self.k2 ** 2 * self.length *
         #                                        (x1 ** 2 + y1 ** 2) ** 2 / 8 / pi)     # beta0 \approx 1
         delta1 = (delta0 - (delta0 * RefParticle.beta + 1) ** 2 * Cr * RefParticle.energy ** 3 * self.k2 ** 2 *
-                  self.length * (x1 ** 2 + y1 ** 2) ** 2 / 8 / pi / RefParticle.beta)
+                  self.length * (x1 ** 2 + y1 ** 2) ** 2 / 8 / np.pi / RefParticle.beta)
         # e1_div_e0 = (delta1 + 1) / (delta0 + 1)  # approximation
         e1_div_e0 = np.sqrt(((1 + delta1 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2) /
                             ((1 + delta0 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2))
@@ -126,6 +145,6 @@ class Sextupole(Element):
         return beam
 
     def radiation_integrals(self):
-        xi_x = self.etax * self.k2 * self.length * self.betax / 4 / pi
-        xi_y = - self.etax * self.k2 * self.length * self.betay / 4 / pi
+        xi_x = self.etax * self.k2 * self.length * self.betax / 4 / np.pi
+        xi_y = - self.etax * self.k2 * self.length * self.betay / 4 / np.pi
         return 0, 0, 0, 0, 0, xi_x, xi_y

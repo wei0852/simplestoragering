@@ -232,15 +232,21 @@ class HBend(Element):
         integral1 = self.length * self.etax * self.h
         integral2 = self.length * self.h ** 2
         integral3 = self.length * abs(self.h) ** 3
-        integral4 = self.length * (self.h ** 2 + 2 * self.k1) * self.etax * self.h + 2 * self.h ** 2 * self.etax * np.tan(self.theta_in)
+        integral4 = self.length * (
+                    self.h ** 2 + 2 * self.k1) * self.etax * self.h + 2 * self.h ** 2 * self.etax * np.tan(
+            self.theta_in)
         if self.theta_out != 0:
-            eta = self.next_eta_bag('x')[0]
-            integral4 -= 2 * self.h ** 2 * eta * np.tan(self.theta_out)
-        integral5 = self.length * self.curl_H * abs(self.h) ** 3
+            eta = self.matrix[:2, :2].dot(np.array([self.etax, self.etaxp])) + np.array(
+                [self.matrix[0, 5], self.matrix[1, 5]])
+            integral4 -= 2 * self.h ** 2 * eta[0] * np.tan(self.theta_out)
+        curl_H = self.gammax * self.etax ** 2 + 2 * self.alphax * self.etax * self.etaxp + self.betax * self.etaxp ** 2
+        integral5 = self.length * curl_H * abs(self.h) ** 3
         xi_x = (- (self.k1 + self.h ** 2) * self.length * self.betax + self.h * (
-                    np.tan(self.theta_in) + np.tan(self.theta_out)) * self.betax) / 4 / pi
+                np.tan(self.theta_in) + np.tan(self.theta_out)) * self.betax) / 4 / pi
         xi_y = (self.k1 * self.length * self.betay - self.h * (
-                    np.tan(self.theta_in) + np.tan(self.theta_out)) * self.betay) / 4 / pi
+                np.tan(self.theta_in) + np.tan(self.theta_out)) * self.betay) / 4 / pi
+        xi_x += - 2 * self.k1 * (np.tan(self.theta_in) + np.tan(self.theta_out)) * self.etax * self.betax / 4 / pi
+        xi_y += 2 * self.k1 * (np.tan(self.theta_in) + np.tan(self.theta_out)) * self.etax * self.betay / 4 / pi
         return integral1, integral2, integral3, integral4, integral5, xi_x, xi_y
 
     def slice(self, initial_s, identifier):
@@ -250,31 +256,29 @@ class HBend(Element):
 
         ele_list = []
         current_s = initial_s
-        ele = deepcopy(self)
-        ele.identifier = identifier
-        ele.theta_out = 0
-        ele.s = current_s
-        ele.length = round(self.length / self.n_slices, LENGTH_PRECISION)
-        ele.cal_matrix()
-        ele_list.append(deepcopy(ele))
-        current_s = round(current_s + ele.length, LENGTH_PRECISION)
         if self.n_slices == 1:
-            ele_list[0].theta_out = self.theta_out
-            return [ele_list, current_s]
-        for i in range(self.n_slices - 2):
+            ele = HBend(self.name, self.length, self.theta, self.theta_in, self.theta_out, self.k1, 1)
             ele.s = current_s
-            ele.theta_in = 0
-            ele.theta_out = 0
-            ele.length = round(self.length / self.n_slices, LENGTH_PRECISION)
-            ele.cal_matrix()
-            ele_list.append(deepcopy(ele))
-            current_s = round(current_s + ele.length, LENGTH_PRECISION)
+            ele.identifier = identifier
+            current_s = round(current_s + self.length, LENGTH_PRECISION)
+            return [[ele], current_s]
+        length = round(self.length / self.n_slices, LENGTH_PRECISION)
+        ele = HBend(self.name, length, self.h * length, self.theta_in, 0, self.k1, 1)
         ele.s = current_s
-        ele.theta_in = 0
-        ele.theta_out = self.theta_out
-        ele.length = round(self.length + initial_s - current_s, LENGTH_PRECISION)
-        ele.cal_matrix()
-        ele_list.append(deepcopy(ele))
+        ele.identifier = identifier
+        ele_list.append(ele)
+        current_s = round(current_s + ele.length, LENGTH_PRECISION)
+        for i in range(self.n_slices - 2):
+            ele = HBend(self.name, length, self.h * length, 0, 0, self.k1, 1)
+            ele.s = current_s
+            ele.identifier = identifier
+            ele_list.append(ele)
+            current_s = round(current_s + ele.length, LENGTH_PRECISION)
+        length = round(self.length + initial_s - current_s, LENGTH_PRECISION)
+        ele = HBend(self.name, length, self.h * length, 0, self.theta_out, self.k1, 1)
+        ele.s = current_s
+        ele.identifier = identifier
+        ele_list.append(ele)
         current_s = round(current_s + ele.length, LENGTH_PRECISION)
         return [ele_list, current_s]
 

@@ -105,72 +105,36 @@ class Element(metaclass=ABCMeta):
     def nuy(self):
         return self.psiy / 2 / pi
 
+    @abstractmethod
     def slice(self, initial_s, identifier):
         """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
-        ele_list = []
-        current_s = initial_s
-        ele = deepcopy(self)
-        ele.identifier = identifier
-        for i in range(self.n_slices - 1):
-            ele.s = current_s
-            ele.length = round(self.length / self.n_slices, LENGTH_PRECISION)
-            ele.cal_matrix()
-            ele_list.append(deepcopy(ele))
-            current_s = round(current_s + ele.length, LENGTH_PRECISION)
-        ele.s = current_s
-        ele.length = round(self.length + initial_s - current_s, LENGTH_PRECISION)
-        ele.cal_matrix()
-        ele_list.append(deepcopy(ele))
-        current_s = round(current_s + ele.length, LENGTH_PRECISION)
-        return [ele_list, current_s]
+        pass
 
-    def __sub_matrix(self, direction):
-        """return sub_matrix of x or y direction"""
-        if direction == 'x':
-            return np.array([[self.matrix[0, 0], self.matrix[0, 1]],
-                             [self.matrix[1, 0], self.matrix[1, 1]]])
-        elif direction == 'y':
-            return np.array([[self.matrix[2, 2], self.matrix[2, 3]],
-                             [self.matrix[3, 2], self.matrix[3, 3]]])
-        else:
-            raise Exception("direction must be 'x' or 'y' !!!")
-
-    def __get_twiss(self, direction):
-        if direction == 'x':
-            return np.array([self.betax, self.alphax, self.gammax])
-        elif direction == 'y':
-            return np.array([self.betay, self.alphay, self.gammay])
-
-    def next_twiss(self, direction):
-        """calculate twiss parameters at the element's exit according to the data at the element's entrance"""
-        sub = self.__sub_matrix(direction)
+    def pass_next_data(self, next_ele):
+        sub = self.matrix[:2, :2]
         matrix_cal = np.array([[sub[0, 0] ** 2, -2 * sub[0, 0] * sub[0, 1], sub[0, 1] ** 2],
                                [-sub[0, 0] * sub[1, 0], 2 * sub[0, 1] * sub[1, 0] + 1, -sub[0, 1] * sub[1, 1]],
                                [sub[1, 0] ** 2, -2 * sub[1, 0] * sub[1, 1], sub[1, 1] ** 2]])
-        return matrix_cal.dot(self.__get_twiss(direction))
-
-    def next_eta_bag(self, direction):
-        """calculate  parameters at the element's exit according to the data at the element's entrance"""
-        if direction == 'x':
-            eta_bag = np.array([self.etax, self.etaxp])
-            return self.__sub_matrix('x').dot(eta_bag) + np.array([self.matrix[0, 5], self.matrix[1, 5]])
-        elif direction == 'y':
-            eta_bag = np.array([self.etay, self.etayp])
-            return self.__sub_matrix('y').dot(eta_bag) + np.array([self.matrix[2, 5], self.matrix[3, 5]])
-        else:
-            raise Exception("direction must be 'x' or 'y' !!!")
-
-    def next_phase(self):
-        """:return psix, psiy"""
+        [next_ele.betax, next_ele.alphax, next_ele.gammax] = matrix_cal.dot(
+            np.array([self.betax, self.alphax, self.gammax]))
+        sub = self.matrix[2:4, 2:4]
+        matrix_cal = np.array([[sub[0, 0] ** 2, -2 * sub[0, 0] * sub[0, 1], sub[0, 1] ** 2],
+                               [-sub[0, 0] * sub[1, 0], 2 * sub[0, 1] * sub[1, 0] + 1, -sub[0, 1] * sub[1, 1]],
+                               [sub[1, 0] ** 2, -2 * sub[1, 0] * sub[1, 1], sub[1, 1] ** 2]])
+        [next_ele.betay, next_ele.alphay, next_ele.gammay] = matrix_cal.dot(
+            np.array([self.betay, self.alphay, self.gammay]))
+        [next_ele.etax, next_ele.etaxp] = self.matrix[:2, :2].dot(np.array([self.etax, self.etaxp])) + np.array(
+            [self.matrix[0, 5], self.matrix[1, 5]])
+        [next_ele.etay, next_ele.etayp] = self.matrix[2:4, 2:4].dot(np.array([self.etay, self.etayp])) + np.array(
+            [self.matrix[2, 5], self.matrix[3, 5]])
         dpsix = np.arctan(self.matrix[0, 1] / (self.matrix[0, 0] * self.betax - self.matrix[0, 1] * self.alphax))
         while dpsix < 0:
             dpsix += pi
-        phix = self.psix + dpsix
+        next_ele.psix = self.psix + dpsix
         dpsiy = np.arctan(self.matrix[2, 3] / (self.matrix[2, 2] * self.betay - self.matrix[2, 3] * self.alphay))
         while dpsiy < 0:
             dpsiy += pi
-        phiy = self.psiy + dpsiy
-        return phix, phiy
+        next_ele.psiy = self.psiy + dpsiy
 
     def __repr__(self):
         return self.name
@@ -213,6 +177,11 @@ class Mark(Element):
         self.data = None
         self.record = record
         self.cal_matrix()
+
+    def slice(self, initial_s, identifier):
+        """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
+        ele_list = [self]
+        return [ele_list, initial_s]
 
     @property
     def damping_matrix(self):
@@ -261,6 +230,9 @@ class LineEnd(Element):
         self.identifier = identifier
         self.n_slices = 1
         self.cal_matrix()
+
+    def slice(self, initial_s, identifier):
+        pass
 
     @property
     def damping_matrix(self):

@@ -76,7 +76,6 @@ class CSLattice(object):
         """calculate optical functions and ring parameters."""
 
         self.__solve_along()
-        self.__radiation_integrals()
         self.__global_parameters()
 
     def __slice(self):
@@ -134,48 +133,30 @@ class CSLattice(object):
         [betay, alphay, gammay] = self.twiss_y0
         [etax, etaxp] = self.eta_x0
         [etay, etayp] = self.eta_y0
-        psix = 0
-        psiy = 0
-        for ele in self.ele_slices:
-            ele.betax = betax
-            ele.betay = betay
-            ele.alphax = alphax
-            ele.alphay = alphay
-            ele.gammax = gammax
-            ele.gammay = gammay
-            ele.etax = etax
-            ele.etay = etay
-            ele.etaxp = etaxp
-            ele.etayp = etayp
-            ele.psix = psix
-            ele.psiy = psiy
-            ele.curl_H = ele.gammax * ele.etax ** 2 + 2 * ele.alphax * ele.etax * ele.etaxp + ele.betax * ele.etaxp ** 2
-            [betax, alphax, gammax] = ele.next_twiss('x')
-            [betay, alphay, gammay] = ele.next_twiss('y')
-            [etax, etaxp] = ele.next_eta_bag('x')
-            [etay, etayp] = ele.next_eta_bag('y')
-            psix, psiy = ele.next_phase()
-        self.nux = psix * self.periods_number / 2 / pi
-        self.nuy = psiy * self.periods_number / 2 / pi
-
-    def __radiation_integrals(self):
-        integral1 = 0
-        integral2 = 0
-        integral3 = 0
-        integral4 = 0
-        integral5 = 0
-        natural_xi_x = 0
-        sextupole_part_xi_x = 0
-        natural_xi_y = 0
-        sextupole_part_xi_y = 0
-        for ele in self.ele_slices:
-            i1, i2, i3, i4, i5, xix, xiy = ele.radiation_integrals()
+        psix = psiy = integral1 = integral2 = integral3 = integral4 = integral5 = 0
+        natural_xi_x = sextupole_part_xi_x = natural_xi_y = sextupole_part_xi_y = 0
+        ele = self.ele_slices[0]
+        ele.betax = betax
+        ele.betay = betay
+        ele.alphax = alphax
+        ele.alphay = alphay
+        ele.gammax = gammax
+        ele.gammay = gammay
+        ele.etax = etax
+        ele.etay = etay
+        ele.etaxp = etaxp
+        ele.etayp = etayp
+        ele.psix = psix
+        ele.psiy = psiy
+        for i in range(len(self.ele_slices) - 1):
+            self.ele_slices[i].pass_next_data(self.ele_slices[i+1])
+            i1, i2, i3, i4, i5, xix, xiy = self.ele_slices[i].radiation_integrals()
             integral1 += i1
             integral2 += i2
             integral3 += i3
             integral4 += i4
             integral5 += i5
-            if ele.type == 'Sextupole':
+            if self.ele_slices[i].type == 'Sextupole':
                 sextupole_part_xi_x += xix
                 sextupole_part_xi_y += xiy
             else:
@@ -190,33 +171,89 @@ class CSLattice(object):
         self.natural_xi_y = natural_xi_y * self.periods_number
         self.xi_x = (natural_xi_x + sextupole_part_xi_x) * self.periods_number
         self.xi_y = (natural_xi_y + sextupole_part_xi_y) * self.periods_number
+        self.nux = self.ele_slices[-1].nux * self.periods_number
+        self.nuy = self.ele_slices[-1].nuy * self.periods_number
 
-    def compute_adts(self):
-        sext_list = []
-        Qxx = 0
-        Qyy = 0
-        Qxy = 0
-        pi_nux = pi * self.nux
-        pi_nuy = pi * self.nuy
-        for ele in self.ele_slices:
-            if ele.type == 'Sextupole':
-                sext_list.append(ele)
-        for j in range(len(sext_list)):
-            k2_l_j = sext_list[j].k2 * sext_list[j].length
-            beta_xj = sext_list[j].betax
-            beta_yj = sext_list[j].betay
-            phi_xj = sext_list[j].psix
-            phi_yj = sext_list[j].psiy
-            for k in range(len(sext_list)):
-                k2l = sext_list[k].k2 * sext_list[k].length * k2_l_j
-                beta_xjk = sext_list[k].betax * beta_xj
-                beta_yk = sext_list[k].betay
-                phi_jk_x = abs(sext_list[k].psix - phi_xj)
-                phi_jk_y = abs(sext_list[k].psiy - phi_yj)
-                Qxx += k2l * beta_xjk ** 1.5 * (3 * np.cos(phi_jk_x - pi_nux) / np.sin(pi_nux) + np.cos(3 * phi_jk_x - 3 * pi_nux) / np.sin(3 * pi_nux))
-                # Qxy += k2l * beta_xjk ** 0.5 * beta_yj * ()
-        Qxx = -Qxx / 64 / pi
-        print(f'Qxx = {Qxx}')
+    def compute_nonlinear_term(self):
+        Qxx = Qxy = Qyy = 0
+        # xi2x = - self.xi_x / 2
+        # xi2y = - self.xi_y / 2
+        h21000 = h30000 = h10110 = h10020 = h10200 = 0
+        h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
+        num = len(self.ele_slices)
+        for i in range(num - 1):
+            b3l_i = self.ele_slices[i].k2 * self.ele_slices[i].length / 2  # k2 = 2 * b3, k1 = b2
+            b2l_i = self.ele_slices[i].k1 * self.ele_slices[i].length
+            # beta1_xk = beta1_yk = 0
+            # eta1x_i = (self.ele_slices[i].etax + self.ele_slices[i + 1].etax) / 2
+            # eta2xk = 0
+            if b3l_i != 0 or b2l_i != 0:
+                beta_xi = (self.ele_slices[i].betax + self.ele_slices[i + 1].betax) / 2
+                beta_yi = (self.ele_slices[i].betay + self.ele_slices[i + 1].betay) / 2
+                mu_ix = (self.ele_slices[i].psix + self.ele_slices[i + 1].psix) / 2
+                mu_iy = (self.ele_slices[i].psiy + self.ele_slices[i + 1].psiy) / 2
+                pi_nux = self.ele_slices[-1].psix / 2
+                pi_nuy = self.ele_slices[-1].psiy / 2
+                h21000 += - b3l_i * beta_xi ** 1.5 * np.exp(np.complex(0, mu_ix)) / 8
+                h30000 += - b3l_i * beta_xi ** 1.5 * np.exp(np.complex(0, 3 * mu_ix)) / 24
+                h10110 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(np.complex(0, mu_ix)) / 4
+                h10020 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(np.complex(0, mu_ix - 2 * mu_iy)) / 8
+                h10200 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(np.complex(0, mu_ix + 2 * mu_iy)) / 8
+                for j in range(num - 1):
+                    # b2l_j = self.ele_slices[j].k1 * self.ele_slices[j].length
+                    b3l_j = self.ele_slices[j].k2 * self.ele_slices[j].length / 2
+                    beta_xj = (self.ele_slices[j].betax + self.ele_slices[j + 1].betax) / 2
+                    # eta1x_j = (self.ele_slices[j].etax + self.ele_slices[j + 1].etax) / 2
+                    # beta_yj = (self.ele_slices[j].betay + self.ele_slices[j + 1].betay) / 2
+                    mu_jx = (self.ele_slices[j].psix + self.ele_slices[j + 1].psix) / 2
+                    mu_ijx = mu_ix - mu_jx
+                    a_mu_ijx = abs(mu_ijx)
+                    mu_jy = (self.ele_slices[j].psiy + self.ele_slices[j + 1].psiy) / 2
+                    mu_ijy = mu_iy - mu_jy
+                    b3l = b3l_j * b3l_i
+                    # eta2xk += (b2l_j - b3l_j * eta1x_j) * eta1x_j * np.sqrt(beta_xj) * np.cos(a_mu_ijx - pi_nux)
+                    # beta1_xk += (b2l_j - 2 * b3l_j * eta1x_j) * beta_xj * np.cos(2 * (a_mu_ijx - pi_nux))
+                    # beta1_yk += (b2l_j - 2 * b3l_j * eta1x_j) * beta_yj * np.cos(2 * (abs(mu_ijy) - pi_nuy))
+                    if b3l != 0:
+                        beta_xij = beta_xj * beta_xi
+                        # beta_xij_sqrt = np.sqrt(beta_xij)
+                        beta_yj = (self.ele_slices[j].betay + self.ele_slices[j + 1].betay) / 2
+                        mu_ij_x2y = abs(mu_ijx + 2 * mu_ijy)
+                        mu_ij_x_2y = abs(mu_ijx - 2 * mu_ijy)
+                        Qxx += b3l / (-16 * np.pi) * pow(beta_xi * beta_xj, 1.5) * (
+                                3 * np.cos(abs(mu_ijx) - pi_nux) / np.sin(pi_nux) + np.cos(
+                            3 * abs(mu_ijx) - 3 * pi_nux) / np.sin(3 * pi_nux))
+                        Qxy += b3l / (8 * np.pi) * pow(beta_xij, 0.5) * beta_yj * (
+                                2 * beta_xi * np.cos(a_mu_ijx - pi_nux) / np.sin(pi_nux)
+                                - beta_yi * np.cos(mu_ij_x2y - pi_nux - 2 * pi_nuy) / np.sin(pi_nux + 2 * pi_nuy)
+                                + beta_yi * np.cos(mu_ij_x_2y - pi_nux + 2 * pi_nuy) / np.sin(pi_nux - 2 * pi_nuy))
+                        Qyy += b3l / (-16 * np.pi) * pow(beta_xij, 0.5) * beta_yj * beta_yi * (
+                                4 * np.cos(a_mu_ijx - pi_nux) / np.sin(pi_nux)
+                                + np.cos(mu_ij_x2y - pi_nux - 2 * pi_nuy) / np.sin(pi_nux + 2 * pi_nuy)
+                                + np.cos(mu_ij_x_2y - pi_nux + 2 * pi_nuy) / np.sin(pi_nux - 2 * pi_nuy))
+                        sign = - np.sign(mu_ijx)
+                        jj = np.complex(0, 1)
+                        const = sign * jj * b3l
+                        h31000 += const * beta_xij ** 1.5 * np.exp(np.complex(0, 3 * mu_ix - mu_jx)) / 32
+                        h40000 += const * beta_xij ** 1.5 * np.exp(np.complex(0, 3 * mu_ix + mu_jx)) / 64
+                        h20110 += const * beta_xij ** 0.5 * beta_yi * (beta_xj * (np.exp(np.complex(0, 3 * mu_jx - mu_ix)) - np.exp(np.complex(0, mu_ix + mu_jx)))
+                                                                                 + 2 * beta_yj * np.exp(np.complex(0, mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy))) / 32
+                        h11200 += const * beta_xij ** 0.5 * beta_yi * (beta_xj * (np.exp(np.complex(0, -mu_ix + mu_jx + 2 * mu_iy)) - np.exp(np.complex(0, mu_ix - mu_jx + 2 * mu_iy)))
+                                                                                 + 2 * beta_yj * (np.exp(np.complex(0, mu_ix - mu_jx + 2 * mu_iy)) + np.exp(np.complex(0, - mu_ix + mu_jx + 2 * mu_iy)))) / 32
+                        h20020 += const * beta_xij ** 0.5 * beta_yi * (beta_xj * np.exp(np.complex(0, -mu_ix + 3 * mu_jx - 2 * mu_iy)) - (beta_xj + 4 * beta_yj) * np.exp(np.complex(0, mu_ix + mu_jx - 2 * mu_iy))) / 64
+                        h20200 += const * beta_xij ** 0.5 * beta_yi * (beta_xj * np.exp(np.complex(0, -mu_ix + 3 * mu_jx + 2 * mu_iy)) - (beta_xj - 4 * beta_yj) * np.exp((np.complex(0, mu_ix + mu_jx + 2 * mu_iy)))) / 64
+                        h00310 += const * beta_xij ** 0.5 * beta_yi * beta_yj * (np.exp(np.complex(0, mu_ix - mu_jx + 2 * mu_iy)) - np.exp(np.complex(0, -mu_ix + mu_jx + 2 * mu_iy))) / 32
+                        h00400 += const * beta_xij ** 0.5 * beta_yi * beta_yj * np.exp(np.complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy)) / 64
+                # eta2xk = - eta1x_i + np.sqrt(beta_xi) * eta2xk / 2 / np.sin(pi_nux)
+                # beta1_xk = beta1_xk * beta_xi / 2 / np.sin(2 * pi_nux)
+                # beta1_yk = - beta1_yk * beta_yi / 2 / np.sin(2 * pi_nuy)
+                # xi2x += (2 * b3l_i * eta2xk * beta_xi - (b2l_i - 2 * b3l_i * eta1x_i) * beta1_xk) / 8 / pi
+                # xi2y += - (2 * b3l_i * eta2xk * beta_yi + (b2l_i - 2 * b3l_i * eta1x_i) * beta1_yk) / 8 / pi
+        print(f'nonlinear terms:\n h21000 = {abs(h21000):.2f}\n h30000 = {abs(h30000):.2f}\n h10110 = {abs(h10110):.2f}\n h10020 = {abs(h10020):.2f}\n h10200 = {abs(h10200):.2f}')
+        # print(f' xi2x = {xi2x:.2f}\n xi2y = {xi2y:.2f}')
+        print(f' Qxx = {Qxx:.2f}\n Qxy = {Qxy:.2f}\n Qyy = {Qyy:.2f}')
+        print(f' h31000 = {abs(h31000):.2f}\n h40000 = {abs(h40000):.2f}\n h20110 = {abs(h20110):.2f}\n h11200 = {abs(h11200):.2f}')
+        print(f' h20020 = {abs(h20020):.2f}\n h20200 = {abs(h20200):.2f}\n h00310 = {abs(h00310):.2f}\n h00400 = {abs(h00400):.2f}')
 
     def __global_parameters(self):
         self.Jx = 1 - self.I4 / self.I2
