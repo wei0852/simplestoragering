@@ -2,7 +2,7 @@
 from .components import Element, assin_twiss
 from .constants import Cr, LENGTH_PRECISION
 from .particles import RefParticle, Beam7
-from .drift import drift_matrix
+from .Drift import drift_matrix
 from .exceptions import ParticleLost
 from .functions import next_twiss
 import numpy as np

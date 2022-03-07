@@ -5,9 +5,9 @@ this file is unnecessary, I use these functions to quickly visualize lattice dat
 
 import matplotlib.pyplot as plt
 
-from .sextupole import Sextupole
-from .quadrupole import Quadrupole
-from .hbend import HBend
+from .Sextupole import Sextupole
+from .Quadrupole import Quadrupole
+from .HBend import HBend
 from .constants import pi
 from simplestoragering.exceptions import UnfinishedWork
 

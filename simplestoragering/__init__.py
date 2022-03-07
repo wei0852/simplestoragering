@@ -11,12 +11,12 @@ two method to solve lattice:
 
 from simplestoragering.particles import RefParticle, calculate_beta, Beam7
 from simplestoragering.components import Mark
-from simplestoragering.drift import Drift
-from simplestoragering.hbend import HBend
-from simplestoragering.quadrupole import Quadrupole
-from simplestoragering.sextupole import Sextupole
-from simplestoragering.rfcavity import RFCavity
-from simplestoragering.cslattice import CSLattice
+from simplestoragering.Drift import Drift
+from simplestoragering.HBend import HBend
+from simplestoragering.Quadrupole import Quadrupole
+from simplestoragering.Sextupole import Sextupole
+from simplestoragering.RFCavity import RFCavity
+from simplestoragering.CSLattice import CSLattice
 from simplestoragering.slimlattice import SlimRing, compute_twiss_of_slim_method
 from simplestoragering.plotlattice import plot_lattice, plot_layout_in_ax, plot_with_background, get_col
 from simplestoragering.functions import compute_transfer_matrix_by_tracking, output_opa_file, chromaticity_correction

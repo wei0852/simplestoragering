@@ -2,13 +2,13 @@
 import numpy as np
 import copy
 from .components import LineEnd, Mark
-from .rfcavity import RFCavity
+from .RFCavity import RFCavity
 from .constants import pi, c, Cq, Cr, LENGTH_PRECISION
 from .particles import RefParticle
-from .hbend import HBend
-from .drift import Drift
-from .quadrupole import Quadrupole
-from .sextupole import Sextupole
+from .HBend import HBend
+from .Drift import Drift
+from .Quadrupole import Quadrupole
+from .Sextupole import Sextupole
 
 
 class CSLattice(object):
@@ -199,40 +199,53 @@ class CSLattice(object):
             else:
                 self.ele_slices += ele.slice(1)
 
-    def compute_nonlinear_term(self):
+    def compute_nonlinear_term(self, bend_slice_length=0.1, list_data=False):
+        ele_list = []
+        for ele in self.elements:
+            if isinstance(ele, HBend):
+                ele_list += ele.slice(max(1, int(ele.length / bend_slice_length)))
+            else:
+                ele_list.append(ele)
+        # if list_data:
+        #     driving_term = {}
+        #     driving_term['h21000'] = []
+        #     driving_term['h30000'] = []
+        #     driving_term['h10110'] = []
+        #     driving_term['h10020'] = []
+        #     driving_term['h10200'] = []
         Qxx = Qxy = Qyy = 0
         xi2x = xi2y = 0
         h21000 = h30000 = h10110 = h10020 = h10200 = 0
         h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
-        num = len(self.elements)
+        num = len(ele_list)
         pi_nux = self.elements[-1].psix / 2
         pi_nuy = self.elements[-1].psiy / 2
         for i in range(num - 1):
-            b3l_i = self.elements[i].k2 * self.elements[i].length / 2  # k2 = 2 * b3, k1 = b2
-            b2l_i = self.elements[i].k1 * self.elements[i].length
+            b3l_i = ele_list[i].k2 * ele_list[i].length / 2  # k2 = 2 * b3, k1 = b2
+            b2l_i = ele_list[i].k1 * ele_list[i].length
             beta1_xk = beta1_yk = 0
-            eta1x_i = (self.elements[i].etax + self.elements[i + 1].etax) / 2
+            eta1x_i = (ele_list[i].etax + ele_list[i + 1].etax) / 2
             eta2xk = 0
             if b3l_i != 0 or b2l_i != 0:
-                beta_xi = (self.elements[i].betax + self.elements[i + 1].betax) / 2
-                beta_yi = (self.elements[i].betay + self.elements[i + 1].betay) / 2
-                mu_ix = (self.elements[i].psix + self.elements[i + 1].psix) / 2
-                mu_iy = (self.elements[i].psiy + self.elements[i + 1].psiy) / 2
+                beta_xi = (ele_list[i].betax + ele_list[i + 1].betax) / 2
+                beta_yi = (ele_list[i].betay + ele_list[i + 1].betay) / 2
+                mu_ix = (ele_list[i].psix + ele_list[i + 1].psix) / 2
+                mu_iy = (ele_list[i].psiy + ele_list[i + 1].psiy) / 2
                 h21000 += - b3l_i * beta_xi ** 1.5 * np.exp(np.complex(0, mu_ix)) / 8
                 h30000 += - b3l_i * beta_xi ** 1.5 * np.exp(np.complex(0, 3 * mu_ix)) / 24
                 h10110 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(np.complex(0, mu_ix)) / 4
                 h10020 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(np.complex(0, mu_ix - 2 * mu_iy)) / 8
                 h10200 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(np.complex(0, mu_ix + 2 * mu_iy)) / 8
                 for j in range(num - 1):
-                    b2l_j = self.elements[j].k1 * self.elements[j].length
-                    b3l_j = self.elements[j].k2 * self.elements[j].length / 2
-                    beta_xj = (self.elements[j].betax + self.elements[j + 1].betax) / 2
-                    eta1x_j = (self.elements[j].etax + self.elements[j + 1].etax) / 2
-                    beta_yj = (self.elements[j].betay + self.elements[j + 1].betay) / 2
-                    mu_jx = (self.elements[j].psix + self.elements[j + 1].psix) / 2
+                    b2l_j = ele_list[j].k1 * ele_list[j].length
+                    b3l_j = ele_list[j].k2 * ele_list[j].length / 2
+                    beta_xj = (ele_list[j].betax + ele_list[j + 1].betax) / 2
+                    eta1x_j = (ele_list[j].etax + ele_list[j + 1].etax) / 2
+                    beta_yj = (ele_list[j].betay + ele_list[j + 1].betay) / 2
+                    mu_jx = (ele_list[j].psix + ele_list[j + 1].psix) / 2
                     mu_ijx = mu_ix - mu_jx
                     a_mu_ijx = abs(mu_ijx)
-                    mu_jy = (self.elements[j].psiy + self.elements[j + 1].psiy) / 2
+                    mu_jy = (ele_list[j].psiy + ele_list[j + 1].psiy) / 2
                     mu_ijy = mu_iy - mu_jy
                     b3l = b3l_j * b3l_i
                     eta2xk += (b2l_j - b3l_j * eta1x_j) * eta1x_j * np.sqrt(beta_xj) * np.cos(a_mu_ijx - pi_nux)
@@ -240,8 +253,7 @@ class CSLattice(object):
                     beta1_yk += (b2l_j - 2 * b3l_j * eta1x_j) * beta_yj * np.cos(2 * (abs(mu_ijy) - pi_nuy))
                     if b3l != 0:
                         beta_xij = beta_xj * beta_xi
-                        beta_xij_sqrt = np.sqrt(beta_xij)
-                        beta_yj = (self.elements[j].betay + self.elements[j + 1].betay) / 2
+                        beta_yj = (ele_list[j].betay + ele_list[j + 1].betay) / 2
                         mu_ij_x2y = abs(mu_ijx + 2 * mu_ijy)
                         mu_ij_x_2y = abs(mu_ijx - 2 * mu_ijy)
                         Qxx += b3l / (-16 * np.pi) * pow(beta_xi * beta_xj, 1.5) * (
@@ -290,13 +302,13 @@ class CSLattice(object):
         xi2x += - self.xi_x / 2
         xi2y += - self.xi_y / 2
         print(
-            f'nonlinear terms:\n h21000 = {abs(h21000):.2f}\n h30000 = {abs(h30000):.2f}\n h10110 = {abs(h10110):.2f}\n h10020 = {abs(h10020):.2f}\n h10200 = {abs(h10200):.2f}')
-        print(f' xi2x = {xi2x:.2f}\n xi2y = {xi2y:.2f}')
-        print(f' Qxx = {Qxx:.2f}\n Qxy = {Qxy:.2f}\n Qyy = {Qyy:.2f}')
+            f'nonlinear terms:\n    h21000 = {abs(h21000):.2f}\n    h30000 = {abs(h30000):.2f}\n    h10110 = {abs(h10110):.2f}\n    h10020 = {abs(h10020):.2f}\n    h10200 = {abs(h10200):.2f}')
+        print(f'    xi2x   = {xi2x:.2f}\n    xi2y   = {xi2y:.2f}')
+        print(f'    Qxx    = {Qxx:.2f}\n    Qxy    = {Qxy:.2f}\n    Qyy    = {Qyy:.2f}')
         print(
-            f' h31000 = {abs(h31000):.2f}\n h40000 = {abs(h40000):.2f}\n h20110 = {abs(h20110):.2f}\n h11200 = {abs(h11200):.2f}')
+            f'    h31000 = {abs(h31000):.2f}\n    h40000 = {abs(h40000):.2f}\n    h20110 = {abs(h20110):.2f}\n    h11200 = {abs(h11200):.2f}')
         print(
-            f' h20020 = {abs(h20020):.2f}\n h20200 = {abs(h20200):.2f}\n h00310 = {abs(h00310):.2f}\n h00400 = {abs(h00400):.2f}')
+            f'    h20020 = {abs(h20020):.2f}\n    h20200 = {abs(h20200):.2f}\n    h00310 = {abs(h00310):.2f}\n    h00400 = {abs(h00400):.2f}')
 
     def __global_parameters(self):
         self.Jx = 1 - self.I4 / self.I2
