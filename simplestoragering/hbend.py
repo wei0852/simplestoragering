@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-from .components import Element
+from .components import Element, assin_twiss
 from .constants import Cr, LENGTH_PRECISION, pi
 from .particles import RefParticle, Beam7, calculate_beta
+from .functions import next_twiss
 from copy import deepcopy
 import numpy as np
 
@@ -28,51 +29,7 @@ class HBend(Element):
 
     @property
     def matrix(self):
-        h_beta = self.h / RefParticle.beta
-        inlet_edge = np.array([[1, 0, 0, 0, 0, 0],
-                               [np.tan(self.theta_in) * self.h, 1, 0, 0, 0, 0],
-                               [0, 0, 1, 0, 0, 0],
-                               [0, 0, -np.tan(self.theta_in) * self.h, 1, 0, 0],
-                               [0, 0, 0, 0, 1, 0],
-                               [0, 0, 0, 0, 0, 1]])
-        fx = self.k1 + self.h ** 2
-        [cx, sx, dx] = self.__calculate_csd(fx)
-        if fx != 0:
-            m56 = self.length / RefParticle.gamma ** 2 / RefParticle.beta ** 2 - self.h ** 2 * (self.length - sx) / fx
-        else:
-            m56 = self.length / RefParticle.gamma ** 2 / RefParticle.beta ** 2 - self.h ** 2 * self.length ** 3 / 6
-        fy = - self.k1
-        [cy, sy, dy] = self.__calculate_csd(fy)
-        middle_section = np.array([[cx, sx, 0, 0, 0, h_beta * dx],
-                                   [-fx * sx, cx, 0, 0, 0, h_beta * sx],
-                                   [0, 0, cy, sy, 0, 0],
-                                   [0, 0, -fy * sy, cy, 0, 0],
-                                   [h_beta * sx, h_beta * dx, 0, 0, 1, - m56],
-                                   [0, 0, 0, 0, 0, 1]])
-        outlet_edge = np.array([[1, 0, 0, 0, 0, 0],
-                                [np.tan(self.theta_out) * self.h, 1, 0, 0, 0, 0],
-                                [0, 0, 1, 0, 0, 0],
-                                [0, 0, -np.tan(self.theta_out) * self.h, 1, 0, 0],
-                                [0, 0, 0, 0, 1, 0],
-                                [0, 0, 0, 0, 0, 1]])
-        return outlet_edge.dot(middle_section).dot(inlet_edge)
-
-    def __calculate_csd(self, fu):
-        if fu > 0:
-            sqrt_fu_z = np.sqrt(fu) * self.length
-            cu = np.cos(sqrt_fu_z)
-            su = np.sin(sqrt_fu_z) / np.sqrt(fu)
-            du = (1 - cu) / fu
-        elif fu < 0:
-            sqrt_fu_z = np.sqrt(-fu) * self.length
-            cu = np.cosh(sqrt_fu_z)
-            su = np.sinh(sqrt_fu_z) / np.sqrt(-fu)
-            du = (1 - cu) / fu
-        else:
-            cu = 1
-            su = self.length
-            du = self.length ** 2 / 2
-        return [cu, su, du]
+        return _hbend_matrix(self.length, self.h, self.theta_in, self.theta_out, self.k1)
 
     @property
     def damping_matrix(self):
@@ -228,59 +185,91 @@ class HBend(Element):
         beam.set_particle([x2, px3, y2, py3, z1, delta1])
         return beam
 
-    def radiation_integrals(self):
-        integral1 = self.length * self.etax * self.h
-        integral2 = self.length * self.h ** 2
-        integral3 = self.length * abs(self.h) ** 3
-        integral4 = self.length * (
-                    self.h ** 2 + 2 * self.k1) * self.etax * self.h + 2 * self.h ** 2 * self.etax * np.tan(
-            self.theta_in)
-        if self.theta_out != 0:
-            eta = self.matrix[:2, :2].dot(np.array([self.etax, self.etaxp])) + np.array(
-                [self.matrix[0, 5], self.matrix[1, 5]])
-            integral4 -= 2 * self.h ** 2 * eta[0] * np.tan(self.theta_out)
-        curl_H = self.gammax * self.etax ** 2 + 2 * self.alphax * self.etax * self.etaxp + self.betax * self.etaxp ** 2
-        integral5 = self.length * curl_H * abs(self.h) ** 3
-        xi_x = (- (self.k1 + self.h ** 2) * self.length * self.betax + self.h * (
-                np.tan(self.theta_in) + np.tan(self.theta_out)) * self.betax) / 4 / pi
-        xi_y = (self.k1 * self.length * self.betay - self.h * (
-                np.tan(self.theta_in) + np.tan(self.theta_out)) * self.betay) / 4 / pi
-        xi_x += - 2 * self.k1 * (np.tan(self.theta_in) + np.tan(self.theta_out)) * self.etax * self.betax / 4 / pi
-        xi_y += 2 * self.k1 * (np.tan(self.theta_in) + np.tan(self.theta_out)) * self.etax * self.betay / 4 / pi
-        return integral1, integral2, integral3, integral4, integral5, xi_x, xi_y
+    def __radiation_integrals(self, length, integrals, twiss0, twiss1):
+        betax = (twiss0[0] + twiss1[0]) / 2
+        alphax = (twiss0[1] + twiss1[1]) / 2
+        gammax = (twiss0[2] + twiss1[2]) / 2
+        betay = (twiss0[3] + twiss1[3]) / 2
+        etax = (twiss0[6] + twiss1[6]) / 2
+        etaxp = (twiss0[7] + twiss1[7]) / 2
+        integrals[0] += length * etax * self.h
+        integrals[1] += length * self.h ** 2
+        integrals[2] += length * abs(self.h) ** 3
+        integrals[3] += length * (self.h ** 2 + 2 * self.k1) * etax * self.h
+        curl_H = gammax * etax ** 2 + 2 * alphax * etax * etaxp + betax * etaxp ** 2
+        integrals[4] += length * curl_H * abs(self.h) ** 3
+        integrals[5] += (- (self.k1 + self.h ** 2) * length * betax) / 4 / pi
+        integrals[6] += (self.k1 * length * betay) / 4 / pi
 
-    def slice(self, initial_s, identifier):
+    def copy(self):
+        return HBend(self.name, self.length, self.theta, self.theta_in, self.theta_out, self.k1)
+
+    def linear_optics(self):
+        twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])
+        integrals = np.zeros(7)
+        current_s = 0
+        length = 0.01
+        # inlet
+        integrals[3] += 2 * self.h ** 2 * self.etax * np.tan(self.theta_in)
+        integrals[5] += (self.h * np.tan(self.theta_in) * self.betax - 2 * self.k1 * np.tan(self.theta_in) * self.etax * self.betax) / 4 / pi
+        integrals[6] += (- self.h * np.tan(self.theta_in) * self.betay + 2 * self.k1 * np.tan(self.theta_in) * self.etax * self.betay) / 4 / pi
+        matrix = _hbend_matrix(length, self.h, self.theta_in, 0, self.k1)
+        twiss1 = next_twiss(matrix, twiss0)
+        self.__radiation_integrals(length, integrals, twiss0, twiss1)
+        current_s = round(current_s + length, LENGTH_PRECISION)
+        for i in range(len(twiss0)):
+            twiss0[i] = twiss1[i]
+        while current_s < self.length - length:
+            matrix = _hbend_matrix(length, self.h, 0, 0, self.k1)
+            twiss1 = next_twiss(matrix, twiss0)
+            self.__radiation_integrals(length, integrals, twiss0, twiss1)
+            current_s = round(current_s + length, LENGTH_PRECISION)
+            for j in range(len(twiss0)):
+                twiss0[j] = twiss1[j]
+        length = round(self.length - current_s, LENGTH_PRECISION)
+        matrix = _hbend_matrix(length, self.h, 0, self.theta_out, self.k1)
+        twiss1 = next_twiss(matrix, twiss0)
+        self.__radiation_integrals(length, integrals, twiss0, twiss1)
+        integrals[3] += - 2 * self.h ** 2 * twiss1[6] * np.tan(self.theta_out)
+        integrals[5] += (self.h * np.tan(self.theta_out) * twiss1[0] - 2 * self.k1 * np.tan(self.theta_out) * twiss1[6] * twiss1[0]) / 4 / pi
+        integrals[6] += (- self.h * np.tan(self.theta_out) * twiss1[3] + 2 * self.k1 * np.tan(self.theta_out) * twiss1[6] * twiss1[3]) / 4 / pi
+        return integrals, twiss1
+
+    def slice(self, n_slices: int) -> list:
         """slice component to element list, return [ele_list, final_z]
 
         this method is rewritten because of the edge angles."""
 
         ele_list = []
-        current_s = initial_s
-        if self.n_slices == 1:
+        current_s = self.s
+        twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])
+        if n_slices == 1:
             ele = HBend(self.name, self.length, self.theta, self.theta_in, self.theta_out, self.k1, 1)
             ele.s = current_s
-            ele.identifier = identifier
-            current_s = round(current_s + self.length, LENGTH_PRECISION)
-            return [[ele], current_s]
-        length = round(self.length / self.n_slices, LENGTH_PRECISION)
+            assin_twiss(ele, twiss0)
+            ele.identifier = self.identifier
+            return [ele]
+        length = round(self.length / n_slices, LENGTH_PRECISION)
         ele = HBend(self.name, length, self.h * length, self.theta_in, 0, self.k1, 1)
         ele.s = current_s
-        ele.identifier = identifier
+        assin_twiss(ele, twiss0)
+        twiss0 = next_twiss(ele.matrix, twiss0)
         ele_list.append(ele)
         current_s = round(current_s + ele.length, LENGTH_PRECISION)
-        for i in range(self.n_slices - 2):
+        for i in range(n_slices - 2):
             ele = HBend(self.name, length, self.h * length, 0, 0, self.k1, 1)
             ele.s = current_s
-            ele.identifier = identifier
+            assin_twiss(ele, twiss0)
+            twiss0 = next_twiss(ele.matrix, twiss0)
             ele_list.append(ele)
             current_s = round(current_s + ele.length, LENGTH_PRECISION)
-        length = round(self.length + initial_s - current_s, LENGTH_PRECISION)
+        length = round(self.length + self.s - current_s, LENGTH_PRECISION)
         ele = HBend(self.name, length, self.h * length, 0, self.theta_out, self.k1, 1)
+        ele.identifier = self.identifier
         ele.s = current_s
-        ele.identifier = identifier
+        assin_twiss(ele, twiss0)
         ele_list.append(ele)
-        current_s = round(current_s + ele.length, LENGTH_PRECISION)
-        return [ele_list, current_s]
+        return ele_list
 
     def __str__(self):
         text = str(self.name)
@@ -295,3 +284,52 @@ class HBend(Element):
         if self.k1 != 0:
             text += f',   k1 = {self.k1: .6f}'
         return text
+
+
+def _hbend_matrix(length, h, theta_in, theta_out, k1):
+    h_beta = h / RefParticle.beta
+    inlet_edge = np.array([[1, 0, 0, 0, 0, 0],
+                            [np.tan(theta_in) * h, 1, 0, 0, 0, 0],
+                            [0, 0, 1, 0, 0, 0],
+                            [0, 0, -np.tan(theta_in) * h, 1, 0, 0],
+                            [0, 0, 0, 0, 1, 0],
+                            [0, 0, 0, 0, 0, 1]])
+    fx = k1 + h ** 2
+    [cx, sx, dx] = __calculate_csd(length, fx)
+    if fx != 0:
+        m56 = length / RefParticle.gamma ** 2 / RefParticle.beta ** 2 - h ** 2 * (length - sx) / fx
+    else:
+        m56 = length / RefParticle.gamma ** 2 / RefParticle.beta ** 2 - h ** 2 * length ** 3 / 6
+    fy = - k1
+    [cy, sy, dy] = __calculate_csd(length, fy)
+    middle_section = np.array([[cx, sx, 0, 0, 0, h_beta * dx],
+                                   [-fx * sx, cx, 0, 0, 0, h_beta * sx],
+                                   [0, 0, cy, sy, 0, 0],
+                                   [0, 0, -fy * sy, cy, 0, 0],
+                                   [h_beta * sx, h_beta * dx, 0, 0, 1, - m56],
+                                   [0, 0, 0, 0, 0, 1]])
+    outlet_edge = np.array([[1, 0, 0, 0, 0, 0],
+                                [np.tan(theta_out) * h, 1, 0, 0, 0, 0],
+                                [0, 0, 1, 0, 0, 0],
+                                [0, 0, -np.tan(theta_out) * h, 1, 0, 0],
+                                [0, 0, 0, 0, 1, 0],
+                                [0, 0, 0, 0, 0, 1]])
+    return outlet_edge.dot(middle_section).dot(inlet_edge)
+
+
+def __calculate_csd(length, fu):
+    if fu > 0:
+        sqrt_fu_z = np.sqrt(fu) * length
+        cu = np.cos(sqrt_fu_z)
+        su = np.sin(sqrt_fu_z) / np.sqrt(fu)
+        du = (1 - cu) / fu
+    elif fu < 0:
+        sqrt_fu_z = np.sqrt(-fu) * length
+        cu = np.cosh(sqrt_fu_z)
+        su = np.sinh(sqrt_fu_z) / np.sqrt(-fu)
+        du = (1 - cu) / fu
+    else:
+        cu = 1
+        su = length
+        du = length ** 2 / 2
+    return [cu, su, du]

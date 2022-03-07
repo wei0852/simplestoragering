@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-from .components import Element
+from .components import Element, assin_twiss
 from .constants import Cr, LENGTH_PRECISION
 from .particles import RefParticle, Beam7
-from .drift import Drift
+from .drift import drift_matrix
 from .exceptions import ParticleLost
+from .functions import next_twiss
 import numpy as np
 
 
@@ -17,39 +18,31 @@ class Sextupole(Element):
         self.k2 = k2
         self.n_slices = n_slices
 
-    def slice(self, initial_s, identifier):
+    def slice(self, n_slices: int) -> list:
         """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
         ele_list = []
-        current_s = initial_s
-        length = round(self.length / self.n_slices, LENGTH_PRECISION)
-        for i in range(self.n_slices - 1):
+        current_s = self.s
+        length = round(self.length / n_slices, LENGTH_PRECISION)
+        twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])
+        for i in range(n_slices - 1):
             ele = Sextupole(self.name, length, self.k2)
-            ele.identifier = identifier
+            assin_twiss(ele, twiss0)
+            ele.identifier = self.identifier
             ele.s = current_s
+            twiss0 = next_twiss(ele.matrix, twiss0)
             ele_list.append(ele)
             current_s = round(current_s + ele.length, LENGTH_PRECISION)
-        length = round(self.length + initial_s - current_s, LENGTH_PRECISION)
+        length = round(self.length + self.s - current_s, LENGTH_PRECISION)
         ele = Sextupole(self.name, length, self.k2)
-        ele.identifier = identifier
+        ele.identifier = self.identifier
         ele.s = current_s
+        assin_twiss(ele, twiss0)
         ele_list.append(ele)
-        current_s = round(current_s + ele.length, LENGTH_PRECISION)
-        return [ele_list, current_s]
+        return ele_list
 
     @property
     def matrix(self):
-        k2l = self.k2 * self.length
-        x0 = self.closed_orbit[0]
-        y0 = self.closed_orbit[2]
-        x02_y02_2 = (x0 ** 2 - y0 ** 2) / 2  # (x0 ** 2 - y0 ** 2) / 2
-        matrix = np.array([[1, 0, 0, 0, 0, 0],
-                           [- k2l * x0, 1, k2l * y0, 0, 0, k2l * x02_y02_2],
-                           [0, 0, 1, 0, 0, 0],
-                           [k2l * y0, 0, k2l * x0, 1, 0, - k2l * x0 * y0],
-                           [- k2l * x02_y02_2, 0, k2l * x0 * y0, 0, 1, 0],
-                           [0, 0, 0, 0, 0, 1]])
-        drift = Drift(length=self.length / 2).matrix
-        return drift.dot(matrix).dot(drift)
+        return sext_matrix(self.length, self.k2, self.closed_orbit)
 
     @property
     def damping_matrix(self):
@@ -71,7 +64,8 @@ class Sextupole(Element):
                  (self.closed_orbit[0] ** 2 + self.closed_orbit[2] ** 2) ** 2 / 8 / np.pi)
         # m67 = m67 * (1 + self.closed_orbit[5]) ** 2
         matrix7 = np.identity(7)
-        drift = Drift(length=self.length / 2).matrix
+        # drift = Drift(length=self.length / 2).matrix
+        drift = drift_matrix(self.length / 2)
         matrix = np.identity(6)
         matrix[1, 5] = self.k2 * self.length * (self.closed_orbit[0] ** 2 - self.closed_orbit[2] ** 2)
         matrix[4, 0] = - matrix[1, 5]
@@ -144,7 +138,48 @@ class Sextupole(Element):
         beam.set_particle([x2, px1, y2, py1, z2, delta1])
         return beam
 
-    def radiation_integrals(self):
-        xi_x = self.etax * self.k2 * self.length * self.betax / 4 / np.pi
-        xi_y = - self.etax * self.k2 * self.length * self.betay / 4 / np.pi
-        return 0, 0, 0, 0, 0, xi_x, xi_y
+    def copy(self):
+        return Sextupole(self.name, self.length, self.k2)
+
+    def linear_optics(self):
+        twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])
+        integrals = np.zeros(7)
+        current_s = 0
+        length = 0.01
+        orbit = self.closed_orbit
+        while current_s < self.length - length:
+            matrix = sext_matrix(length, self.k2, orbit)
+            twiss1 = next_twiss(matrix, twiss0)
+            orbit = matrix.dot(orbit)
+            betax = (twiss0[0] + twiss1[0]) / 2
+            betay = (twiss0[3] + twiss1[3]) / 2
+            etax = (twiss0[6] + twiss1[6]) / 2
+            integrals[5] += etax * self.k2 * length * betax / 4 / np.pi
+            integrals[6] += - etax * self.k2 * length * betay / 4 / np.pi
+            current_s = round(current_s + length, LENGTH_PRECISION)
+            for i in range(len(twiss0)):
+                twiss0[i] = twiss1[i]
+        length = round(self.length - current_s, LENGTH_PRECISION)
+        matrix = sext_matrix(length, self.k2, orbit)
+        twiss1 = next_twiss(matrix, twiss0)
+        betax = (twiss0[0] + twiss1[0]) / 2
+        betay = (twiss0[3] + twiss1[3]) / 2
+        etax = (twiss0[6] + twiss1[6]) / 2
+        integrals[5] += etax * self.k2 * length * betax / 4 / np.pi
+        integrals[6] += - etax * self.k2 * length * betay / 4 / np.pi
+        return integrals, twiss1
+
+
+def sext_matrix(length, k2, closed_orbit):
+    k2l = k2 * length
+    x0 = closed_orbit[0]
+    y0 = closed_orbit[2]
+    x02_y02_2 = (x0 ** 2 - y0 ** 2) / 2  # (x0 ** 2 - y0 ** 2) / 2
+    matrix = np.array([[1, 0, 0, 0, 0, 0],
+                       [- k2l * x0, 1, k2l * y0, 0, 0, k2l * x02_y02_2],
+                       [0, 0, 1, 0, 0, 0],
+                       [k2l * y0, 0, k2l * x0, 1, 0, - k2l * x0 * y0],
+                       [- k2l * x02_y02_2, 0, k2l * x0 * y0, 0, 1, 0],
+                       [0, 0, 0, 0, 0, 1]])
+    drift = drift_matrix(length=length / 2)
+    return drift.dot(matrix).dot(drift)

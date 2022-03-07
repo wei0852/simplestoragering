@@ -6,6 +6,9 @@ from .rfcavity import RFCavity
 from .constants import pi, c, Cq, Cr, LENGTH_PRECISION
 from .particles import RefParticle
 from .hbend import HBend
+from .drift import Drift
+from .quadrupole import Quadrupole
+from .sextupole import Sextupole
 
 
 class CSLattice(object):
@@ -20,7 +23,18 @@ class CSLattice(object):
         self.rf_cavity = None
         self.angle = 0
         self.abs_angle = 0
-        for ele in ele_list:
+        self.ele_slices = None
+        current_s = 0
+        current_identifier = 0
+        for oe in ele_list:
+            ele = oe.copy()
+            ele.s = current_s
+            ele.identifier = current_identifier
+            if isinstance(ele, Mark):
+                if ele.name in self.mark:
+                    self.mark[ele.name].append(ele)
+                else:
+                    self.mark[ele.name] = [ele]
             if isinstance(ele, RFCavity):
                 self.rf_cavity = ele
             self.elements.append(ele)
@@ -28,10 +42,12 @@ class CSLattice(object):
             if isinstance(ele, HBend):
                 self.angle += ele.theta
                 self.abs_angle += abs(ele.theta)
+            current_identifier += 1
+            current_s = round(current_s + ele.length, LENGTH_PRECISION)
+        last_ele = LineEnd(s=self.length, identifier=current_identifier)
+        self.elements.append(last_ele)
         self.angle = self.angle * 180 / pi * periods_number
         self.abs_angle = self.abs_angle * 180 / pi * periods_number
-        self.ele_slices = None
-        self.__slice()
         # initialize twiss
         self.twiss_x0 = None
         self.twiss_y0 = None
@@ -72,27 +88,11 @@ class CSLattice(object):
         self.sigma_z = None
         # self.global_parameters()
 
-    def compute(self):
+    def linear_optics(self):
         """calculate optical functions and ring parameters."""
 
         self.__solve_along()
         self.__global_parameters()
-
-    def __slice(self):
-        self.ele_slices = []
-        current_s = 0
-        current_identifier = 0
-        for ele in self.elements:
-            [new_list, current_s] = ele.slice(current_s, current_identifier)
-            self.ele_slices += new_list
-            if isinstance(new_list[0], Mark):
-                if new_list[0].name in self.mark:
-                    self.mark[new_list[0].name].append(new_list[0])
-                else:
-                    self.mark[new_list[0].name] = [new_list[0]]
-            current_identifier += 1
-        last_ele = LineEnd(s=self.length, identifier=current_identifier)
-        self.ele_slices.append(last_ele)
 
     def find_the_periodic_solution(self):
         """compute periodic solution and initialize twiss"""
@@ -135,7 +135,7 @@ class CSLattice(object):
         [etay, etayp] = self.eta_y0
         psix = psiy = integral1 = integral2 = integral3 = integral4 = integral5 = 0
         natural_xi_x = sextupole_part_xi_x = natural_xi_y = sextupole_part_xi_y = 0
-        ele = self.ele_slices[0]
+        ele = self.elements[0]
         ele.betax = betax
         ele.betay = betay
         ele.alphax = alphax
@@ -148,15 +148,26 @@ class CSLattice(object):
         ele.etayp = etayp
         ele.psix = psix
         ele.psiy = psiy
-        for i in range(len(self.ele_slices) - 1):
-            self.ele_slices[i].pass_next_data(self.ele_slices[i+1])
-            i1, i2, i3, i4, i5, xix, xiy = self.ele_slices[i].radiation_integrals()
+        for i in range(len(self.elements) - 1):
+            [i1, i2, i3, i4, i5, xix, xiy], twiss = self.elements[i].linear_optics()
+            self.elements[i + 1].betax = twiss[0]
+            self.elements[i + 1].alphax = twiss[1]
+            self.elements[i + 1].gammax = twiss[2]
+            self.elements[i + 1].betay = twiss[3]
+            self.elements[i + 1].alphay = twiss[4]
+            self.elements[i + 1].gammay = twiss[5]
+            self.elements[i + 1].etax = twiss[6]
+            self.elements[i + 1].etaxp = twiss[7]
+            self.elements[i + 1].etay = twiss[8]
+            self.elements[i + 1].etayp = twiss[9]
+            self.elements[i + 1].psix = twiss[10]
+            self.elements[i + 1].psiy = twiss[11]
             integral1 += i1
             integral2 += i2
             integral3 += i3
             integral4 += i4
             integral5 += i5
-            if self.ele_slices[i].type == 'Sextupole':
+            if self.elements[i].type == 'Sextupole':
                 sextupole_part_xi_x += xix
                 sextupole_part_xi_y += xiy
             else:
@@ -171,43 +182,57 @@ class CSLattice(object):
         self.natural_xi_y = natural_xi_y * self.periods_number
         self.xi_x = (natural_xi_x + sextupole_part_xi_x) * self.periods_number
         self.xi_y = (natural_xi_y + sextupole_part_xi_y) * self.periods_number
-        self.nux = self.ele_slices[-1].nux * self.periods_number
-        self.nuy = self.ele_slices[-1].nuy * self.periods_number
+        self.nux = self.elements[-1].nux * self.periods_number
+        self.nuy = self.elements[-1].nuy * self.periods_number
+
+    def slice_elements(self, drift_length=10.0, bend_length=10.0, quad_length=10.0, sext_length=10.0):
+        self.ele_slices = []
+        for ele in self.elements:
+            if isinstance(ele, Drift):
+                self.ele_slices += ele.slice(max(int(ele.length / drift_length), 1))
+            elif isinstance(ele, HBend):
+                self.ele_slices += ele.slice(max(int(ele.length / bend_length), 1))
+            elif isinstance(ele, Quadrupole):
+                self.ele_slices += ele.slice(max(int(ele.length / quad_length), 1))
+            elif isinstance(ele, Sextupole):
+                self.ele_slices += ele.slice(max(int(ele.length / sext_length), 1))
+            else:
+                self.ele_slices += ele.slice(1)
 
     def compute_nonlinear_term(self):
         Qxx = Qxy = Qyy = 0
         xi2x = xi2y = 0
         h21000 = h30000 = h10110 = h10020 = h10200 = 0
         h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
-        num = len(self.ele_slices)
-        pi_nux = self.ele_slices[-1].psix / 2
-        pi_nuy = self.ele_slices[-1].psiy / 2
+        num = len(self.elements)
+        pi_nux = self.elements[-1].psix / 2
+        pi_nuy = self.elements[-1].psiy / 2
         for i in range(num - 1):
-            b3l_i = self.ele_slices[i].k2 * self.ele_slices[i].length / 2  # k2 = 2 * b3, k1 = b2
-            b2l_i = self.ele_slices[i].k1 * self.ele_slices[i].length
+            b3l_i = self.elements[i].k2 * self.elements[i].length / 2  # k2 = 2 * b3, k1 = b2
+            b2l_i = self.elements[i].k1 * self.elements[i].length
             beta1_xk = beta1_yk = 0
-            eta1x_i = (self.ele_slices[i].etax + self.ele_slices[i + 1].etax) / 2
+            eta1x_i = (self.elements[i].etax + self.elements[i + 1].etax) / 2
             eta2xk = 0
             if b3l_i != 0 or b2l_i != 0:
-                beta_xi = (self.ele_slices[i].betax + self.ele_slices[i + 1].betax) / 2
-                beta_yi = (self.ele_slices[i].betay + self.ele_slices[i + 1].betay) / 2
-                mu_ix = (self.ele_slices[i].psix + self.ele_slices[i + 1].psix) / 2
-                mu_iy = (self.ele_slices[i].psiy + self.ele_slices[i + 1].psiy) / 2
+                beta_xi = (self.elements[i].betax + self.elements[i + 1].betax) / 2
+                beta_yi = (self.elements[i].betay + self.elements[i + 1].betay) / 2
+                mu_ix = (self.elements[i].psix + self.elements[i + 1].psix) / 2
+                mu_iy = (self.elements[i].psiy + self.elements[i + 1].psiy) / 2
                 h21000 += - b3l_i * beta_xi ** 1.5 * np.exp(np.complex(0, mu_ix)) / 8
                 h30000 += - b3l_i * beta_xi ** 1.5 * np.exp(np.complex(0, 3 * mu_ix)) / 24
                 h10110 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(np.complex(0, mu_ix)) / 4
                 h10020 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(np.complex(0, mu_ix - 2 * mu_iy)) / 8
                 h10200 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(np.complex(0, mu_ix + 2 * mu_iy)) / 8
                 for j in range(num - 1):
-                    b2l_j = self.ele_slices[j].k1 * self.ele_slices[j].length
-                    b3l_j = self.ele_slices[j].k2 * self.ele_slices[j].length / 2
-                    beta_xj = (self.ele_slices[j].betax + self.ele_slices[j + 1].betax) / 2
-                    eta1x_j = (self.ele_slices[j].etax + self.ele_slices[j + 1].etax) / 2
-                    beta_yj = (self.ele_slices[j].betay + self.ele_slices[j + 1].betay) / 2
-                    mu_jx = (self.ele_slices[j].psix + self.ele_slices[j + 1].psix) / 2
+                    b2l_j = self.elements[j].k1 * self.elements[j].length
+                    b3l_j = self.elements[j].k2 * self.elements[j].length / 2
+                    beta_xj = (self.elements[j].betax + self.elements[j + 1].betax) / 2
+                    eta1x_j = (self.elements[j].etax + self.elements[j + 1].etax) / 2
+                    beta_yj = (self.elements[j].betay + self.elements[j + 1].betay) / 2
+                    mu_jx = (self.elements[j].psix + self.elements[j + 1].psix) / 2
                     mu_ijx = mu_ix - mu_jx
                     a_mu_ijx = abs(mu_ijx)
-                    mu_jy = (self.ele_slices[j].psiy + self.ele_slices[j + 1].psiy) / 2
+                    mu_jy = (self.elements[j].psiy + self.elements[j + 1].psiy) / 2
                     mu_ijy = mu_iy - mu_jy
                     b3l = b3l_j * b3l_i
                     eta2xk += (b2l_j - b3l_j * eta1x_j) * eta1x_j * np.sqrt(beta_xj) * np.cos(a_mu_ijx - pi_nux)
@@ -216,7 +241,7 @@ class CSLattice(object):
                     if b3l != 0:
                         beta_xij = beta_xj * beta_xi
                         beta_xij_sqrt = np.sqrt(beta_xij)
-                        beta_yj = (self.ele_slices[j].betay + self.ele_slices[j + 1].betay) / 2
+                        beta_yj = (self.elements[j].betay + self.elements[j + 1].betay) / 2
                         mu_ij_x2y = abs(mu_ijx + 2 * mu_ijy)
                         mu_ij_x_2y = abs(mu_ijx - 2 * mu_ijy)
                         Qxx += b3l / (-16 * np.pi) * pow(beta_xi * beta_xj, 1.5) * (
@@ -235,14 +260,28 @@ class CSLattice(object):
                         const = sign * jj * b3l
                         h31000 += const * beta_xij ** 1.5 * np.exp(np.complex(0, 3 * mu_ix - mu_jx)) / 32
                         h40000 += const * beta_xij ** 1.5 * np.exp(np.complex(0, 3 * mu_ix + mu_jx)) / 64
-                        h20110 += const * beta_xij ** 0.5 * beta_yi * (beta_xj * (np.exp(np.complex(0, 3 * mu_jx - mu_ix)) - np.exp(np.complex(0, mu_ix + mu_jx)))
-                                                                                 + 2 * beta_yj * np.exp(np.complex(0, mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy))) / 32
-                        h11200 += const * beta_xij ** 0.5 * beta_yi * (beta_xj * (np.exp(np.complex(0, -mu_ix + mu_jx + 2 * mu_iy)) - np.exp(np.complex(0, mu_ix - mu_jx + 2 * mu_iy)))
-                                                                                 + 2 * beta_yj * (np.exp(np.complex(0, mu_ix - mu_jx + 2 * mu_iy)) + np.exp(np.complex(0, - mu_ix + mu_jx + 2 * mu_iy)))) / 32
-                        h20020 += const * beta_xij ** 0.5 * beta_yi * (beta_xj * np.exp(np.complex(0, -mu_ix + 3 * mu_jx - 2 * mu_iy)) - (beta_xj + 4 * beta_yj) * np.exp(np.complex(0, mu_ix + mu_jx - 2 * mu_iy))) / 64
-                        h20200 += const * beta_xij ** 0.5 * beta_yi * (beta_xj * np.exp(np.complex(0, -mu_ix + 3 * mu_jx + 2 * mu_iy)) - (beta_xj - 4 * beta_yj) * np.exp((np.complex(0, mu_ix + mu_jx + 2 * mu_iy)))) / 64
-                        h00310 += const * beta_xij ** 0.5 * beta_yi * beta_yj * (np.exp(np.complex(0, mu_ix - mu_jx + 2 * mu_iy)) - np.exp(np.complex(0, -mu_ix + mu_jx + 2 * mu_iy))) / 32
-                        h00400 += const * beta_xij ** 0.5 * beta_yi * beta_yj * np.exp(np.complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy)) / 64
+                        h20110 += const * beta_xij ** 0.5 * beta_yi * (beta_xj * (
+                                    np.exp(np.complex(0, 3 * mu_jx - mu_ix)) - np.exp(np.complex(0, mu_ix + mu_jx)))
+                                                                       + 2 * beta_yj * np.exp(
+                                    np.complex(0, mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy))) / 32
+                        h11200 += const * beta_xij ** 0.5 * beta_yi * (beta_xj * (
+                                    np.exp(np.complex(0, -mu_ix + mu_jx + 2 * mu_iy)) - np.exp(
+                                np.complex(0, mu_ix - mu_jx + 2 * mu_iy)))
+                                                                       + 2 * beta_yj * (np.exp(
+                                    np.complex(0, mu_ix - mu_jx + 2 * mu_iy)) + np.exp(
+                                    np.complex(0, - mu_ix + mu_jx + 2 * mu_iy)))) / 32
+                        h20020 += const * beta_xij ** 0.5 * beta_yi * (
+                                    beta_xj * np.exp(np.complex(0, -mu_ix + 3 * mu_jx - 2 * mu_iy)) - (
+                                        beta_xj + 4 * beta_yj) * np.exp(np.complex(0, mu_ix + mu_jx - 2 * mu_iy))) / 64
+                        h20200 += const * beta_xij ** 0.5 * beta_yi * (
+                                    beta_xj * np.exp(np.complex(0, -mu_ix + 3 * mu_jx + 2 * mu_iy)) - (
+                                        beta_xj - 4 * beta_yj) * np.exp(
+                                (np.complex(0, mu_ix + mu_jx + 2 * mu_iy)))) / 64
+                        h00310 += const * beta_xij ** 0.5 * beta_yi * beta_yj * (
+                                    np.exp(np.complex(0, mu_ix - mu_jx + 2 * mu_iy)) - np.exp(
+                                np.complex(0, -mu_ix + mu_jx + 2 * mu_iy))) / 32
+                        h00400 += const * beta_xij ** 0.5 * beta_yi * beta_yj * np.exp(
+                            np.complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy)) / 64
                 eta2xk = - eta1x_i + np.sqrt(beta_xi) * eta2xk / 2 / np.sin(pi_nux)
                 beta1_xk = beta1_xk * beta_xi / 2 / np.sin(2 * pi_nux)
                 beta1_yk = - beta1_yk * beta_yi / 2 / np.sin(2 * pi_nuy)
@@ -250,11 +289,14 @@ class CSLattice(object):
                 xi2y += - (2 * b3l_i * eta2xk * beta_yi + (b2l_i - 2 * b3l_i * eta1x_i) * beta1_yk) / 8 / pi
         xi2x += - self.xi_x / 2
         xi2y += - self.xi_y / 2
-        print(f'nonlinear terms:\n h21000 = {abs(h21000):.2f}\n h30000 = {abs(h30000):.2f}\n h10110 = {abs(h10110):.2f}\n h10020 = {abs(h10020):.2f}\n h10200 = {abs(h10200):.2f}')
+        print(
+            f'nonlinear terms:\n h21000 = {abs(h21000):.2f}\n h30000 = {abs(h30000):.2f}\n h10110 = {abs(h10110):.2f}\n h10020 = {abs(h10020):.2f}\n h10200 = {abs(h10200):.2f}')
         print(f' xi2x = {xi2x:.2f}\n xi2y = {xi2y:.2f}')
         print(f' Qxx = {Qxx:.2f}\n Qxy = {Qxy:.2f}\n Qyy = {Qyy:.2f}')
-        print(f' h31000 = {abs(h31000):.2f}\n h40000 = {abs(h40000):.2f}\n h20110 = {abs(h20110):.2f}\n h11200 = {abs(h11200):.2f}')
-        print(f' h20020 = {abs(h20020):.2f}\n h20200 = {abs(h20200):.2f}\n h00310 = {abs(h00310):.2f}\n h00400 = {abs(h00400):.2f}')
+        print(
+            f' h31000 = {abs(h31000):.2f}\n h40000 = {abs(h40000):.2f}\n h20110 = {abs(h20110):.2f}\n h11200 = {abs(h11200):.2f}')
+        print(
+            f' h20020 = {abs(h20020):.2f}\n h20200 = {abs(h20200):.2f}\n h00310 = {abs(h00310):.2f}\n h00400 = {abs(h00400):.2f}')
 
     def __global_parameters(self):
         self.Jx = 1 - self.I4 / self.I2
@@ -300,7 +342,7 @@ class CSLattice(object):
         file1 = open(file_name, 'w')
         file1.write('& s, ElementName, betax, alphax, psix, betay, alphay, psiy, etax, etaxp\n')
         last_identifier = 123465
-        for ele in self.ele_slices:
+        for ele in self.elements:
             if ele.identifier != last_identifier:
                 file1.write(f'{ele.s:.6e} {ele.name:10} {ele.betax:.6e}  {ele.alphax:.6e}  {ele.psix / 2 / pi:.6e}  '
                             f'{ele.betay:.6e}  {ele.alphay:.6e}  {ele.psiy / 2 / pi:.6e}  {ele.etax:.6e}  {ele.etaxp:.6e}\n')
@@ -313,11 +355,11 @@ class CSLattice(object):
         val += f'\n{str("abs_angle ="):11} {self.abs_angle:9.3f}'
         val += f'\n{str("nux ="):11} {self.nux:9.4f}'
         val += f'\n{str("nuy ="):11} {self.nuy:9.4f}'
-        val += f'\n{str("I1 ="):11} {self.I1:9.3e}'
-        val += f'\n{str("I2 ="):11} {self.I2:9.3e}'
-        val += f'\n{str("I3 ="):11} {self.I3:9.3e}'
-        val += f'\n{str("I4 ="):11} {self.I4:9.3e}'
-        val += f'\n{str("I5 ="):11} {self.I5:9.3e}'
+        val += f'\n{str("I1 ="):11} {self.I1:9.5e}'
+        val += f'\n{str("I2 ="):11} {self.I2:9.5e}'
+        val += f'\n{str("I3 ="):11} {self.I3:9.5e}'
+        val += f'\n{str("I4 ="):11} {self.I4:9.5e}'
+        val += f'\n{str("I5 ="):11} {self.I5:9.5e}'
         val += f'\n{str("Js ="):11} {self.Js:9.4f}'
         val += f'\n{str("Jx ="):11} {self.Jx:9.4f}'
         val += f'\n{str("energy ="):11} {RefParticle.energy:9.2e} MeV'

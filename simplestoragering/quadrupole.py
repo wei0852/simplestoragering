@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-from .components import Element
+from .components import Element, assin_twiss
 from .constants import Cr, LENGTH_PRECISION
 from .particles import RefParticle, Beam7
 from .exceptions import ParticleLost
+from .functions import next_twiss
 import numpy as np
 
 
@@ -15,45 +16,33 @@ class Quadrupole(Element):
         self.k1 = k1
         self.n_slices = n_slices
 
-    def slice(self, initial_s, identifier):
+    def slice(self, n_slices: int) -> list:
         """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
         ele_list = []
-        current_s = initial_s
-        length = round(self.length / self.n_slices, LENGTH_PRECISION)
-        for i in range(self.n_slices - 1):
+        current_s = self.s
+        length = round(self.length / n_slices, LENGTH_PRECISION)
+        twiss0 = np.array(
+            [self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp,
+             self.etay, self.etayp, self.psix, self.psiy])
+        for i in range(n_slices - 1):
             ele = Quadrupole(self.name, length, self.k1)
-            ele.identifier = identifier
+            ele.identifier = self.identifier
             ele.s = current_s
+            assin_twiss(ele, twiss0)
+            twiss0 = next_twiss(ele.matrix, twiss0)
             ele_list.append(ele)
             current_s = round(current_s + ele.length, LENGTH_PRECISION)
-        length = round(self.length + initial_s - current_s, LENGTH_PRECISION)
+        length = round(self.length + self.s - current_s, LENGTH_PRECISION)
         ele = Quadrupole(self.name, length, self.k1)
-        ele.identifier = identifier
+        ele.identifier = self.identifier
         ele.s = current_s
+        assin_twiss(ele, twiss0)
         ele_list.append(ele)
-        current_s = round(current_s + ele.length, LENGTH_PRECISION)
-        return [ele_list, current_s]
+        return ele_list
 
     @property
     def matrix(self):
-        if self.k1 > 0:
-            sqk = np.sqrt(self.k1)
-            sqkl = sqk * self.length
-            return np.array([[np.cos(sqkl), np.sin(sqkl) / sqk, 0, 0, 0, 0],
-                             [- sqk * np.sin(sqkl), np.cos(sqkl), 0, 0, 0, 0],
-                             [0, 0, np.cosh(sqkl), np.sinh(sqkl) / sqk, 0, 0],
-                             [0, 0, sqk * np.sinh(sqkl), np.cosh(sqkl), 0, 0],
-                             [0, 0, 0, 0, 1, self.length / RefParticle.gamma ** 2],
-                             [0, 0, 0, 0, 0, 1]])
-        else:
-            sqk = np.sqrt(-self.k1)
-            sqkl = sqk * self.length
-            return np.array([[np.cosh(sqkl), np.sinh(sqkl) / sqk, 0, 0, 0, 0],
-                             [sqk * np.sinh(sqkl), np.cosh(sqkl), 0, 0, 0, 0],
-                             [0, 0, np.cos(sqkl), np.sin(sqkl) / sqk, 0, 0],
-                             [0, 0, - sqk * np.sin(sqkl), np.cos(sqkl), 0, 0],
-                             [0, 0, 0, 0, 1, self.length / RefParticle.gamma ** 2],
-                             [0, 0, 0, 0, 0, 1]])
+        return quad_matrix(self.length, self.k1)
 
     @property
     def damping_matrix(self):
@@ -130,7 +119,50 @@ class Quadrupole(Element):
         beam.set_particle([x2, px1, y2, py1, z2, delta1])
         return beam
 
-    def radiation_integrals(self):
-        xi_x = - self.k1 * self.length * self.betax / 4 / np.pi
-        xi_y = self.k1 * self.length * self.betay / 4 / np.pi
-        return 0, 0, 0, 0, 0, xi_x, xi_y
+    def copy(self):
+        return Quadrupole(self.name, self.length, self.k1)
+
+    def linear_optics(self):
+        twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])
+        integrals = np.zeros(7)
+        current_s = 0
+        length = 0.01
+        while current_s < self.length - length:
+            matrix = quad_matrix(length, self.k1)
+            twiss1 = next_twiss(matrix, twiss0)
+            betax = (twiss0[0] + twiss1[0]) / 2
+            betay = (twiss0[3] + twiss1[3]) / 2
+            integrals[5] += - self.k1 * length * betax / 4 / np.pi
+            integrals[6] += self.k1 * length * betay / 4 / np.pi
+            current_s = round(current_s + length, LENGTH_PRECISION)
+            for i in range(len(twiss0)):
+                twiss0[i] = twiss1[i]
+        length = round(self.length - current_s, LENGTH_PRECISION)
+        matrix = quad_matrix(length, self.k1)
+        twiss1 = next_twiss(matrix, twiss0)
+        betax = (twiss0[0] + twiss1[0]) / 2
+        betay = (twiss0[3] + twiss1[3]) / 2
+        integrals[5] += - self.k1 * length * betax / 4 / np.pi
+        integrals[6] += self.k1 * length * betay / 4 / np.pi
+        return integrals, twiss1
+
+
+def quad_matrix(length, k1):
+    if k1 > 0:
+        sqk = np.sqrt(k1)
+        sqkl = sqk * length
+        return np.array([[np.cos(sqkl), np.sin(sqkl) / sqk, 0, 0, 0, 0],
+                         [- sqk * np.sin(sqkl), np.cos(sqkl), 0, 0, 0, 0],
+                         [0, 0, np.cosh(sqkl), np.sinh(sqkl) / sqk, 0, 0],
+                         [0, 0, sqk * np.sinh(sqkl), np.cosh(sqkl), 0, 0],
+                         [0, 0, 0, 0, 1, length / RefParticle.gamma ** 2],
+                         [0, 0, 0, 0, 0, 1]])
+    else:
+        sqk = np.sqrt(-k1)
+        sqkl = sqk * length
+        return np.array([[np.cosh(sqkl), np.sinh(sqkl) / sqk, 0, 0, 0, 0],
+                         [sqk * np.sinh(sqkl), np.cosh(sqkl), 0, 0, 0, 0],
+                         [0, 0, np.cos(sqkl), np.sin(sqkl) / sqk, 0, 0],
+                         [0, 0, - sqk * np.sin(sqkl), np.cos(sqkl), 0, 0],
+                         [0, 0, 0, 0, 1, length / RefParticle.gamma ** 2],
+                         [0, 0, 0, 0, 0, 1]])

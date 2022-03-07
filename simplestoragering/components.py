@@ -48,6 +48,7 @@ class Element(metaclass=ABCMeta):
     etay = None
     etayp = None
     curl_H = None
+
     # matrix = None
 
     @property
@@ -87,7 +88,7 @@ class Element(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def radiation_integrals(self):
+    def copy(self):
         """calculate integral parameters
 
         return: I1, I2, I3, I4, I5, xi_x, xi_y"""
@@ -108,36 +109,17 @@ class Element(metaclass=ABCMeta):
         return self.psiy / 2 / pi
 
     @abstractmethod
-    def slice(self, initial_s, identifier):
-        """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
+    def slice(self, n_slices: int) -> list:
+        """Slice a component into a list of elements. twiss data will be calculated for each element.
+
+        return: ele_list"""
         pass
 
-    def pass_next_data(self, next_ele):
-        matrix = self.matrix
-        sub = matrix[:2, :2]
-        matrix_cal = np.array([[sub[0, 0] ** 2, -2 * sub[0, 0] * sub[0, 1], sub[0, 1] ** 2],
-                               [-sub[0, 0] * sub[1, 0], 2 * sub[0, 1] * sub[1, 0] + 1, -sub[0, 1] * sub[1, 1]],
-                               [sub[1, 0] ** 2, -2 * sub[1, 0] * sub[1, 1], sub[1, 1] ** 2]])
-        [next_ele.betax, next_ele.alphax, next_ele.gammax] = matrix_cal.dot(
-            np.array([self.betax, self.alphax, self.gammax]))
-        sub = matrix[2:4, 2:4]
-        matrix_cal = np.array([[sub[0, 0] ** 2, -2 * sub[0, 0] * sub[0, 1], sub[0, 1] ** 2],
-                               [-sub[0, 0] * sub[1, 0], 2 * sub[0, 1] * sub[1, 0] + 1, -sub[0, 1] * sub[1, 1]],
-                               [sub[1, 0] ** 2, -2 * sub[1, 0] * sub[1, 1], sub[1, 1] ** 2]])
-        [next_ele.betay, next_ele.alphay, next_ele.gammay] = matrix_cal.dot(
-            np.array([self.betay, self.alphay, self.gammay]))
-        [next_ele.etax, next_ele.etaxp] = matrix[:2, :2].dot(np.array([self.etax, self.etaxp])) + np.array(
-            [matrix[0, 5], matrix[1, 5]])
-        [next_ele.etay, next_ele.etayp] = matrix[2:4, 2:4].dot(np.array([self.etay, self.etayp])) + np.array(
-            [matrix[2, 5], matrix[3, 5]])
-        dpsix = np.arctan(matrix[0, 1] / (matrix[0, 0] * self.betax - matrix[0, 1] * self.alphax))
-        while dpsix < 0:
-            dpsix += pi
-        next_ele.psix = self.psix + dpsix
-        dpsiy = np.arctan(matrix[2, 3] / (matrix[2, 2] * self.betay - matrix[2, 3] * self.alphay))
-        while dpsiy < 0:
-            dpsiy += pi
-        next_ele.psiy = self.psiy + dpsiy
+    def linear_optics(self):
+        twiss0 = np.array(
+            [self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp,
+             self.etay, self.etayp, self.psix, self.psiy])
+        return np.zeros(7), twiss0
 
     def __repr__(self):
         return self.name
@@ -180,14 +162,15 @@ class Mark(Element):
         self.data = None
         self.record = record
 
+    @property
     def matrix(self):
         """matrix with coupled effects to calculate tune and bunch distribution"""
         return np.identity(6)
 
-    def slice(self, initial_s, identifier):
+    def slice(self, n_slices: int) -> list:
         """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
         ele_list = [self]
-        return [ele_list, initial_s]
+        return ele_list
 
     @property
     def damping_matrix(self):
@@ -223,8 +206,8 @@ class Mark(Element):
         """clear the particle coordinate data."""
         self.data = None
 
-    def radiation_integrals(self):
-        return 0, 0, 0, 0, 0, 0, 0
+    def copy(self):
+        return Mark(self.name, self.record)
 
 
 class LineEnd(Element):
@@ -236,12 +219,13 @@ class LineEnd(Element):
         self.identifier = identifier
         self.n_slices = 1
 
+    @property
     def matrix(self):
         """matrix with coupled effects to calculate tune and bunch distribution"""
         return np.identity(6)
 
-    def slice(self, initial_s, identifier):
-        pass
+    def slice(self, n_slices: int) -> list:
+        return [self]
 
     @property
     def damping_matrix(self):
@@ -262,5 +246,20 @@ class LineEnd(Element):
     def real_track(self, beam: Beam7) -> Beam7:
         return beam
 
-    def radiation_integrals(self):
-        return 0, 0, 0, 0, 0, 0, 0
+    def copy(self):
+        return LineEnd(self.s, self.identifier, self.name)
+
+
+def assin_twiss(ele: Element, twiss):
+    ele.betax = twiss[0]
+    ele.alphax = twiss[1]
+    ele.gammax = twiss[2]
+    ele.betay = twiss[3]
+    ele.alphay = twiss[4]
+    ele.gammay = twiss[5]
+    ele.etax = twiss[6]
+    ele.etaxp = twiss[7]
+    ele.etay = twiss[8]
+    ele.etayp = twiss[9]
+    ele.psix = twiss[10]
+    ele.psiy = twiss[11]
