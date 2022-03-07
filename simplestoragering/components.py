@@ -48,7 +48,7 @@ class Element(metaclass=ABCMeta):
     etay = None
     etayp = None
     curl_H = None
-    matrix = None
+    # matrix = None
 
     @property
     @abstractmethod
@@ -56,9 +56,11 @@ class Element(metaclass=ABCMeta):
         """matrix with coupled effects and damping rates to calculate tune and damping rate"""
         pass
 
-    def cal_matrix(self):
+    @property
+    @abstractmethod
+    def matrix(self):
         """matrix with coupled effects to calculate tune and bunch distribution"""
-        self.matrix = np.identity(6)
+        return np.identity(6)
 
     @property
     def next_closed_orbit(self):
@@ -111,27 +113,28 @@ class Element(metaclass=ABCMeta):
         pass
 
     def pass_next_data(self, next_ele):
-        sub = self.matrix[:2, :2]
+        matrix = self.matrix
+        sub = matrix[:2, :2]
         matrix_cal = np.array([[sub[0, 0] ** 2, -2 * sub[0, 0] * sub[0, 1], sub[0, 1] ** 2],
                                [-sub[0, 0] * sub[1, 0], 2 * sub[0, 1] * sub[1, 0] + 1, -sub[0, 1] * sub[1, 1]],
                                [sub[1, 0] ** 2, -2 * sub[1, 0] * sub[1, 1], sub[1, 1] ** 2]])
         [next_ele.betax, next_ele.alphax, next_ele.gammax] = matrix_cal.dot(
             np.array([self.betax, self.alphax, self.gammax]))
-        sub = self.matrix[2:4, 2:4]
+        sub = matrix[2:4, 2:4]
         matrix_cal = np.array([[sub[0, 0] ** 2, -2 * sub[0, 0] * sub[0, 1], sub[0, 1] ** 2],
                                [-sub[0, 0] * sub[1, 0], 2 * sub[0, 1] * sub[1, 0] + 1, -sub[0, 1] * sub[1, 1]],
                                [sub[1, 0] ** 2, -2 * sub[1, 0] * sub[1, 1], sub[1, 1] ** 2]])
         [next_ele.betay, next_ele.alphay, next_ele.gammay] = matrix_cal.dot(
             np.array([self.betay, self.alphay, self.gammay]))
-        [next_ele.etax, next_ele.etaxp] = self.matrix[:2, :2].dot(np.array([self.etax, self.etaxp])) + np.array(
-            [self.matrix[0, 5], self.matrix[1, 5]])
-        [next_ele.etay, next_ele.etayp] = self.matrix[2:4, 2:4].dot(np.array([self.etay, self.etayp])) + np.array(
-            [self.matrix[2, 5], self.matrix[3, 5]])
-        dpsix = np.arctan(self.matrix[0, 1] / (self.matrix[0, 0] * self.betax - self.matrix[0, 1] * self.alphax))
+        [next_ele.etax, next_ele.etaxp] = matrix[:2, :2].dot(np.array([self.etax, self.etaxp])) + np.array(
+            [matrix[0, 5], matrix[1, 5]])
+        [next_ele.etay, next_ele.etayp] = matrix[2:4, 2:4].dot(np.array([self.etay, self.etayp])) + np.array(
+            [matrix[2, 5], matrix[3, 5]])
+        dpsix = np.arctan(matrix[0, 1] / (matrix[0, 0] * self.betax - matrix[0, 1] * self.alphax))
         while dpsix < 0:
             dpsix += pi
         next_ele.psix = self.psix + dpsix
-        dpsiy = np.arctan(self.matrix[2, 3] / (self.matrix[2, 2] * self.betay - self.matrix[2, 3] * self.alphay))
+        dpsiy = np.arctan(matrix[2, 3] / (matrix[2, 2] * self.betay - matrix[2, 3] * self.alphay))
         while dpsiy < 0:
             dpsiy += pi
         next_ele.psiy = self.psiy + dpsiy
@@ -176,7 +179,10 @@ class Mark(Element):
         self.n_slices = 1
         self.data = None
         self.record = record
-        self.cal_matrix()
+
+    def matrix(self):
+        """matrix with coupled effects to calculate tune and bunch distribution"""
+        return np.identity(6)
 
     def slice(self, initial_s, identifier):
         """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
@@ -229,7 +235,10 @@ class LineEnd(Element):
         self.s = s
         self.identifier = identifier
         self.n_slices = 1
-        self.cal_matrix()
+
+    def matrix(self):
+        """matrix with coupled effects to calculate tune and bunch distribution"""
+        return np.identity(6)
 
     def slice(self, initial_s, identifier):
         pass

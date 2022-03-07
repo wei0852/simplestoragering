@@ -176,47 +176,46 @@ class CSLattice(object):
 
     def compute_nonlinear_term(self):
         Qxx = Qxy = Qyy = 0
-        # xi2x = - self.xi_x / 2
-        # xi2y = - self.xi_y / 2
+        xi2x = xi2y = 0
         h21000 = h30000 = h10110 = h10020 = h10200 = 0
         h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
         num = len(self.ele_slices)
+        pi_nux = self.ele_slices[-1].psix / 2
+        pi_nuy = self.ele_slices[-1].psiy / 2
         for i in range(num - 1):
             b3l_i = self.ele_slices[i].k2 * self.ele_slices[i].length / 2  # k2 = 2 * b3, k1 = b2
             b2l_i = self.ele_slices[i].k1 * self.ele_slices[i].length
-            # beta1_xk = beta1_yk = 0
-            # eta1x_i = (self.ele_slices[i].etax + self.ele_slices[i + 1].etax) / 2
-            # eta2xk = 0
+            beta1_xk = beta1_yk = 0
+            eta1x_i = (self.ele_slices[i].etax + self.ele_slices[i + 1].etax) / 2
+            eta2xk = 0
             if b3l_i != 0 or b2l_i != 0:
                 beta_xi = (self.ele_slices[i].betax + self.ele_slices[i + 1].betax) / 2
                 beta_yi = (self.ele_slices[i].betay + self.ele_slices[i + 1].betay) / 2
                 mu_ix = (self.ele_slices[i].psix + self.ele_slices[i + 1].psix) / 2
                 mu_iy = (self.ele_slices[i].psiy + self.ele_slices[i + 1].psiy) / 2
-                pi_nux = self.ele_slices[-1].psix / 2
-                pi_nuy = self.ele_slices[-1].psiy / 2
                 h21000 += - b3l_i * beta_xi ** 1.5 * np.exp(np.complex(0, mu_ix)) / 8
                 h30000 += - b3l_i * beta_xi ** 1.5 * np.exp(np.complex(0, 3 * mu_ix)) / 24
                 h10110 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(np.complex(0, mu_ix)) / 4
                 h10020 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(np.complex(0, mu_ix - 2 * mu_iy)) / 8
                 h10200 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(np.complex(0, mu_ix + 2 * mu_iy)) / 8
                 for j in range(num - 1):
-                    # b2l_j = self.ele_slices[j].k1 * self.ele_slices[j].length
+                    b2l_j = self.ele_slices[j].k1 * self.ele_slices[j].length
                     b3l_j = self.ele_slices[j].k2 * self.ele_slices[j].length / 2
                     beta_xj = (self.ele_slices[j].betax + self.ele_slices[j + 1].betax) / 2
-                    # eta1x_j = (self.ele_slices[j].etax + self.ele_slices[j + 1].etax) / 2
-                    # beta_yj = (self.ele_slices[j].betay + self.ele_slices[j + 1].betay) / 2
+                    eta1x_j = (self.ele_slices[j].etax + self.ele_slices[j + 1].etax) / 2
+                    beta_yj = (self.ele_slices[j].betay + self.ele_slices[j + 1].betay) / 2
                     mu_jx = (self.ele_slices[j].psix + self.ele_slices[j + 1].psix) / 2
                     mu_ijx = mu_ix - mu_jx
                     a_mu_ijx = abs(mu_ijx)
                     mu_jy = (self.ele_slices[j].psiy + self.ele_slices[j + 1].psiy) / 2
                     mu_ijy = mu_iy - mu_jy
                     b3l = b3l_j * b3l_i
-                    # eta2xk += (b2l_j - b3l_j * eta1x_j) * eta1x_j * np.sqrt(beta_xj) * np.cos(a_mu_ijx - pi_nux)
-                    # beta1_xk += (b2l_j - 2 * b3l_j * eta1x_j) * beta_xj * np.cos(2 * (a_mu_ijx - pi_nux))
-                    # beta1_yk += (b2l_j - 2 * b3l_j * eta1x_j) * beta_yj * np.cos(2 * (abs(mu_ijy) - pi_nuy))
+                    eta2xk += (b2l_j - b3l_j * eta1x_j) * eta1x_j * np.sqrt(beta_xj) * np.cos(a_mu_ijx - pi_nux)
+                    beta1_xk += (b2l_j - 2 * b3l_j * eta1x_j) * beta_xj * np.cos(2 * (a_mu_ijx - pi_nux))
+                    beta1_yk += (b2l_j - 2 * b3l_j * eta1x_j) * beta_yj * np.cos(2 * (abs(mu_ijy) - pi_nuy))
                     if b3l != 0:
                         beta_xij = beta_xj * beta_xi
-                        # beta_xij_sqrt = np.sqrt(beta_xij)
+                        beta_xij_sqrt = np.sqrt(beta_xij)
                         beta_yj = (self.ele_slices[j].betay + self.ele_slices[j + 1].betay) / 2
                         mu_ij_x2y = abs(mu_ijx + 2 * mu_ijy)
                         mu_ij_x_2y = abs(mu_ijx - 2 * mu_ijy)
@@ -244,13 +243,15 @@ class CSLattice(object):
                         h20200 += const * beta_xij ** 0.5 * beta_yi * (beta_xj * np.exp(np.complex(0, -mu_ix + 3 * mu_jx + 2 * mu_iy)) - (beta_xj - 4 * beta_yj) * np.exp((np.complex(0, mu_ix + mu_jx + 2 * mu_iy)))) / 64
                         h00310 += const * beta_xij ** 0.5 * beta_yi * beta_yj * (np.exp(np.complex(0, mu_ix - mu_jx + 2 * mu_iy)) - np.exp(np.complex(0, -mu_ix + mu_jx + 2 * mu_iy))) / 32
                         h00400 += const * beta_xij ** 0.5 * beta_yi * beta_yj * np.exp(np.complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy)) / 64
-                # eta2xk = - eta1x_i + np.sqrt(beta_xi) * eta2xk / 2 / np.sin(pi_nux)
-                # beta1_xk = beta1_xk * beta_xi / 2 / np.sin(2 * pi_nux)
-                # beta1_yk = - beta1_yk * beta_yi / 2 / np.sin(2 * pi_nuy)
-                # xi2x += (2 * b3l_i * eta2xk * beta_xi - (b2l_i - 2 * b3l_i * eta1x_i) * beta1_xk) / 8 / pi
-                # xi2y += - (2 * b3l_i * eta2xk * beta_yi + (b2l_i - 2 * b3l_i * eta1x_i) * beta1_yk) / 8 / pi
+                eta2xk = - eta1x_i + np.sqrt(beta_xi) * eta2xk / 2 / np.sin(pi_nux)
+                beta1_xk = beta1_xk * beta_xi / 2 / np.sin(2 * pi_nux)
+                beta1_yk = - beta1_yk * beta_yi / 2 / np.sin(2 * pi_nuy)
+                xi2x += (2 * b3l_i * eta2xk * beta_xi - (b2l_i - 2 * b3l_i * eta1x_i) * beta1_xk) / 8 / pi
+                xi2y += - (2 * b3l_i * eta2xk * beta_yi + (b2l_i - 2 * b3l_i * eta1x_i) * beta1_yk) / 8 / pi
+        xi2x += - self.xi_x / 2
+        xi2y += - self.xi_y / 2
         print(f'nonlinear terms:\n h21000 = {abs(h21000):.2f}\n h30000 = {abs(h30000):.2f}\n h10110 = {abs(h10110):.2f}\n h10020 = {abs(h10020):.2f}\n h10200 = {abs(h10200):.2f}')
-        # print(f' xi2x = {xi2x:.2f}\n xi2y = {xi2y:.2f}')
+        print(f' xi2x = {xi2x:.2f}\n xi2y = {xi2y:.2f}')
         print(f' Qxx = {Qxx:.2f}\n Qxy = {Qxy:.2f}\n Qyy = {Qyy:.2f}')
         print(f' h31000 = {abs(h31000):.2f}\n h40000 = {abs(h40000):.2f}\n h20110 = {abs(h20110):.2f}\n h11200 = {abs(h11200):.2f}')
         print(f' h20020 = {abs(h20020):.2f}\n h20200 = {abs(h20200):.2f}\n h00310 = {abs(h00310):.2f}\n h00400 = {abs(h00400):.2f}')

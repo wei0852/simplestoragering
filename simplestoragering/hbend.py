@@ -18,7 +18,6 @@ class HBend(Element):
         self.theta_out = theta_out
         self.n_slices = n_slices
         self.k1 = k1
-        self.cal_matrix()
 
     @property
     def theta(self):
@@ -27,7 +26,8 @@ class HBend(Element):
     def set_slices(self, n_slices):
         self.n_slices = n_slices
 
-    def cal_matrix(self):
+    @property
+    def matrix(self):
         h_beta = self.h / RefParticle.beta
         inlet_edge = np.array([[1, 0, 0, 0, 0, 0],
                                [np.tan(self.theta_in) * self.h, 1, 0, 0, 0, 0],
@@ -55,7 +55,7 @@ class HBend(Element):
                                 [0, 0, -np.tan(self.theta_out) * self.h, 1, 0, 0],
                                 [0, 0, 0, 0, 1, 0],
                                 [0, 0, 0, 0, 0, 1]])
-        self.matrix = outlet_edge.dot(middle_section).dot(inlet_edge)
+        return outlet_edge.dot(middle_section).dot(inlet_edge)
 
     def __calculate_csd(self, fu):
         if fu > 0:

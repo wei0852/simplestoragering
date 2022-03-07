@@ -14,7 +14,6 @@ class Quadrupole(Element):
         self.length = length
         self.k1 = k1
         self.n_slices = n_slices
-        self.cal_matrix()
 
     def slice(self, initial_s, identifier):
         """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
@@ -35,11 +34,12 @@ class Quadrupole(Element):
         current_s = round(current_s + ele.length, LENGTH_PRECISION)
         return [ele_list, current_s]
 
-    def cal_matrix(self):
+    @property
+    def matrix(self):
         if self.k1 > 0:
             sqk = np.sqrt(self.k1)
             sqkl = sqk * self.length
-            self.matrix = np.array([[np.cos(sqkl), np.sin(sqkl) / sqk, 0, 0, 0, 0],
+            return np.array([[np.cos(sqkl), np.sin(sqkl) / sqk, 0, 0, 0, 0],
                              [- sqk * np.sin(sqkl), np.cos(sqkl), 0, 0, 0, 0],
                              [0, 0, np.cosh(sqkl), np.sinh(sqkl) / sqk, 0, 0],
                              [0, 0, sqk * np.sinh(sqkl), np.cosh(sqkl), 0, 0],
@@ -48,7 +48,7 @@ class Quadrupole(Element):
         else:
             sqk = np.sqrt(-self.k1)
             sqkl = sqk * self.length
-            self.matrix = np.array([[np.cosh(sqkl), np.sinh(sqkl) / sqk, 0, 0, 0, 0],
+            return np.array([[np.cosh(sqkl), np.sinh(sqkl) / sqk, 0, 0, 0, 0],
                              [sqk * np.sinh(sqkl), np.cosh(sqkl), 0, 0, 0, 0],
                              [0, 0, np.cos(sqkl), np.sin(sqkl) / sqk, 0, 0],
                              [0, 0, - sqk * np.sin(sqkl), np.cos(sqkl), 0, 0],

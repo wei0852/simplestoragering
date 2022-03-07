@@ -13,7 +13,6 @@ class Drift(Element):
         self.name = name
         self.length = length
         self.n_slices = n_slices
-        self.cal_matrix()
 
     def slice(self, initial_s, identifier):
         """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
@@ -34,8 +33,9 @@ class Drift(Element):
         current_s = round(current_s + ele.length, LENGTH_PRECISION)
         return [ele_list, current_s]
 
-    def cal_matrix(self):
-        self.matrix = np.array([[1, self.length, 0, 0, 0, 0],
+    @property
+    def matrix(self):
+        return np.array([[1, self.length, 0, 0, 0, 0],
                          [0, 1, 0, 0, 0, 0],
                          [0, 0, 1, self.length, 0, 0],
                          [0, 0, 0, 1, 0, 0],
