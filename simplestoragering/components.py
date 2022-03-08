@@ -78,14 +78,14 @@ class Element(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def symplectic_track(self, beam: Beam7) -> Beam7:
+    def symplectic_track(self, beam):
         """assuming that the energy is constant, the result is symplectic."""
         pass
 
-    @abstractmethod
-    def real_track(self, beam: Beam7) -> Beam7:
-        """tracking with energy loss, the result is not symplectic"""
-        pass
+    # @abstractmethod
+    # def real_track(self, beam: Beam7) -> Beam7:
+    #     """tracking with energy loss, the result is not symplectic"""
+    #     pass
 
     @abstractmethod
     def copy(self):
@@ -185,22 +185,29 @@ class Mark(Element):
     def next_closed_orbit(self):
         return self.closed_orbit
 
-    def symplectic_track(self, beam: Beam7) -> Beam7:
-        assert isinstance(beam, Beam7)
+    def symplectic_track(self, particle: np.ndarray):
+        # assert isinstance(beam, Beam7)
+        # if particle.ndim == 2:
         if self.record:
             if self.data is None:
-                self.data = beam.get_particle_array()
+                if particle.ndim == 2:
+                    self.data = particle[:, 6]
+                elif particle.ndim == 1:
+                    self.data = particle
             else:
-                self.data = np.vstack((self.data, beam.get_particle_array()))
-        return beam
+                if particle.ndim == 2:
+                    self.data = np.vstack((self.data, particle[:, 6]))
+                elif particle.ndim == 1:
+                    self.data = np.vstack((self.data, particle))
+        return particle
 
-    def real_track(self, beam: Beam7) -> Beam7:
-        if self.record:
-            if self.data is None:
-                self.data = beam.get_particle_array()
-            else:
-                self.data = np.vstack((self.data, beam.get_particle_array()))
-        return beam
+    # def real_track(self, beam: Beam7) -> Beam7:
+    #     if self.record:
+    #         if self.data is None:
+    #             self.data = beam.get_particle_array()
+    #         else:
+    #             self.data = np.vstack((self.data, beam.get_particle_array()))
+    #     return beam
 
     def clear(self):
         """clear the particle coordinate data."""
@@ -243,8 +250,8 @@ class LineEnd(Element):
     def symplectic_track(self, beam):
         return beam
 
-    def real_track(self, beam: Beam7) -> Beam7:
-        return beam
+    # def real_track(self, beam: Beam7) -> Beam7:
+    #     return beam
 
     def copy(self):
         return LineEnd(self.s, self.identifier, self.name)

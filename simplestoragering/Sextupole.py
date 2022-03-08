@@ -78,28 +78,38 @@ class Sextupole(Element):
         return matrix7
 
     def symplectic_track(self, beam):
-        [x0, px0, y0, py0, z0, delta0] = beam.get_particle()
-        ds = self.length / 2
+        # [x0, px0, y0, py0, ct0, dp0] = beam.get_particle()
+        [x0, px0, y0, py0, ct0, dp0] = beam
+
+        beta0 = RefParticle.beta
+
+        ds = self.length / self.n_slices
         k2 = self.k2
-        # drift
-        d1 = np.sqrt(1 - px0 ** 2 - py0 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
-        x1 = x0 + ds * px0 / d1
-        y1 = y0 + ds * py0 / d1
-        z1 = z0 + ds * (1 - (1 + RefParticle.beta * delta0) / d1) / RefParticle.beta
-        # kick
-        px1 = px0 - (x1 * x1 - y1 * y1) * k2 * ds
-        py1 = py0 + x1 * y1 * k2 * ds * 2
-        # drift
-        np.seterr(all='raise')
-        try:
-            d2 = np.sqrt(1 - px1 ** 2 - py1 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
-        except FloatingPointError:
-            raise ParticleLost(self.s)
-        x2 = x1 + ds * px1 / d2
-        y2 = y1 + ds * py1 / d2
-        z2 = z1 + ds * (1 - (1 + RefParticle.beta * delta0) / d2) / RefParticle.beta
-        beam.set_particle([x2, px1, y2, py1, z2, delta0])
-        return beam
+        for i in range(self.n_slices):
+            d1 = np.sqrt(1 - px0 * px0 - py0 * py0 + 2 * dp0 / beta0 + dp0 * dp0)
+
+            x1 = x0 + ds * px0 / d1 / 2
+            y1 = y0 + ds * py0 / d1 / 2
+            ct1 = ct0 + ds * (1 - (1 + beta0 * dp0) / d1) / beta0 / 2
+
+            px1 = px0 - (x1 * x1 - y1 * y1) * k2 * ds / 2
+            py1 = py0 + x1 * y1 * k2 * ds
+            try:
+                d1 = np.sqrt(1 - px1 * px1 - py1 * py1 + 2 * dp0 / beta0 + dp0 * dp0)
+            except FloatingPointError:
+                print(f'particle lost in {self.name} at {self.s + i * ds}\n')
+                raise ParticleLost(' just lost')
+            x2 = x1 + ds * px1 / d1 / 2
+            y2 = y1 + ds * py1 / d1 / 2
+            ct2 = ct1 + ds * (1 - (1 + beta0 * dp0) / d1) / beta0 / 2
+            x0 = x2
+            px0 = px1
+            y0 = y2
+            py0 = py1
+            ct0 = ct2
+        # beam.set_particle([x2, px1, y2, py1, ct2, dp0])
+        # return beam
+        return np.array([x2, px1, y2, py1, ct2, dp0])
 
     def real_track(self, beam: Beam7) -> Beam7:
         [x0, px0, y0, py0, z0, delta0] = beam.get_particle()
@@ -139,7 +149,7 @@ class Sextupole(Element):
         return beam
 
     def copy(self):
-        return Sextupole(self.name, self.length, self.k2)
+        return Sextupole(self.name, self.length, self.k2, self.n_slices)
 
     def linear_optics(self):
         twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])

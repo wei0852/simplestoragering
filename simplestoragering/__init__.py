@@ -18,5 +18,5 @@ from simplestoragering.Sextupole import Sextupole
 from simplestoragering.RFCavity import RFCavity
 from simplestoragering.CSLattice import CSLattice
 from simplestoragering.slimlattice import SlimRing, compute_twiss_of_slim_method
-from simplestoragering.plotlattice import plot_lattice, plot_layout_in_ax, plot_with_background, get_col
-from simplestoragering.functions import compute_transfer_matrix_by_tracking, output_opa_file, chromaticity_correction
+from simplestoragering.plotlib import plot_lattice, plot_layout_in_ax, plot_with_background, get_col
+from simplestoragering.functions import compute_transfer_matrix_by_tracking, output_opa_file, chromaticity_correction, track_4d_closed_orbit

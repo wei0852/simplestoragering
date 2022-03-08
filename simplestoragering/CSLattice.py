@@ -23,7 +23,6 @@ class CSLattice(object):
         self.rf_cavity = None
         self.angle = 0
         self.abs_angle = 0
-        self.ele_slices = None
         current_s = 0
         current_identifier = 0
         for oe in ele_list:
@@ -186,18 +185,19 @@ class CSLattice(object):
         self.nuy = self.elements[-1].nuy * self.periods_number
 
     def slice_elements(self, drift_length=10.0, bend_length=10.0, quad_length=10.0, sext_length=10.0):
-        self.ele_slices = []
+        ele_slices = []
         for ele in self.elements:
             if isinstance(ele, Drift):
-                self.ele_slices += ele.slice(max(int(ele.length / drift_length), 1))
+                ele_slices += ele.slice(max(int(ele.length / drift_length), 1))
             elif isinstance(ele, HBend):
-                self.ele_slices += ele.slice(max(int(ele.length / bend_length), 1))
+                ele_slices += ele.slice(max(int(ele.length / bend_length), 1))
             elif isinstance(ele, Quadrupole):
-                self.ele_slices += ele.slice(max(int(ele.length / quad_length), 1))
+                ele_slices += ele.slice(max(int(ele.length / quad_length), 1))
             elif isinstance(ele, Sextupole):
-                self.ele_slices += ele.slice(max(int(ele.length / sext_length), 1))
+                ele_slices += ele.slice(max(int(ele.length / sext_length), 1))
             else:
-                self.ele_slices += ele.slice(1)
+                ele_slices += ele.slice(1)
+        return ele_slices
 
     def compute_nonlinear_term(self, bend_slice_length=0.1, list_data=False):
         ele_list = []

@@ -10,11 +10,10 @@ import numpy as np
 class Quadrupole(Element):
     """normal Quadrupole"""
 
-    def __init__(self, name: str = None, length: float = 0, k1: float = 0, n_slices: int = 1):
+    def __init__(self, name: str = None, length: float = 0, k1: float = 0):
         self.name = name
         self.length = length
         self.k1 = k1
-        self.n_slices = n_slices
 
     def slice(self, n_slices: int) -> list:
         """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
@@ -64,27 +63,47 @@ class Quadrupole(Element):
         return matrix7
 
     def symplectic_track(self, beam):
-        [x0, px0, y0, py0, z0, delta0] = beam.get_particle()
-        # drift
-        ds = self.length / 2
-        d1 = np.sqrt(1 - px0 ** 2 - py0 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
-        x1 = x0 + ds * px0 / d1
-        y1 = y0 + ds * py0 / d1
-        z1 = z0 + ds * (1 - (1 + RefParticle.beta * delta0) / d1) / RefParticle.beta
-        # kick
-        px1 = px0 - self.k1 * x1 * self.length
-        py1 = py0 + self.k1 * y1 * self.length
-        # drift
-        np.seterr(all='raise')
-        try:
-            d2 = np.sqrt(1 - px1 ** 2 - py1 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
-        except FloatingPointError:
-            raise ParticleLost(self.s)
-        x2 = x1 + ds * px1 / d2
-        y2 = y1 + ds * py1 / d2
-        z2 = z1 + ds * (1 - (1 + RefParticle.beta * delta0) / d2) / RefParticle.beta
-        beam.set_particle([x2, px1, y2, py1, z2, delta0])
-        return beam
+        # [x0, px0, y0, py0, ct0, dp0] = beam.get_particle()
+        [x0, px0, y0, py0, ct0, dp0] = beam
+
+        beta0 = RefParticle.beta
+
+        ds = self.length
+        k1 = self.k1
+
+        d1 = np.sqrt(1 + 2 * dp0 / beta0 + dp0 * dp0)
+        w = np.sqrt(complex(k1, 0) / d1)
+        w_2 = np.real(w ** 2)
+
+        xs = np.sin(w * ds)
+        xc = np.cos(w * ds)
+        ys = np.sinh(w * ds)
+        yc = np.cosh(w * ds)
+        xs2 = np.sin(2 * w * ds)
+
+        ys2 = np.sinh(2 * w * ds)
+
+        x1 = x0 * xc + px0 * xs * w / k1
+        px1 = -k1 * x0 * xs / w + px0 * xc
+        y1 = y0 * yc + py0 * ys * w / k1
+        py1 = k1 * y0 * ys / w + py0 * yc
+
+        d0 = 1 / beta0 + dp0
+        d2 = -d0 / d1 / d1 / d1 / 2
+
+        c0 = (1 / beta0 - d0 / d1) * ds
+        c11 = k1 * k1 * d2 * (xs2 / w - 2 * ds) / w_2 / 4
+        c12 = -k1 * d2 * xs * xs / w_2
+        c22 = d2 * (xs2 / w + 2 * ds) / 4
+        c33 = k1 * k1 * d2 * (ys2 / w - 2 * ds) / w_2 / 4
+        c34 = k1 * d2 * ys * ys / w / w
+        c44 = d2 * (ys2 / w + 2 * ds) / 4
+
+        ct1 = ct0 + c0 + c11 * x0 * x0 + c12 * x0 * px0 + c22 * px0 * px0 + c33 * y0 * y0 + c34 * y0 * py0 + c44 * py0 * py0
+
+        # beam.set_particle([abs(x1), abs(px1), abs(y1), abs(py1), abs(ct1), abs(dp0)])
+        # return beam
+        return np.real(np.array([x1, px1, y1, py1, ct1, dp0]))
 
     def real_track(self, beam: Beam7) -> Beam7:
         [x0, px0, y0, py0, z0, delta0] = beam.get_particle()
@@ -123,7 +142,9 @@ class Quadrupole(Element):
         return Quadrupole(self.name, self.length, self.k1)
 
     def linear_optics(self):
-        twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])
+        twiss0 = np.array(
+            [self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp,
+             self.etay, self.etayp, self.psix, self.psiy])
         integrals = np.zeros(7)
         current_s = 0
         length = 0.01

@@ -58,8 +58,9 @@ class Drift(Element):
         return matrix7
 
     def symplectic_track(self, beam):
-        assert isinstance(beam, Beam7)
-        [x0, px0, y0, py0, z0, delta0] = beam.get_particle()
+        # assert isinstance(beam, Beam7)
+        # [x0, px0, y0, py0, z0, delta0] = beam.get_particle()
+        [x0, px0, y0, py0, z0, delta0] = beam
         ds = self.length
         np.seterr(all='raise')
         try:
@@ -69,11 +70,11 @@ class Drift(Element):
         x1 = x0 + ds * px0 / d1
         y1 = y0 + ds * py0 / d1
         z1 = z0 + ds * (1 - (1 + RefParticle.beta * delta0) / d1) / RefParticle.beta
-        beam.set_particle([x1, px0, y1, py0, z1, delta0])
-        return beam
+        # beam.set_particle([x1, px0, y1, py0, z1, delta0])
+        return np.array([x1, px0, y1, py0, z1, delta0])
 
-    def real_track(self, beam: Beam7) -> Beam7:
-        return self.symplectic_track(beam)
+    # def real_track(self, beam: Beam7) -> Beam7:
+    #     return self.symplectic_track(beam)
 
     def copy(self):
         return Drift(self.name, self.length)
@@ -84,5 +85,5 @@ def drift_matrix(length):
                      [0, 1, 0, 0, 0, 0],
                      [0, 0, 1, length, 0, 0],
                      [0, 0, 0, 1, 0, 0],
-                     [0, 0, 0, 0, 1, length / RefParticle.gamma ** 2],
+                     [0, 0, 0, 0, 1, length / (RefParticle.gamma * RefParticle.beta) ** 2],
                      [0, 0, 0, 0, 0, 1]])
