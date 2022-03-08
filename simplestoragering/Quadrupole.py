@@ -70,8 +70,11 @@ class Quadrupole(Element):
 
         ds = self.length
         k1 = self.k1
-
-        d1 = np.sqrt(1 + 2 * dp0 / beta0 + dp0 * dp0)
+        try:
+            d1 = np.sqrt(1 + 2 * dp0 / beta0 + dp0 * dp0)
+        except FloatingPointError:
+            print(f'particle lost in {self.name} at {self.s + i * ds}\n')
+            raise ParticleLost(' just lost')
         w = np.sqrt(complex(k1, 0) / d1)
         w_2 = np.real(w ** 2)
 

@@ -33,16 +33,20 @@ def next_twiss(matrix, twiss0):
     return twiss1
 
 
-def compute_transfer_matrix_by_tracking(element_list: list, particle: list, with_e_loss=False, precision=1e-9):
+def compute_transfer_matrix_by_tracking(element_list: list, particle, with_e_loss=False, precision=1e-9):
     """calculate the transfer matrix by tracking, the tracking data is copied from SAMM (Andrzej Wolski).
 
     element_list: list of elements.
     particle: list with a length of 6"""
 
     assert len(particle) == 6
+    if isinstance(particle, list):
+        particle = np.array(particle)
+    else:
+        assert isinstance(particle, np.ndarray)
     beam = np.eye(6, 7) * precision
     for i in range(6):
-        beam[i, :] = beam[i, :] + particle[i]
+        beam[:, i] = beam[:, i] + particle
     for ele in element_list:
         if with_e_loss:
             beam = ele.real_track(beam)
@@ -59,20 +63,53 @@ def track_4d_closed_orbit(element_list, delta):
 
     delta: momentum deviation."""
 
+    # print('\n-------------------\ntracking 4D closed orbit:\n')
+    # xco = np.array([0, 0, 0, 0, delta])
+    # matrix = np.zeros([5, 5])
+    # resdl = 1
+    # j = 1
+    # precision = 1e-9
+    # d = np.zeros(5)
+    # while j <= 10 and resdl > 1e-16:
+    #     beam = np.eye(6, 7) * precision
+    #     for i in range(6):
+    #         beam[:4, i] = beam[:4, i] + xco[:4]
+    #         beam[5, i] = beam[5, i] + delta
+    #     beam[5, 6] = beam[5, 6] + delta
+    #     for ele in element_list:
+    #         ele.closed_orbit = beam[:, 6]
+    #         beam = ele.symplectic_track(beam)
+    #     for i in range(4):
+    #         matrix[:4, i] = (beam[:4, i] - beam[:4, 6]) / precision
+    #     matrix[:4, 4] = (beam[:4, 5] - beam[:4, 6]) / precision
+    #     matrix[4, 4] = 1
+    #     d[:4] = beam[:4, 6] - xco[:4]
+    #     dco = np.linalg.inv(np.identity(5) - matrix).dot(d)
+    #     xco = xco + dco
+    #     resdl = dco.dot(dco.T)
+    #     print(f'iterated {j} times, current result is \n    {beam[:4, 6]}\n')
+    #     j += 1
+    # print(f'closed orbit at s=0 is \n    {xco}\n')
+    # beam = np.eye(6, 7) * precision
+    # for i in range(4):
+    #     beam[i, :] = beam[i, :] + xco[i]
+    # for el in element_list:
+    #     el.closed_orbit = beam[:, 6]
+    #     beam = el.symplectic_track(beam)
+    # print(f'\nclosed orbit at end is \n    {beam[:4, 6]}\n')
+
     print('\n-------------------\ntracking 4D closed orbit:\n')
     xco = np.array([0, 0, 0, 0, 0, delta])
     matrix = np.zeros([6, 6])
     resdl = 1
     j = 1
     precision = 1e-9
-    dco = np.array([0, 0, 0, 0, 0, 0])
     while j <= 10 and resdl > 1e-16:
         beam = np.eye(6, 7) * precision
-        # beam[5, :] = delta
-        for i in range(6):
-            beam[i, :] = beam[i, :] + xco[i]
+        for i in range(7):
+            beam[:, i] = beam[:, i] + xco
         for ele in element_list:
-            ele.closed_orbit = beam[:, 6]
+            # ele.closed_orbit = beam[:, 6]
             beam = ele.symplectic_track(beam)
         for i in range(7):
             beam[4, i] = 0
@@ -80,22 +117,19 @@ def track_4d_closed_orbit(element_list, delta):
         for i in range(6):
             matrix[:, i] = (beam[:, i] - beam[:, 6]) / precision
         d = beam[:, 6] - xco
-        # matrix = (np.identity(6) - np.sign(matrix[4, 5]) * lf) * matrix
-        # matrix[4, 4] = 1
-        # matrix[5, 5] = 1
         dco = np.linalg.inv(np.identity(6) - matrix).dot(d)
         xco = xco + dco
         resdl = dco.dot(dco.T)
-        print(f'iterated {j} times, current result is \n    {beam[:4, 6]}\n')
+        print(f'iterated {j} times, current result is \n    {beam[:, 6]}\n')
         j += 1
     print(f'closed orbit at s=0 is \n    {xco}\n')
     beam = np.eye(6, 7) * precision
-    for i in range(4):
-        beam[i, :] = beam[i, :] + xco[i]
+    for i in range(7):
+        beam[:, i] = beam[:, i] + xco
     for el in element_list:
         el.closed_orbit = beam[:, 6]
         beam = el.symplectic_track(beam)
-    print(f'\nclosed orbit at end is \n    {beam[:4, 6]}\n')
+    print(f'\nclosed orbit at end is \n    {beam[:, 6]}\n')
 
 
 def output_opa_file(lattice, file_name=None):

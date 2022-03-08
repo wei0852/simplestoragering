@@ -3,6 +3,7 @@ from .components import Element, assin_twiss
 from .constants import Cr, LENGTH_PRECISION, pi
 from .particles import RefParticle, Beam7, calculate_beta
 from .functions import next_twiss
+from .exceptions import ParticleLost
 from copy import deepcopy
 import numpy as np
 
@@ -57,8 +58,11 @@ class HBend(Element):
 
         ds = self.length
         k0 = self.h
-        d1 = np.sqrt(1 + 2 * dp0 / beta0 + dp0 ** 2)
-
+        try:
+            d1 = np.sqrt(1 + 2 * dp0 / beta0 + dp0 * dp0)
+        except FloatingPointError:
+            print(f'particle lost in {self.name} at {self.s + i * ds}\n')
+            raise ParticleLost(' just lost')
         r10 = k0 * np.tan(self.theta_in)
         r32 = -k0 * np.tan(self.theta_in)
 
