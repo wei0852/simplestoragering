@@ -58,8 +58,6 @@ class Drift(Element):
         return matrix7
 
     def symplectic_track(self, beam):
-        # assert isinstance(beam, Beam7)
-        # [x0, px0, y0, py0, z0, delta0] = beam.get_particle()
         [x0, px0, y0, py0, z0, delta0] = beam
         ds = self.length
         np.seterr(all='raise')
@@ -70,8 +68,21 @@ class Drift(Element):
         x1 = x0 + ds * px0 / d1
         y1 = y0 + ds * py0 / d1
         z1 = z0 + ds * (1 - (1 + RefParticle.beta * delta0) / d1) / RefParticle.beta
-        # beam.set_particle([x1, px0, y1, py0, z1, delta0])
         return np.array([x1, px0, y1, py0, z1, delta0])
+
+        # [x0, px0, y0, py0, z0, delta0] = beam
+        # ds = self.length
+        # np.seterr(all='raise')
+        # d1 = 1
+        # # try:
+        # #     d1 = np.sqrt(1 - px0 ** 2 - py0 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
+        # # except FloatingPointError:
+        # #     raise ParticleLost(self.s)
+        # x1 = x0 + ds * px0 / d1
+        # y1 = y0 + ds * py0 / d1
+        # z1 = z0 + ds * (1 - (1 + RefParticle.beta * delta0) / d1) / RefParticle.beta
+        # return np.array([x1, px0, y1, py0, z1, delta0])
+
 
     # def real_track(self, beam: Beam7) -> Beam7:
     #     return self.symplectic_track(beam)

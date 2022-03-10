@@ -301,14 +301,14 @@ class CSLattice(object):
                 xi2y += - (2 * b3l_i * eta2xk * beta_yi + (b2l_i - 2 * b3l_i * eta1x_i) * beta1_yk) / 8 / pi
         xi2x += - self.xi_x / 2
         xi2y += - self.xi_y / 2
-        print(
-            f'nonlinear terms:\n    h21000 = {abs(h21000):.2f}\n    h30000 = {abs(h30000):.2f}\n    h10110 = {abs(h10110):.2f}\n    h10020 = {abs(h10020):.2f}\n    h10200 = {abs(h10200):.2f}')
-        print(f'    xi2x   = {xi2x:.2f}\n    xi2y   = {xi2y:.2f}')
-        print(f'    Qxx    = {Qxx:.2f}\n    Qxy    = {Qxy:.2f}\n    Qyy    = {Qyy:.2f}')
-        print(
-            f'    h31000 = {abs(h31000):.2f}\n    h40000 = {abs(h40000):.2f}\n    h20110 = {abs(h20110):.2f}\n    h11200 = {abs(h11200):.2f}')
-        print(
-            f'    h20020 = {abs(h20020):.2f}\n    h20200 = {abs(h20200):.2f}\n    h00310 = {abs(h00310):.2f}\n    h00400 = {abs(h00400):.2f}')
+        nonlinear_terms = {'h21000': abs(h21000), 'h30000': abs(h30000), 'h10110': abs(h10110), 'h10020': abs(h10020),
+                           'h10200': abs(h10200), 'xi2x': xi2x, 'xi2y': xi2y, 'Qxx': Qxx, 'Qxy': Qxy, 'Qyy': Qyy,
+                           'h31000': abs(h31000), 'h40000': abs(h40000), 'h20110': abs(h20110), 'h11200': abs(h11200),
+                           'h20020': abs(h20020), 'h20200': abs(h20200), 'h00310': abs(h00310), 'h00400': abs(h00400)}
+        print('\nnonlinear terms:')
+        for i, j in nonlinear_terms.items():
+            print(f'    {str(i):7}: {j:.4f}')
+        return nonlinear_terms
 
     def __global_parameters(self):
         self.Jx = 1 - self.I4 / self.I2

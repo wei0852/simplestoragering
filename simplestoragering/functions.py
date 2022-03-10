@@ -63,73 +63,94 @@ def track_4d_closed_orbit(element_list, delta):
 
     delta: momentum deviation."""
 
-    # print('\n-------------------\ntracking 4D closed orbit:\n')
-    # xco = np.array([0, 0, 0, 0, delta])
-    # matrix = np.zeros([5, 5])
-    # resdl = 1
-    # j = 1
-    # precision = 1e-9
-    # d = np.zeros(5)
-    # while j <= 10 and resdl > 1e-16:
-    #     beam = np.eye(6, 7) * precision
-    #     for i in range(6):
-    #         beam[:4, i] = beam[:4, i] + xco[:4]
-    #         beam[5, i] = beam[5, i] + delta
-    #     beam[5, 6] = beam[5, 6] + delta
-    #     for ele in element_list:
-    #         ele.closed_orbit = beam[:, 6]
-    #         beam = ele.symplectic_track(beam)
-    #     for i in range(4):
-    #         matrix[:4, i] = (beam[:4, i] - beam[:4, 6]) / precision
-    #     matrix[:4, 4] = (beam[:4, 5] - beam[:4, 6]) / precision
-    #     matrix[4, 4] = 1
-    #     d[:4] = beam[:4, 6] - xco[:4]
-    #     dco = np.linalg.inv(np.identity(5) - matrix).dot(d)
-    #     xco = xco + dco
-    #     resdl = dco.dot(dco.T)
-    #     print(f'iterated {j} times, current result is \n    {beam[:4, 6]}\n')
-    #     j += 1
-    # print(f'closed orbit at s=0 is \n    {xco}\n')
-    # beam = np.eye(6, 7) * precision
-    # for i in range(4):
-    #     beam[i, :] = beam[i, :] + xco[i]
-    # for el in element_list:
-    #     el.closed_orbit = beam[:, 6]
-    #     beam = el.symplectic_track(beam)
-    # print(f'\nclosed orbit at end is \n    {beam[:4, 6]}\n')
-
     print('\n-------------------\ntracking 4D closed orbit:\n')
-    xco = np.array([0, 0, 0, 0, 0, delta])
-    matrix = np.zeros([6, 6])
+    xco = np.array([0, 0, 0, 0])
+    matrix = np.zeros([4, 4])
     resdl = 1
     j = 1
     precision = 1e-9
     while j <= 10 and resdl > 1e-16:
         beam = np.eye(6, 7) * precision
         for i in range(7):
-            beam[:, i] = beam[:, i] + xco
+            beam[:4, i] = beam[:4, i] + xco
+            beam[5, i] = beam[5, i] + delta
         for ele in element_list:
-            # ele.closed_orbit = beam[:, 6]
+            ele.closed_orbit = beam[:, 6]
             beam = ele.symplectic_track(beam)
-        for i in range(7):
-            beam[4, i] = 0
-            beam[5, i] = delta
-        for i in range(6):
-            matrix[:, i] = (beam[:, i] - beam[:, 6]) / precision
-        d = beam[:, 6] - xco
-        dco = np.linalg.inv(np.identity(6) - matrix).dot(d)
+        for i in range(4):
+            matrix[:, i] = (beam[:4, i] - beam[:4, 6]) / precision
+        d = beam[:4, 6] - xco
+        dco = np.linalg.inv(np.identity(4) - matrix).dot(d)
         xco = xco + dco
         resdl = dco.dot(dco.T)
-        print(f'iterated {j} times, current result is \n    {beam[:, 6]}\n')
+        print(f'iterated {j} times, current result is \n    {beam[:4, 6]}\n')
         j += 1
     print(f'closed orbit at s=0 is \n    {xco}\n')
+    # verify closed orbit.
     beam = np.eye(6, 7) * precision
     for i in range(7):
-        beam[:, i] = beam[:, i] + xco
+        beam[:4, i] = beam[:4, i] + xco
+        beam[5, i] = beam[5, i] + delta
     for el in element_list:
         el.closed_orbit = beam[:, 6]
         beam = el.symplectic_track(beam)
-    print(f'\nclosed orbit at end is \n    {beam[:, 6]}\n')
+    print(f'\nclosed orbit at end is \n    {beam[:4, 6]}\n')
+    for i in range(4):
+        matrix[:, i] = (beam[:4, i] - beam[:4, 6]) / precision
+    cos_mu = (matrix[0, 0] + matrix[1, 1]) / 2
+    assert abs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
+    nux = np.arccos(cos_mu) * np.sign(matrix[0, 1]) / 2 / pi
+    nuy = np.arccos((matrix[2, 2] + matrix[3, 3]) / 2) * np.sign(matrix[2, 3]) / 2 / pi
+    print(f'tune is {nux - np.floor(nux):.6f}, {nuy - np.floor(nuy):.6f}')
+    return_data = {'closed_orbit': xco[:4], 'nux': nux - np.floor(nux), 'nuy': nuy - np.floor(nuy)}
+    return return_data
+
+    # print('\n-------------------\ntracking 4D closed orbit:\n')
+    # xco = np.array([0, 0, 0, 0, 0, delta])
+    # matrix = np.zeros([6, 6])
+    # resdl = 1
+    # j = 1
+    # precision = 1e-9
+    # while j <= 10 and resdl > 1e-16:
+    #     beam = np.eye(6, 7) * precision
+    #     for i in range(7):
+    #         beam[:, i] = beam[:, i] + xco
+    #     for ele in element_list:
+    #         # ele.closed_orbit = beam[:, 6]
+    #         beam = ele.symplectic_track(beam)
+    #     for i in range(7):
+    #         beam[4, i] = 0
+    #         beam[5, i] = delta
+    #     for i in range(6):
+    #         matrix[:, i] = (beam[:, i] - beam[:, 6]) / precision
+    #     d = beam[:, 6] - xco
+    #     dco = np.linalg.inv(np.identity(6) - matrix).dot(d)
+    #     xco = xco + dco
+    #     resdl = dco.dot(dco.T)
+    #     print(f'iterated {j} times, current result is \n    {beam[:, 6]}\n')
+    #     # if abs(matrix[0, 0] + matrix[1, 1]) < 2 and abs(matrix[2, 2] + matrix[3, 3]) < 2:
+    #     #     break
+    #     j += 1
+    # print(f'closed orbit at s=0 is \n    {xco}\n')
+    # beam = np.eye(6, 7) * precision
+    # for i in range(7):
+    #     beam[:, i] = beam[:, i] + xco
+    # for el in element_list:
+    #     el.closed_orbit = beam[:, 6]
+    #     beam = el.symplectic_track(beam)
+    # print(f'\nclosed orbit at end is \n    {beam[:, 6]}')
+    # for i in range(6):
+    #     matrix[:, i] = (beam[:, i] - beam[:, 6]) / precision
+    # cos_mu = (matrix[0, 0] + matrix[1, 1]) / 2
+    # # eig_val, v = np.linalg.eig(matrix)
+    # # print(np.angle(eig_val) / 2 / pi)
+    # assert abs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
+    # nux = np.arccos(cos_mu) * np.sign(matrix[0, 1]) / 2 / pi
+    # nuy = np.arccos((matrix[2, 2] + matrix[3, 3]) / 2) * np.sign(matrix[2, 3]) / 2 / pi
+    # print(f'tune is {nux - np.floor(nux):.6f}, {nuy - np.floor(nuy):.6f}')
+    # return_data = {'closed_orbit': xco[:4], 'nux': nux - np.floor(nux), 'nuy': nuy - np.floor(nuy)}
+    # return return_data
+
 
 
 def output_opa_file(lattice, file_name=None):
