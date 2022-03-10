@@ -185,6 +185,8 @@ class CSLattice(object):
         self.nuy = self.elements[-1].nuy * self.periods_number
 
     def slice_elements(self, drift_length=10.0, bend_length=10.0, quad_length=10.0, sext_length=10.0):
+        """slice elements of ring, the twiss data of each slice will be calculated.
+        return list of elements."""
         ele_slices = []
         for ele in self.elements:
             if isinstance(ele, Drift):
@@ -199,11 +201,21 @@ class CSLattice(object):
                 ele_slices += ele.slice(1)
         return ele_slices
 
-    def compute_nonlinear_term(self, bend_slice_length=0.1, list_data=False):
+    def compute_nonlinear_term(self, list_data=False):
+        """compute resonance driving terms. return a dictionary
+        nonlinear_terms = {'h21000': , 'h30000': , 'h10110': , 'h10020': ,
+                           'h10200': , 'Qxx': , 'Qxy': , 'Qyy': ,
+                           'h31000': , 'h40000': , 'h20110': , 'h11200': ,
+                           'h20020': , 'h20200': , 'h00310': , 'h00400': }
+
+        references:
+        1. The Sextupole Scheme for the SLS: An Analytic Approach, SLS Note 09/97, Johan Bengtsson
+        2. Explicit formulas for 2nd-order driving terms due to sextupoles and chromatic effects of quadrupoles, Chun-xi Wang"""
+
         ele_list = []
         for ele in self.elements:
-            if isinstance(ele, HBend):
-                ele_list += ele.slice(max(1, int(ele.length / bend_slice_length)))
+            if isinstance(ele, Sextupole):
+                ele_list += ele.slice(ele.n_slices)
             else:
                 ele_list.append(ele)
         # if list_data:
@@ -214,7 +226,6 @@ class CSLattice(object):
         #     driving_term['h10020'] = []
         #     driving_term['h10200'] = []
         Qxx = Qxy = Qyy = 0
-        xi2x = xi2y = 0
         h21000 = h30000 = h10110 = h10020 = h10200 = 0
         h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
         num = len(ele_list)
@@ -222,38 +233,28 @@ class CSLattice(object):
         pi_nuy = self.elements[-1].psiy / 2
         for i in range(num - 1):
             b3l_i = ele_list[i].k2 * ele_list[i].length / 2  # k2 = 2 * b3, k1 = b2
-            b2l_i = ele_list[i].k1 * ele_list[i].length
-            beta1_xk = beta1_yk = 0
-            eta1x_i = (ele_list[i].etax + ele_list[i + 1].etax) / 2
-            eta2xk = 0
-            if b3l_i != 0 or b2l_i != 0:
+            if b3l_i != 0:
                 beta_xi = (ele_list[i].betax + ele_list[i + 1].betax) / 2
                 beta_yi = (ele_list[i].betay + ele_list[i + 1].betay) / 2
                 mu_ix = (ele_list[i].psix + ele_list[i + 1].psix) / 2
                 mu_iy = (ele_list[i].psiy + ele_list[i + 1].psiy) / 2
-                h21000 += - b3l_i * beta_xi ** 1.5 * np.exp(np.complex(0, mu_ix)) / 8
-                h30000 += - b3l_i * beta_xi ** 1.5 * np.exp(np.complex(0, 3 * mu_ix)) / 24
-                h10110 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(np.complex(0, mu_ix)) / 4
-                h10020 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(np.complex(0, mu_ix - 2 * mu_iy)) / 8
-                h10200 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(np.complex(0, mu_ix + 2 * mu_iy)) / 8
+                h21000 += - b3l_i * beta_xi ** 1.5 * np.exp(complex(0, mu_ix)) / 8
+                h30000 += - b3l_i * beta_xi ** 1.5 * np.exp(complex(0, 3 * mu_ix)) / 24
+                h10110 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(complex(0, mu_ix)) / 4
+                h10020 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(complex(0, mu_ix - 2 * mu_iy)) / 8
+                h10200 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(complex(0, mu_ix + 2 * mu_iy)) / 8
                 for j in range(num - 1):
-                    b2l_j = ele_list[j].k1 * ele_list[j].length
                     b3l_j = ele_list[j].k2 * ele_list[j].length / 2
-                    beta_xj = (ele_list[j].betax + ele_list[j + 1].betax) / 2
-                    eta1x_j = (ele_list[j].etax + ele_list[j + 1].etax) / 2
-                    beta_yj = (ele_list[j].betay + ele_list[j + 1].betay) / 2
-                    mu_jx = (ele_list[j].psix + ele_list[j + 1].psix) / 2
-                    mu_ijx = mu_ix - mu_jx
-                    a_mu_ijx = abs(mu_ijx)
-                    mu_jy = (ele_list[j].psiy + ele_list[j + 1].psiy) / 2
-                    mu_ijy = mu_iy - mu_jy
                     b3l = b3l_j * b3l_i
-                    eta2xk += (b2l_j - b3l_j * eta1x_j) * eta1x_j * np.sqrt(beta_xj) * np.cos(a_mu_ijx - pi_nux)
-                    beta1_xk += (b2l_j - 2 * b3l_j * eta1x_j) * beta_xj * np.cos(2 * (a_mu_ijx - pi_nux))
-                    beta1_yk += (b2l_j - 2 * b3l_j * eta1x_j) * beta_yj * np.cos(2 * (abs(mu_ijy) - pi_nuy))
                     if b3l != 0:
-                        beta_xij = beta_xj * beta_xi
+                        beta_xj = (ele_list[j].betax + ele_list[j + 1].betax) / 2
                         beta_yj = (ele_list[j].betay + ele_list[j + 1].betay) / 2
+                        mu_jx = (ele_list[j].psix + ele_list[j + 1].psix) / 2
+                        mu_ijx = mu_ix - mu_jx
+                        a_mu_ijx = abs(mu_ijx)
+                        mu_jy = (ele_list[j].psiy + ele_list[j + 1].psiy) / 2
+                        mu_ijy = mu_iy - mu_jy
+                        beta_xij = beta_xj * beta_xi
                         mu_ij_x2y = abs(mu_ijx + 2 * mu_ijy)
                         mu_ij_x_2y = abs(mu_ijx - 2 * mu_ijy)
                         Qxx += b3l / (-16 * np.pi) * pow(beta_xi * beta_xj, 1.5) * (
@@ -268,47 +269,85 @@ class CSLattice(object):
                                 + np.cos(mu_ij_x2y - pi_nux - 2 * pi_nuy) / np.sin(pi_nux + 2 * pi_nuy)
                                 + np.cos(mu_ij_x_2y - pi_nux + 2 * pi_nuy) / np.sin(pi_nux - 2 * pi_nuy))
                         sign = - np.sign(mu_ijx)
-                        jj = np.complex(0, 1)
+                        jj = complex(0, 1)
                         const = sign * jj * b3l
-                        h31000 += const * beta_xij ** 1.5 * np.exp(np.complex(0, 3 * mu_ix - mu_jx)) / 32
-                        h40000 += const * beta_xij ** 1.5 * np.exp(np.complex(0, 3 * mu_ix + mu_jx)) / 64
-                        h20110 += const * beta_xij ** 0.5 * beta_yi * (beta_xj * (
-                                    np.exp(np.complex(0, 3 * mu_jx - mu_ix)) - np.exp(np.complex(0, mu_ix + mu_jx)))
-                                                                       + 2 * beta_yj * np.exp(
-                                    np.complex(0, mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy))) / 32
-                        h11200 += const * beta_xij ** 0.5 * beta_yi * (beta_xj * (
-                                    np.exp(np.complex(0, -mu_ix + mu_jx + 2 * mu_iy)) - np.exp(
-                                np.complex(0, mu_ix - mu_jx + 2 * mu_iy)))
-                                                                       + 2 * beta_yj * (np.exp(
-                                    np.complex(0, mu_ix - mu_jx + 2 * mu_iy)) + np.exp(
-                                    np.complex(0, - mu_ix + mu_jx + 2 * mu_iy)))) / 32
+                        h31000 += const * beta_xij ** 1.5 * np.exp(complex(0, 3 * mu_ix - mu_jx)) / 32
+                        h40000 += const * beta_xij ** 1.5 * np.exp(complex(0, 3 * mu_ix + mu_jx)) / 64
+                        h20110 += const * beta_xij ** 0.5 * beta_yi * (
+                                beta_xj * (np.exp(complex(0, 3 * mu_jx - mu_ix)) - np.exp(complex(0, mu_ix + mu_jx))) +
+                                2 * beta_yj * np.exp(complex(0, mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy))) / 32
+                        h11200 += const * beta_xij ** 0.5 * beta_yi * (
+                                beta_xj * (np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy)) - np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy))) +
+                                2 * beta_yj * (np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy)) + np.exp(complex(0, - mu_ix + mu_jx + 2 * mu_iy)))) / 32
                         h20020 += const * beta_xij ** 0.5 * beta_yi * (
-                                    beta_xj * np.exp(np.complex(0, -mu_ix + 3 * mu_jx - 2 * mu_iy)) - (
-                                        beta_xj + 4 * beta_yj) * np.exp(np.complex(0, mu_ix + mu_jx - 2 * mu_iy))) / 64
+                                beta_xj * np.exp(complex(0, -mu_ix + 3 * mu_jx - 2 * mu_iy)) -
+                                (beta_xj + 4 * beta_yj) * np.exp(complex(0, mu_ix + mu_jx - 2 * mu_iy))) / 64
                         h20200 += const * beta_xij ** 0.5 * beta_yi * (
-                                    beta_xj * np.exp(np.complex(0, -mu_ix + 3 * mu_jx + 2 * mu_iy)) - (
-                                        beta_xj - 4 * beta_yj) * np.exp(
-                                (np.complex(0, mu_ix + mu_jx + 2 * mu_iy)))) / 64
+                                beta_xj * np.exp(complex(0, -mu_ix + 3 * mu_jx + 2 * mu_iy))
+                                - (beta_xj - 4 * beta_yj) * np.exp((complex(0, mu_ix + mu_jx + 2 * mu_iy)))) / 64
                         h00310 += const * beta_xij ** 0.5 * beta_yi * beta_yj * (
-                                    np.exp(np.complex(0, mu_ix - mu_jx + 2 * mu_iy)) - np.exp(
-                                np.complex(0, -mu_ix + mu_jx + 2 * mu_iy))) / 32
-                        h00400 += const * beta_xij ** 0.5 * beta_yi * beta_yj * np.exp(
-                            np.complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy)) / 64
-                eta2xk = - eta1x_i + np.sqrt(beta_xi) * eta2xk / 2 / np.sin(pi_nux)
-                beta1_xk = beta1_xk * beta_xi / 2 / np.sin(2 * pi_nux)
-                beta1_yk = - beta1_yk * beta_yi / 2 / np.sin(2 * pi_nuy)
-                xi2x += (2 * b3l_i * eta2xk * beta_xi - (b2l_i - 2 * b3l_i * eta1x_i) * beta1_xk) / 8 / pi
-                xi2y += - (2 * b3l_i * eta2xk * beta_yi + (b2l_i - 2 * b3l_i * eta1x_i) * beta1_yk) / 8 / pi
-        xi2x += - self.xi_x / 2
-        xi2y += - self.xi_y / 2
+                                np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy)) -
+                                np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy))) / 32
+                        h00400 += const * beta_xij ** 0.5 * beta_yi * beta_yj * np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy)) / 64
         nonlinear_terms = {'h21000': abs(h21000), 'h30000': abs(h30000), 'h10110': abs(h10110), 'h10020': abs(h10020),
-                           'h10200': abs(h10200), 'xi2x': xi2x, 'xi2y': xi2y, 'Qxx': Qxx, 'Qxy': Qxy, 'Qyy': Qyy,
+                           'h10200': abs(h10200), 'Qxx': Qxx, 'Qxy': Qxy, 'Qyy': Qyy,
                            'h31000': abs(h31000), 'h40000': abs(h40000), 'h20110': abs(h20110), 'h11200': abs(h11200),
                            'h20020': abs(h20020), 'h20200': abs(h20200), 'h00310': abs(h00310), 'h00400': abs(h00400)}
         print('\nnonlinear terms:')
         for i, j in nonlinear_terms.items():
             print(f'    {str(i):7}: {j:.4f}')
         return nonlinear_terms
+
+    def higher_order_chromaticity(self, delta=1e-4, matrix_precision=1e-9, resdl_limit=1e-16):
+        """compute higher order chromaticity, compute from tune of 4d off-momentum closed orbit transfer matrix,
+         delta is the momentum deviation.
+        return a dictionary
+        cr = {'xi2x': float,
+              'xi2y': float,
+              'xi3x': float,
+              'xi3y': float}
+        try to reset the value of delta, precision and resdl_limit if the result is wrong.
+        """
+
+        def closed_orbit_tune(deviation):
+            xco = np.array([0, 0, 0, 0])
+            matrix = np.zeros([4, 4])
+            resdl = 1
+            j = 1
+            precision = matrix_precision
+            while j <= 10 and resdl > resdl_limit:
+                beam = np.eye(6, 7) * precision
+                for i in range(7):
+                    beam[:4, i] = beam[:4, i] + xco
+                    beam[5, i] = beam[5, i] + deviation
+                for ele in self.elements:
+                    beam = ele.symplectic_track(beam)
+                for i in range(4):
+                    matrix[:, i] = (beam[:4, i] - beam[:4, 6]) / precision
+                d = beam[:4, 6] - xco
+                dco = np.linalg.inv(np.identity(4) - matrix).dot(d)
+                xco = xco + dco
+                resdl = dco.dot(dco.T)
+                j += 1
+            cos_mu = (matrix[0, 0] + matrix[1, 1]) / 2
+            assert abs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
+            nux = np.arccos(cos_mu) * np.sign(matrix[0, 1]) / 2 / pi
+            nuy = np.arccos((matrix[2, 2] + matrix[3, 3]) / 2) * np.sign(matrix[2, 3]) / 2 / pi
+            return nux - np.floor(nux), nuy - np.floor(nuy)
+        try:
+            nux3, nuy3 = closed_orbit_tune(3 * delta)
+            nux1, nuy1 = closed_orbit_tune(delta)
+            nux_1, nuy_1 = closed_orbit_tune(-delta)
+            nux_3, nuy_3 = closed_orbit_tune(-3 * delta)
+        except Exception:
+            print('!!!!!!!\ncan not find off-momentum closed orbit, try smaller delta.')
+            return {'xi2x': 1e6, 'xi2y': 1e6, 'xi3x': 1e6, 'xi3y': 1e6}
+        xi2x = (nux1 + nux_1 - 2 * (self.nux - int(self.nux))) / 2 / delta ** 2
+        xi2y = (nuy1 + nuy_1 - 2 * (self.nuy - int(self.nuy))) / 2 / delta ** 2
+        xi3x = (nux3 - nux_3 + 3 * nux_1 - 3 * nux1) / (delta * 2) ** 3 / 6
+        xi3y = (nuy3 - nuy_3 + 3 * nuy_1 - 3 * nuy1) / (delta * 2) ** 3 / 6
+        print(f'xi2x: {xi2x:.2f}, xi2y: {xi2y:.2f}, xi3x: {xi3x:.2f}, xi3y: {xi3y:.2f}')
+        return {'xi2x': xi2x, 'xi2y': xi2y, 'xi3x': xi3x, 'xi3y': xi3y}
 
     def __global_parameters(self):
         self.Jx = 1 - self.I4 / self.I2
