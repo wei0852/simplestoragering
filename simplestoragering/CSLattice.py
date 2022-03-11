@@ -201,7 +201,7 @@ class CSLattice(object):
                 ele_slices += ele.slice(1)
         return ele_slices
 
-    def compute_nonlinear_term(self, list_data=False):
+    def compute_nonlinear_term(self):
         """compute resonance driving terms. return a dictionary
         nonlinear_terms = {'h21000': , 'h30000': , 'h10110': , 'h10020': ,
                            'h10200': , 'Qxx': , 'Qxy': , 'Qyy': ,
@@ -250,25 +250,24 @@ class CSLattice(object):
                         beta_xj = (ele_list[j].betax + ele_list[j + 1].betax) / 2
                         beta_yj = (ele_list[j].betay + ele_list[j + 1].betay) / 2
                         mu_jx = (ele_list[j].psix + ele_list[j + 1].psix) / 2
-                        mu_ijx = mu_ix - mu_jx
-                        a_mu_ijx = abs(mu_ijx)
+                        mu_ijx = abs(mu_ix - mu_jx)
                         mu_jy = (ele_list[j].psiy + ele_list[j + 1].psiy) / 2
-                        mu_ijy = mu_iy - mu_jy
+                        mu_ijy = abs(mu_iy - mu_jy)
                         beta_xij = beta_xj * beta_xi
-                        mu_ij_x2y = abs(mu_ijx + 2 * mu_ijy)
-                        mu_ij_x_2y = abs(mu_ijx - 2 * mu_ijy)
-                        Qxx += b3l / (-16 * np.pi) * pow(beta_xi * beta_xj, 1.5) * (
-                                3 * np.cos(abs(mu_ijx) - pi_nux) / np.sin(pi_nux) + np.cos(
-                            3 * abs(mu_ijx) - 3 * pi_nux) / np.sin(3 * pi_nux))
-                        Qxy += b3l / (8 * np.pi) * pow(beta_xij, 0.5) * beta_yj * (
-                                2 * beta_xi * np.cos(a_mu_ijx - pi_nux) / np.sin(pi_nux)
+                        mu_ij_x2y = mu_ijx + 2 * mu_ijy
+                        mu_ij_x_2y = mu_ijx - 2 * mu_ijy
+                        Qxx += b3l / (-16 * pi) * pow(beta_xi * beta_xj, 1.5) * (
+                                3 * np.cos(mu_ijx - pi_nux) / np.sin(pi_nux)
+                                + np.cos(3 * mu_ijx - 3 * pi_nux) / np.sin(3 * pi_nux))
+                        Qxy += b3l / (8 * pi) * pow(beta_xij, 0.5) * beta_yj * (
+                                2 * beta_xi * np.cos(mu_ijx - pi_nux) / np.sin(pi_nux)
                                 - beta_yi * np.cos(mu_ij_x2y - pi_nux - 2 * pi_nuy) / np.sin(pi_nux + 2 * pi_nuy)
                                 + beta_yi * np.cos(mu_ij_x_2y - pi_nux + 2 * pi_nuy) / np.sin(pi_nux - 2 * pi_nuy))
-                        Qyy += b3l / (-16 * np.pi) * pow(beta_xij, 0.5) * beta_yj * beta_yi * (
-                                4 * np.cos(a_mu_ijx - pi_nux) / np.sin(pi_nux)
+                        Qyy += b3l / (-16 * pi) * pow(beta_xij, 0.5) * beta_yj * beta_yi * (
+                                4 * np.cos(mu_ijx - pi_nux) / np.sin(pi_nux)
                                 + np.cos(mu_ij_x2y - pi_nux - 2 * pi_nuy) / np.sin(pi_nux + 2 * pi_nuy)
                                 + np.cos(mu_ij_x_2y - pi_nux + 2 * pi_nuy) / np.sin(pi_nux - 2 * pi_nuy))
-                        sign = - np.sign(mu_ijx)
+                        sign = - np.sign(mu_ix - mu_jx)
                         jj = complex(0, 1)
                         const = sign * jj * b3l
                         h31000 += const * beta_xij ** 1.5 * np.exp(complex(0, 3 * mu_ix - mu_jx)) / 32
@@ -290,7 +289,7 @@ class CSLattice(object):
                                 np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy))) / 32
                         h00400 += const * beta_xij ** 0.5 * beta_yi * beta_yj * np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy)) / 64
         nonlinear_terms = {'h21000': abs(h21000), 'h30000': abs(h30000), 'h10110': abs(h10110), 'h10020': abs(h10020),
-                           'h10200': abs(h10200), 'Qxx': Qxx, 'Qxy': Qxy, 'Qyy': Qyy,
+                           'h10200': abs(h10200), 'Qxx': Qxx / 2, 'Qxy': Qxy / 2, 'Qyy': Qyy / 2,
                            'h31000': abs(h31000), 'h40000': abs(h40000), 'h20110': abs(h20110), 'h11200': abs(h11200),
                            'h20020': abs(h20020), 'h20200': abs(h20200), 'h00310': abs(h00310), 'h00400': abs(h00400)}
         print('\nnonlinear terms:')
@@ -298,15 +297,21 @@ class CSLattice(object):
             print(f'    {str(i):7}: {j:.4f}')
         return nonlinear_terms
 
-    def higher_order_chromaticity(self, delta=1e-4, matrix_precision=1e-9, resdl_limit=1e-16):
-        """compute higher order chromaticity, compute from tune of 4d off-momentum closed orbit transfer matrix,
-         delta is the momentum deviation.
+    def higher_order_chromaticity(self, delta=1e-3, matrix_precision=1e-9, resdl_limit=1e-16):
+        """compute higher order chromaticity with the tunes of 4d off-momentum closed orbit.
+         delta: the momentum deviation.
+         matrix_precision: the small deviation to calculate transfer matrix by tracking.
+         resdl_limit: the limit to judge if the orbit is closed.
+
+                try to reset the value of delta, precision and resdl_limit if the result is wrong.
+        you can call track_4d_closed_orbit() function to see the magnitude of the closed orbit, and the matrix_precision
+        should be much smaller than it.
         return a dictionary
         cr = {'xi2x': float,
               'xi2y': float,
               'xi3x': float,
               'xi3y': float}
-        try to reset the value of delta, precision and resdl_limit if the result is wrong.
+
         """
 
         def closed_orbit_tune(deviation):
@@ -340,8 +345,8 @@ class CSLattice(object):
             nux_1, nuy_1 = closed_orbit_tune(-delta)
             nux_3, nuy_3 = closed_orbit_tune(-3 * delta)
         except Exception:
-            print('!!!!!!!\ncan not find off-momentum closed orbit, try smaller delta.')
-            return {'xi2x': 1e6, 'xi2y': 1e6, 'xi3x': 1e6, 'xi3y': 1e6}
+            print('!!!!!!!\ncan not find off-momentum closed orbit, try smaller delta.\n    !!!! you may need to change matrix_precision, too.')
+            return {'xi2x': 1e9, 'xi2y': 1e9, 'xi3x': 1e9, 'xi3y': 1e9}
         xi2x = (nux1 + nux_1 - 2 * (self.nux - int(self.nux))) / 2 / delta ** 2
         xi2y = (nuy1 + nuy_1 - 2 * (self.nuy - int(self.nuy))) / 2 / delta ** 2
         xi3x = (nux3 - nux_3 + 3 * nux_1 - 3 * nux1) / (delta * 2) ** 3 / 6
