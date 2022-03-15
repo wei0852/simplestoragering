@@ -111,42 +111,48 @@ class Sextupole(Element):
         # return beam
         return np.array([x2, px1, y2, py1, ct2, dp0])
 
-    def real_track(self, beam: Beam7) -> Beam7:
-        [x0, px0, y0, py0, z0, delta0] = beam.get_particle()
-        ds = self.length / 2
+    def real_track(self, beam):
+        [x0, px0, y0, py0, z0, delta0] = beam
+
+        ds = self.length / self.n_slices
         k2 = self.k2
+        for i in range(self.n_slices):
         # drift
-        try:
-            d1 = np.sqrt(1 - px0 ** 2 - py0 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
-        except Exception:
-            raise ParticleLost(self.s)
-        x1 = x0 + ds * px0 / d1
-        y1 = y0 + ds * py0 / d1
-        z1 = z0 + ds * (1 - (1 + RefParticle.beta * delta0) / d1) / RefParticle.beta
+            try:
+                d1 = np.sqrt(1 - px0 ** 2 - py0 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
+            except Exception:
+                raise ParticleLost(self.s)
+            x1 = x0 + ds * px0 / d1 / 2
+            y1 = y0 + ds * py0 / d1 / 2
+            z1 = z0 + ds * (1 - (1 + RefParticle.beta * delta0) / d1) / RefParticle.beta / 2
         # kick
-        px1 = px0 - (x1 * x1 - y1 * y1) * k2 * ds
-        py1 = py0 + x1 * y1 * k2 * ds * 2
+            px1 = px0 - (x1 * x1 - y1 * y1) * k2 * ds / 2
+            py1 = py0 + x1 * y1 * k2 * ds
         # damping, when beta approx 1
         # delta1 = delta0 - (delta0 + 1) ** 2 * (Cr * RefParticle.energy ** 3 * self.k2 ** 2 * self.length *
         #                                        (x1 ** 2 + y1 ** 2) ** 2 / 8 / pi)     # beta0 \approx 1
-        delta1 = (delta0 - (delta0 * RefParticle.beta + 1) ** 2 * Cr * RefParticle.energy ** 3 * self.k2 ** 2 *
-                  self.length * (x1 ** 2 + y1 ** 2) ** 2 / 8 / np.pi / RefParticle.beta)
+            delta1 = (delta0 - (delta0 * RefParticle.beta + 1) ** 2 * Cr * RefParticle.energy ** 3 * self.k2 ** 2 *
+                      self.length * (x1 ** 2 + y1 ** 2) ** 2 / 8 / np.pi / RefParticle.beta)
         # e1_div_e0 = (delta1 + 1) / (delta0 + 1)  # approximation
-        e1_div_e0 = np.sqrt(((1 + delta1 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2) /
-                            ((1 + delta0 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2))
-        px1 = px1 * e1_div_e0
-        py1 = py1 * e1_div_e0
+            e1_div_e0 = np.sqrt(((1 + delta1 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2) /
+                                ((1 + delta0 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2))
+            px1 = px1 * e1_div_e0
+            py1 = py1 * e1_div_e0
         # drift
-        try:
-            d2 = np.sqrt(1 - px1 ** 2 - py1 ** 2 + 2 * delta1 / RefParticle.beta + delta1 ** 2)
-        except Exception:
-            raise ParticleLost(self.s)
-        x2 = x1 + ds * px1 / d2
-        y2 = y1 + ds * py1 / d2
-        z2 = z1 + ds * (1 - (1 + RefParticle.beta * delta1) / d2) / RefParticle.beta
-
-        beam.set_particle([x2, px1, y2, py1, z2, delta1])
-        return beam
+            try:
+                d2 = np.sqrt(1 - px1 ** 2 - py1 ** 2 + 2 * delta1 / RefParticle.beta + delta1 ** 2)
+            except Exception:
+                raise ParticleLost(self.s)
+            x2 = x1 + ds * px1 / d2 / 2
+            y2 = y1 + ds * py1 / d2 / 2
+            z2 = z1 + ds * (1 - (1 + RefParticle.beta * delta1) / d2) / RefParticle.beta / 2
+            x0 = x2
+            px0 = px1
+            y0 = y2
+            py0 = py1
+            z0 = z2
+        # beam.set_particle()
+        return np.array([x2, px1, y2, py1, z2, delta1])
 
     def copy(self):
         return Sextupole(self.name, self.length, self.k2, self.n_slices)

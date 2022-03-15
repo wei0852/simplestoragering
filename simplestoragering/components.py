@@ -26,7 +26,7 @@ class Element(metaclass=ABCMeta):
     """
     name = None
     length = 0
-    s = None
+    s = 0
     h = 0
     k1 = 0
     k2 = 0
@@ -35,19 +35,18 @@ class Element(metaclass=ABCMeta):
     closed_orbit = np.zeros(6)
     tune = None
     beam = None
-    betax = None
-    alphax = None
-    gammax = None
-    psix = None
-    betay = None
-    alphay = None
-    gammay = None
-    psiy = None
-    etax = None
-    etaxp = None
-    etay = None
-    etayp = None
-    curl_H = None
+    betax = 0
+    alphax = 0
+    gammax = 0
+    psix = 0
+    betay = 0
+    alphay = 0
+    gammay = 0
+    psiy = 0
+    etax = 0
+    etaxp = 0
+    etay = 0
+    etayp = 0
 
     # matrix = None
 
@@ -250,8 +249,8 @@ class LineEnd(Element):
     def symplectic_track(self, beam):
         return beam
 
-    # def real_track(self, beam: Beam7) -> Beam7:
-    #     return beam
+    def real_track(self, beam):
+        return beam
 
     def copy(self):
         return LineEnd(self.s, self.identifier, self.name)

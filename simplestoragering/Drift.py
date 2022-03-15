@@ -83,9 +83,8 @@ class Drift(Element):
         # z1 = z0 + ds * (1 - (1 + RefParticle.beta * delta0) / d1) / RefParticle.beta
         # return np.array([x1, px0, y1, py0, z1, delta0])
 
-
-    # def real_track(self, beam: Beam7) -> Beam7:
-    #     return self.symplectic_track(beam)
+    def real_track(self, beam):
+        return self.symplectic_track(beam)
 
     def copy(self):
         return Drift(self.name, self.length)

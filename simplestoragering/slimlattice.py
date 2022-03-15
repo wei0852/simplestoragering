@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-from .components import LineEnd
+from .components import LineEnd, Mark
 from .particles import RefParticle, Beam7
 from .constants import pi, c, Cl, Cr, LENGTH_PRECISION
+from .RFCavity import RFCavity
+from .HBend import HBend
 import numpy as np
 from copy import deepcopy
 
@@ -14,15 +16,37 @@ class SlimRing(object):
     def __init__(self, ele_list: list):
         self.length = 0
         self.elements = []
-        for ele in ele_list:
+        self.mark = {}
+        self.angle = 0
+        self.abs_angle = 0
+        current_s = 0
+        current_identifier = 0
+        for oe in ele_list:
+            ele = oe.copy()
+            ele.s = current_s
+            ele.identifier = current_identifier
+            if isinstance(ele, Mark):
+                if ele.name in self.mark:
+                    self.mark[ele.name].append(ele)
+                else:
+                    self.mark[ele.name] = [ele]
+            if isinstance(ele, RFCavity):
+                self.rf_cavity = ele
             self.elements.append(ele)
             self.length = round(self.length + ele.length, LENGTH_PRECISION)
-        self.ele_slices = None
+            if isinstance(ele, HBend):
+                self.angle += ele.theta
+                self.abs_angle += abs(ele.theta)
+            current_identifier += 1
+            current_s = round(current_s + ele.length, LENGTH_PRECISION)
+        last_ele = LineEnd(s=self.length, identifier=current_identifier)
+        self.elements.append(last_ele)
+        self.angle = self.angle * 180 / pi
+        self.abs_angle = self.abs_angle * 180 / pi
         self.damping = None
         self.U0 = 0
         self.f_c = 0
         self.__set_u0_and_fc()
-        self.__slice()
         # self.compute_closed_orbit_by_matrix()
         # self.compute_damping_by_matrix()
         # self.compute_equilibrium_beam_by_matrix()
@@ -35,64 +59,53 @@ class SlimRing(object):
         self.U0 = Cr * RefParticle.energy ** 4 * i2 / (2 * pi)
         self.f_c = c * RefParticle.beta / self.length
 
-    def __slice(self):
-        self.ele_slices = []
-        current_s = 0
-        current_identifier = 0
-        for ele in self.elements:
-            [new_list, current_s] = ele.slice(current_s, current_identifier)
-            self.ele_slices += new_list
-            current_identifier += 1
-        last_ele = LineEnd(s=self.length, identifier=current_identifier)
-        self.ele_slices.append(last_ele)
+    # def compute_closed_orbit_by_matrix(self):
+    #     """Iteratively solve closed orbit by 7X7 transfer matrix."""
+    #
+    #     x0 = np.array([0, 0, 0, 0, 0, 0])
+    #     matrix7 = np.identity(7)
+    #     i = 1
+    #     print('\n-------------------\nsearching closed orbit:')
+    #     while i < 20:
+    #         for ele in self.ele_slices:
+    #             ele.closed_orbit = deepcopy(x0)
+    #             x0 = ele.next_closed_orbit
+    #             matrix7 = ele.closed_orbit_matrix.dot(matrix7)
+    #         coefficient_matrix = (matrix7 - np.identity(7))[0: 6, 0: 6]
+    #         result_vec = -matrix7[0: 6, 6].T
+    #         x0 = np.linalg.solve(coefficient_matrix, result_vec)
+    #         print(f'\niterated {i} times, current result is: \n    {x0}')
+    #         i += 1
+    #         if max(abs(x0 - self.ele_slices[0].closed_orbit)) < 1e-8:
+    #             break
+    #     print(f'\nclosed orbit at s=0 is \n    {x0}\n--------------')
 
-    def compute_closed_orbit_by_matrix(self):
-        """Iteratively solve closed orbit by 7X7 transfer matrix."""
-
-        x0 = np.array([0, 0, 0, 0, 0, 0])
-        matrix7 = np.identity(7)
-        i = 1
-        print('\n-------------------\nsearching closed orbit:')
-        while i < 20:
-            for ele in self.ele_slices:
-                ele.closed_orbit = deepcopy(x0)
-                x0 = ele.next_closed_orbit
-                matrix7 = ele.closed_orbit_matrix.dot(matrix7)
-            coefficient_matrix = (matrix7 - np.identity(7))[0: 6, 0: 6]
-            result_vec = -matrix7[0: 6, 6].T
-            x0 = np.linalg.solve(coefficient_matrix, result_vec)
-            print(f'\niterated {i} times, current result is: \n    {x0}')
-            i += 1
-            if max(abs(x0 - self.ele_slices[0].closed_orbit)) < 1e-8:
-                break
-        print(f'\nclosed orbit at s=0 is \n    {x0}\n--------------')
-
-    def track_4d_closed_orbit(self, delta):
-        """4D track to compute closed orbit with energy deviation.
-
-        Just a simple test, the code should be verified !!! """
-        print('\n-------------------\ntracking 4D closed orbit:\n')
-        xco = np.zeros(6)
-        matrix = np.zeros([6, 6])
-        resdl = 1
-        j = 1
-        while j <= 10 and resdl > 1e-16:
-            beam = Beam7(xco)
-            for ele in self.ele_slices:
-                ele.closed_orbit = np.array(beam.get_particle_array())
-                beam = ele.symplectic_track(beam)
-            for i in range(7):
-                beam.matrix[4, i] = 0
-                beam.matrix[5, i] = delta
-            for i in range(6):
-                matrix[:, i] = (beam.matrix[:, i] - beam.matrix[:, 6]) / beam.precision
-            d = beam.matrix[:, 6] - xco
-            dco = np.linalg.inv(np.identity(6) - matrix).dot(d)
-            xco = xco + dco
-            resdl = dco.dot(dco.T)
-            print(f'iterated {j} times, current result is \n    {beam.matrix[:, 6]}\n')
-            j += 1
-        print(f'closed orbit at s=0 is \n    {xco}\n')
+    # def track_4d_closed_orbit(self, delta):
+    #     """4D track to compute closed orbit with energy deviation.
+    #
+    #     Just a simple test, the code should be verified !!! """
+    #     print('\n-------------------\ntracking 4D closed orbit:\n')
+    #     xco = np.zeros(6)
+    #     matrix = np.zeros([6, 6])
+    #     resdl = 1
+    #     j = 1
+    #     while j <= 10 and resdl > 1e-16:
+    #         beam = Beam7(xco)
+    #         for ele in self.ele_slices:
+    #             ele.closed_orbit = np.array(beam.get_particle_array())
+    #             beam = ele.symplectic_track(beam)
+    #         for i in range(7):
+    #             beam.matrix[4, i] = 0
+    #             beam.matrix[5, i] = delta
+    #         for i in range(6):
+    #             matrix[:, i] = (beam.matrix[:, i] - beam.matrix[:, 6]) / beam.precision
+    #         d = beam.matrix[:, 6] - xco
+    #         dco = np.linalg.inv(np.identity(6) - matrix).dot(d)
+    #         xco = xco + dco
+    #         resdl = dco.dot(dco.T)
+    #         print(f'iterated {j} times, current result is \n    {beam.matrix[:, 6]}\n')
+    #         j += 1
+    #     print(f'closed orbit at s=0 is \n    {xco}\n')
 
     def track_closed_orbit(self):
         """tracking closed orbit and computing damping"""
@@ -101,28 +114,47 @@ class SlimRing(object):
         matrix = np.zeros([6, 6])
         resdl = 1
         j = 1
+        precision = 1e-10
         while j <= 10 and resdl > 1e-16:
-            beam = Beam7(xco)
-            for ele in self.ele_slices:
-                ele.closed_orbit = np.array(beam.get_particle_array())
+            beam = np.eye(6, 7) * precision
+            for i in range(7):
+                beam[:, i] = beam[:, i] + xco
+            beam[4, :] = -beam[4, :]
+            for ele in self.elements:
+                # ele.closed_orbit = beam[:, 6]
                 beam = ele.real_track(beam)
+            beam[4, :] = -beam[4, :]
             for i in range(6):
-                matrix[:, i] = (beam.matrix[:, i] - beam.matrix[:, 6]) / beam.precision
-            d = beam.matrix[:, 6] - xco
+                matrix[:, i] = (beam[:, i] - beam[:, 6]) / precision
+            d = beam[:, 6] - xco
             dco = np.linalg.inv(np.identity(6) - matrix).dot(d)
             xco = xco + dco
             resdl = dco.dot(dco.T)
-            print(f'iterated {j} times, current result is \n    {beam.matrix[:, 6]}\n')
+            print(f'iterated {j} times, current result is \n    {beam[:, 6]}\n')
             j += 1
         print(f'closed orbit at s=0 is \n    {xco}\n')
-        # eig_val, ring_eig_matrix = self.__get_normalized_and_sorted_eigen(matrix)
-        # self.damping = - np.log(np.abs(eig_val))
-        # print(f'damping  = {self.damping}')
-        # print(f'damping time = {1 / self.f_c / self.damping}')
-        # print('\ncheck:')
-        # print(f'sum damping = {self.damping[0] + self.damping[2] + self.damping[4]}, '
-        #       f'2U0/E0 = {2 * self.U0 / RefParticle.energy}')
-        # print('\n--------------------------------------------\n')
+        # verify and assign closed orbit
+        beam = np.eye(6, 7) * precision
+        for i in range(7):
+            beam[:, i] = beam[:, i] + xco
+        beam[4, :] = -beam[4, :]
+        for ele in self.elements:
+            ele.closed_orbit = deepcopy(beam[:, 6])
+            ele.closed_orbit[4] = - ele.closed_orbit[4]
+            beam = ele.real_track(beam)
+        beam[4, :] = -beam[4, :]
+        for i in range(6):
+            matrix[:, i] = (beam[:, i] - beam[:, 6]) / precision
+        beam[4, :] = -beam[4, :]
+        print(f'verifying:\n    closed orbit at end is \n    {beam[:, 6]}\n')
+        eig_val, ring_eig_matrix = self.__get_normalized_and_sorted_eigen(matrix)
+        self.damping = - np.log(np.abs(eig_val))
+        print(f'damping  = {self.damping}')
+        print(f'damping time = {1 / self.f_c / self.damping}')
+        print('\ncheck:')
+        print(f'sum damping = {self.damping[0] + self.damping[2] + self.damping[4]}, '
+              f'2U0/E0 = {2 * self.U0 / RefParticle.energy}')
+        print('\n--------------------------------------------\n')
         '''the following part is wrong, the equilibrium beam should be computed by symplectic tracking.
         but the results are similar and the following method is simpler.'''
         # beam = Beam7(xco)
@@ -198,19 +230,32 @@ class SlimRing(object):
 
         # calculate one turn matrix and tunes.
         matrix = np.identity(6)
-        for ele in self.ele_slices:
-            beam = Beam7(ele.closed_orbit)
+        ele_matrix = np.identity(6)
+        precision = 1e-10
+        for ele in self.elements:
+            beam = np.eye(6, 7) * precision
+            beam[4, :] = -beam[4, :]
+            for i in range(7):
+                beam[:, i] = beam[:, i] + ele.closed_orbit
             beam = ele.symplectic_track(beam)
-            matrix = beam.solve_transfer_matrix().dot(matrix)
+            beam[4, :] = -beam[4, :]
+            for i in range(6):
+                ele_matrix[:, i] = (beam[:, i] - beam[:, 6]) / precision
+            matrix = ele_matrix.dot(matrix)
         eig_val, ring_eig_matrix = self.__get_normalized_and_sorted_eigen(matrix)
         print(f'ring tune = {np.angle(eig_val) / 2 / pi}')
         ave_deco_square = np.zeros(6)
         sideways_photons = np.zeros(6)
         eig_matrix = ring_eig_matrix
-        for ele in self.ele_slices:
-            beam = Beam7(ele.closed_orbit)
+        for ele in self.elements:
+            beam = np.eye(6, 7) * precision
+            beam[4, :] = -beam[4, :]
+            for i in range(7):
+                beam[:, i] = beam[:, i] + ele.closed_orbit
             beam = ele.symplectic_track(beam)
-            matrix = beam.solve_transfer_matrix()
+            beam[4, :] = -beam[4, :]
+            for i in range(6):
+                matrix[:, i] = (beam[:, i] - beam[:, 6]) / precision
             eig_matrix = matrix.dot(eig_matrix)
             if ele.h != 0:
                 for k in range(6):
@@ -221,8 +266,11 @@ class SlimRing(object):
             sideways_photons[k] = sideways_photons[k] * Cl * RefParticle.gamma ** 3 / c / self.damping[k] / 2
         # compute equilibrium beam matrices
         eig_matrix = ring_eig_matrix
-        for ele in self.ele_slices:
-            beam = Beam7(ele.closed_orbit)
+        for ele in self.elements:
+            beam = np.eye(6, 7) * precision
+            beam[4, :] = -beam[4, :]
+            for i in range(7):
+                beam[:, i] = beam[:, i] + ele.closed_orbit
             equilibrium_beam = np.zeros((6, 6))
             for j in range(6):
                 for i in range(j + 1):
@@ -234,7 +282,10 @@ class SlimRing(object):
                     equilibrium_beam[i, j] = equilibrium_beam[j, i]
             ele.beam = deepcopy(equilibrium_beam)
             beam = ele.symplectic_track(beam)
-            eig_matrix = beam.solve_transfer_matrix().dot(eig_matrix)
+            beam[4, :] = -beam[4, :]
+            for i in range(6):
+                matrix[:, i] = (beam[:, i] - beam[:, 6]) / precision
+            eig_matrix = matrix.dot(eig_matrix)
 
     def damping_by_matrix(self):
         """compute damping by damping matrix. the energy loss has been considered."""
@@ -357,7 +408,7 @@ def compute_twiss_of_slim_method(slim_ring: SlimRing):
     betax_list = []
     etax_list = []
     betay_list = []
-    for ele in slim_ring.ele_slices:
+    for ele in slim_ring.elements:
         betax, betay, etax = __compute_twiss_from_beam_matrix(ele.beam)
         betax_list.append(betax)
         betay_list.append(betay)

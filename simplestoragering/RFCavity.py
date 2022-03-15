@@ -23,6 +23,12 @@ class RFCavity(Element):
         matrix[5, 4] = (self.voltage * temp_val * np.cos(self.phase) / RefParticle.energy)
         return matrix
 
+    def copy(self):
+        return self
+
+    def slice(self, n_slices: int) -> list:
+        return [self]
+
     @property
     def damping_matrix(self):
         temp_val = 2 * pi * self.f_rf / RefParticle.beta / c  # h / R
@@ -43,7 +49,7 @@ class RFCavity(Element):
 
     def symplectic_track(self, beam):
         """rf cavity tracking is simplified by thin len approximation"""
-        [x0, px0, y0, py0, z0, dp0] = beam.get_particle()
+        [x0, px0, y0, py0, z0, dp0] = beam
         beta0 = RefParticle.beta
         ds = self.length
         # First        apply        a        drift        through        ds / 2
@@ -59,11 +65,10 @@ class RFCavity(Element):
         x2 = x1 + ds * px0 / d1 / 2
         y2 = y1 + ds * py0 / d1 / 2
         z2 = z1 + ds * (1 - (1 + beta0 * dp1) / d1) / beta0 / 2
-        beam.set_particle([x2, px0, y2, py0, z2, dp1])
-        return beam
+        return np.array([x2, px0, y2, py0, z2, dp1])
 
-    def real_track(self, beam: Beam7) -> Beam7:
-        [x0, px0, y0, py0, z0, delta0] = beam.get_particle()
+    def real_track(self, beam):
+        [x0, px0, y0, py0, z0, delta0] = beam
         beta0 = RefParticle.beta
         ds = self.length
         # First        apply        a        drift        through        ds / 2
@@ -85,8 +90,8 @@ class RFCavity(Element):
         # dp0_div_dp1 = (delta0 * RefParticle.beta + 1) / (delta1 * RefParticle.beta + 1)
         # px0 = px0 * dp0_div_dp1
         # py0 = py0 * dp0_div_dp1
-        beam.set_particle([x2, px0, y2, py0, z2, delta1])
-        return beam
+        # beam.set_particle()
+        return np.array([x2, px0, y2, py0, z2, delta1])
 
     def radiation_integrals(self):
         return 0, 0, 0, 0, 0, 0, 0

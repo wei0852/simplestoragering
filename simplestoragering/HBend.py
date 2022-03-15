@@ -124,8 +124,8 @@ class HBend(Element):
         # return beam
         return np.array([x2, px3, y2, py3, ct1, dp0])
 
-    def real_track(self, beam: Beam7) -> Beam7:
-        [x0, px0, y0, py0, z0, delta0] = beam.get_particle()
+    def real_track(self, beam):
+        [x0, px0, y0, py0, z0, delta0] = beam
         # delta1 = delta0 - (delta0 + 1) ** 2 * Cr * RefParticle.energy ** 3 * self.theta ** 2 / 2 / pi / self.length
         # delta1 = (delta0 - (delta0 * RefParticle.beta + 1) ** 2 * Cr * RefParticle.energy ** 3 * self.theta ** 2 /
         #           2 / pi / self.length / RefParticle.beta)
@@ -193,8 +193,7 @@ class HBend(Element):
         # exit
         px3 = px2 + self.h * np.tan(self.theta_out) * x2
         py3 = py2 - self.h * np.tan(self.theta_out) * y2
-        beam.set_particle([x2, px3, y2, py3, z1, delta1])
-        return beam
+        return np.array([x2, px3, y2, py3, z1, delta1])
 
     def __radiation_integrals(self, length, integrals, twiss0, twiss1):
         betax = (twiss0[0] + twiss1[0]) / 2
