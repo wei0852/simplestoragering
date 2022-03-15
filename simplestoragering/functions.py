@@ -265,24 +265,25 @@ def chromaticity_correction(lattice, sextupole_name_list: list, target=None, ini
 
     target = [1, 1] if target is None else target
     num_sext = len(sextupole_name_list)
-    remaining_xi_x = lattice.natural_xi_x * 4 * pi
-    remaining_xi_y = lattice.natural_xi_y * 4 * pi
+    remaining_xi_x = lattice.natural_xi_x
+    remaining_xi_y = lattice.natural_xi_y
     # initialize the weight
     weight_x = {n: 0 for n in sextupole_name_list}
     weight_y = {n: 0 for n in sextupole_name_list}
-    for ele in lattice.ele_slices:
+    for ele in lattice.elements:
         if ele.type == 'Sextupole':
             if ele.name not in sextupole_name_list:
-                remaining_xi_x += ele.betax * ele.etax * ele.length * ele.k2
-                remaining_xi_y += - ele.betay * ele.etax * ele.length * ele.k2
+                optical_data, drop = ele.linear_optics()
+                remaining_xi_x += optical_data[5]
+                remaining_xi_y += optical_data[6]
             else:
-                weight_x[ele.name] += ele.betax * ele.etax * ele.length
-                weight_y[ele.name] += - ele.betay * ele.etax * ele.length
-    remaining_xi_x = remaining_xi_x / 4 / pi
-    remaining_xi_y = remaining_xi_y / 4 / pi
-    for ele_name in weight_x:
-        weight_x[ele_name] = weight_x[ele_name] / 4 / pi
-        weight_y[ele_name] = weight_y[ele_name] / 4 / pi
+                if ele.k2 == 0:
+                    ele.k2 = 1
+                optical_data, drop = ele.linear_optics()
+                weight_x[ele.name] += optical_data[5] / ele.k2
+                weight_y[ele.name] += optical_data[6] / ele.k2
+    remaining_xi_x = remaining_xi_x
+    remaining_xi_y = remaining_xi_y
     weight_matrix = np.zeros([2, len(sextupole_name_list)])
     for i in range(len(sextupole_name_list)):
         weight_matrix[0, i] = weight_x[sextupole_name_list[i]]
@@ -299,9 +300,6 @@ def chromaticity_correction(lattice, sextupole_name_list: list, target=None, ini
     print(f'result is\n{initial_k2}\n')
     if update_data:
         for ele in lattice.elements:
-            if ele.name in sextupole_name_list:
-                ele.k2 = initial_k2[sextupole_name_list.index(ele.name)]
-        for ele in lattice.ele_slices:
             if ele.name in sextupole_name_list:
                 ele.k2 = initial_k2[sextupole_name_list.index(ele.name)]
     # TODO: 如何控制六极磁铁强度上限

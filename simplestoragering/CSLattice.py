@@ -201,7 +201,7 @@ class CSLattice(object):
                 ele_slices += ele.slice(1)
         return ele_slices
 
-    def compute_nonlinear_term(self):
+    def compute_nonlinear_term(self, print_out=True):
         """compute resonance driving terms. return a dictionary
         nonlinear_terms = {'h21000': , 'h30000': , 'h10110': , 'h10020': ,
                            'h10200': , 'Qxx': , 'Qxy': , 'Qyy': ,
@@ -292,9 +292,10 @@ class CSLattice(object):
                            'h10200': abs(h10200), 'Qxx': Qxx / 2, 'Qxy': Qxy / 2, 'Qyy': Qyy / 2,
                            'h31000': abs(h31000), 'h40000': abs(h40000), 'h20110': abs(h20110), 'h11200': abs(h11200),
                            'h20020': abs(h20020), 'h20200': abs(h20200), 'h00310': abs(h00310), 'h00400': abs(h00400)}
-        print('\nnonlinear terms:')
-        for i, j in nonlinear_terms.items():
-            print(f'    {str(i):7}: {j:.4f}')
+        if print_out:
+            print('\nnonlinear terms:')
+            for i, j in nonlinear_terms.items():
+                print(f'    {str(i):7}: {j:.4f}')
         return nonlinear_terms
 
     def higher_order_chromaticity(self, delta=1e-3, matrix_precision=1e-9, resdl_limit=1e-16):
