@@ -11,7 +11,8 @@ from copy import deepcopy
 class SlimRing(object):
     """lattice object, solved by slim method.
 
-    There are two different ways to compute transfer matrix."""
+    There are two different ways to compute transfer matrix.
+    存在一些小问题，暂时没时间完善。但是大致是正确的，使用时需要提前将弯铁切片后传入"""
 
     def __init__(self, ele_list: list):
         self.length = 0
@@ -287,56 +288,56 @@ class SlimRing(object):
                 matrix[:, i] = (beam[:, i] - beam[:, 6]) / precision
             eig_matrix = matrix.dot(eig_matrix)
 
-    def damping_by_matrix(self):
-        """compute damping by damping matrix. the energy loss has been considered."""
+    # def damping_by_matrix(self):
+    #     """compute damping by damping matrix. the energy loss has been considered."""
+    #
+    #     matrix = np.identity(6)
+    #     for ele in self.ele_slices:
+    #         matrix = ele.damping_matrix.dot(matrix)
+    #     eig_val, eig_matrix = np.linalg.eig(matrix)
+    #     self.damping = - np.log(np.abs(eig_val))
+    #     print(f'damping  = {self.damping}')
+    #     print(f'damping time = {1 / self.f_c / self.damping}')
+    #     print('\ncheck:')
+    #     print(f'sum damping = {self.damping[0] + self.damping[2] + self.damping[4]}, '
+    #           f'2U0/E0 = {2 * self.U0 / RefParticle.energy}')
+    #     print('\n--------------------------------------------\n')
 
-        matrix = np.identity(6)
-        for ele in self.ele_slices:
-            matrix = ele.damping_matrix.dot(matrix)
-        eig_val, eig_matrix = np.linalg.eig(matrix)
-        self.damping = - np.log(np.abs(eig_val))
-        print(f'damping  = {self.damping}')
-        print(f'damping time = {1 / self.f_c / self.damping}')
-        print('\ncheck:')
-        print(f'sum damping = {self.damping[0] + self.damping[2] + self.damping[4]}, '
-              f'2U0/E0 = {2 * self.U0 / RefParticle.energy}')
-        print('\n--------------------------------------------\n')
-
-    def equilibrium_beam_by_matrix(self):
-        """solve tune along the ring. use matrix"""
-
-        matrix = np.identity(6)
-        for ele in self.ele_slices:
-            matrix = ele.matrix.dot(matrix)
-        eig_val, ring_eig_matrix = self.__get_normalized_and_sorted_eigen(matrix)  # Ei is eig_matrix[:, i]  E_ki is eig_matrix[i, k]
-        print(f'ring tune = {np.angle(eig_val) / 2 / pi}\n')
-        # solve average decomposition and tune along the lattice
-        ave_deco_square = np.zeros(6)
-        sideways_photons = np.zeros(6)
-        eig_matrix = ring_eig_matrix
-        for ele in self.ele_slices:
-            eig_matrix = ele.matrix.dot(eig_matrix)
-            if ele.h != 0:
-                for k in range(6):
-                    ave_deco_square[k] += abs(eig_matrix[4, k]) ** 2 * abs(ele.h) ** 3 * ele.length
-                    sideways_photons[k] += abs(eig_matrix[2, k]) ** 2 * abs(ele.h) ** 3 * ele.length
-        for k in range(6):
-            ave_deco_square[k] = ave_deco_square[k] * Cl * RefParticle.gamma ** 5 / c / self.damping[k]
-            sideways_photons[k] = sideways_photons[k] * Cl * RefParticle.gamma ** 3 / c / self.damping[k] / 2
-        # solve equilibrium beam
-        eig_matrix = ring_eig_matrix
-        for ele in self.ele_slices:
-            equilibrium_beam = np.zeros((6, 6))
-            for j in range(6):
-                for i in range(j + 1):
-                    for k in range(6):
-                        equilibrium_beam[i, j] += ((ave_deco_square[k] + sideways_photons[k]) *
-                                                   np.real(eig_matrix[i, k] * np.conj(eig_matrix[j, k])))
-            for i in range(6):
-                for j in range(i):
-                    equilibrium_beam[i, j] = equilibrium_beam[j, i]
-            ele.beam = deepcopy(equilibrium_beam)
-            eig_matrix = ele.matrix.dot(eig_matrix)
+    # def equilibrium_beam_by_matrix(self):
+    #     """solve tune along the ring. use matrix"""
+    #
+    #     matrix = np.identity(6)
+    #     for ele in self.ele_slices:
+    #         matrix = ele.matrix.dot(matrix)
+    #     eig_val, ring_eig_matrix = self.__get_normalized_and_sorted_eigen(matrix)  # Ei is eig_matrix[:, i]  E_ki is eig_matrix[i, k]
+    #     print(f'ring tune = {np.angle(eig_val) / 2 / pi}\n')
+    #     # solve average decomposition and tune along the lattice
+    #     ave_deco_square = np.zeros(6)
+    #     sideways_photons = np.zeros(6)
+    #     eig_matrix = ring_eig_matrix
+    #     for ele in self.ele_slices:
+    #         eig_matrix = ele.matrix.dot(eig_matrix)
+    #         if ele.h != 0:
+    #             for k in range(6):
+    #                 ave_deco_square[k] += abs(eig_matrix[4, k]) ** 2 * abs(ele.h) ** 3 * ele.length
+    #                 sideways_photons[k] += abs(eig_matrix[2, k]) ** 2 * abs(ele.h) ** 3 * ele.length
+    #     for k in range(6):
+    #         ave_deco_square[k] = ave_deco_square[k] * Cl * RefParticle.gamma ** 5 / c / self.damping[k]
+    #         sideways_photons[k] = sideways_photons[k] * Cl * RefParticle.gamma ** 3 / c / self.damping[k] / 2
+    #     # solve equilibrium beam
+    #     eig_matrix = ring_eig_matrix
+    #     for ele in self.ele_slices:
+    #         equilibrium_beam = np.zeros((6, 6))
+    #         for j in range(6):
+    #             for i in range(j + 1):
+    #                 for k in range(6):
+    #                     equilibrium_beam[i, j] += ((ave_deco_square[k] + sideways_photons[k]) *
+    #                                                np.real(eig_matrix[i, k] * np.conj(eig_matrix[j, k])))
+    #         for i in range(6):
+    #             for j in range(i):
+    #                 equilibrium_beam[i, j] = equilibrium_beam[j, i]
+    #         ele.beam = deepcopy(equilibrium_beam)
+    #         eig_matrix = ele.matrix.dot(eig_matrix)
 
     def matrix_output(self, file_name: str = 'matrix.txt'):
         """output uncoupled matrix for each element (the closed orbit is [0, 0, 0, 0, 0, 0])"""
@@ -354,52 +355,52 @@ class SlimRing(object):
             file.write('\n\n--------------------------\n\n')
         file.close()
 
-    def coupled_matrix_output(self, filename: str = 'matrix.txt'):
-        """output coupled matrices."""
+    # def coupled_matrix_output(self, filename: str = 'matrix.txt'):
+    #     """output coupled matrices."""
+    #
+    #     matrix = np.identity(6)
+    #     element_matrix = np.identity(6)
+    #     file = open(filename, 'w')
+    #     location = 0.0
+    #     first_ele = self.ele_slices[0]
+    #     last_identifier = first_ele.identifier
+    #     file.write(f'{first_ele.type()} {first_ele.name} at s={location} \n')
+    #     file.write(f'closed orbit: \n    {first_ele.closed_orbit}\n')
+    #     for ele in self.ele_slices:
+    #         if ele.identifier != last_identifier:
+    #             matrix = element_matrix.dot(matrix)
+    #             file.write('element matrix:\n' + str(element_matrix) + '\n')
+    #             file.write('contained matrix:\n')
+    #             file.write(str(matrix))
+    #             element_matrix = np.identity(6)
+    #             file.write('\n\n--------------------------------------------\n\n')
+    #             file.write(f'{ele.type()} {ele.name} at s={location} \n')
+    #             file.write(f'closed orbit: {ele.closed_orbit}\n')
+    #         element_matrix = ele.matrix.dot(element_matrix)
+    #         location = round(location + ele.length, LENGTH_PRECISION)
+    #         last_identifier = ele.identifier
+    #     matrix = element_matrix.dot(matrix)
+    #     file.write(str(element_matrix) + '\n')
+    #     file.write('full matrix:\n')
+    #     file.write(str(matrix))
+    #     file.close()
 
-        matrix = np.identity(6)
-        element_matrix = np.identity(6)
-        file = open(filename, 'w')
-        location = 0.0
-        first_ele = self.ele_slices[0]
-        last_identifier = first_ele.identifier
-        file.write(f'{first_ele.type()} {first_ele.name} at s={location} \n')
-        file.write(f'closed orbit: \n    {first_ele.closed_orbit}\n')
-        for ele in self.ele_slices:
-            if ele.identifier != last_identifier:
-                matrix = element_matrix.dot(matrix)
-                file.write('element matrix:\n' + str(element_matrix) + '\n')
-                file.write('contained matrix:\n')
-                file.write(str(matrix))
-                element_matrix = np.identity(6)
-                file.write('\n\n--------------------------------------------\n\n')
-                file.write(f'{ele.type()} {ele.name} at s={location} \n')
-                file.write(f'closed orbit: {ele.closed_orbit}\n')
-            element_matrix = ele.matrix.dot(element_matrix)
-            location = round(location + ele.length, LENGTH_PRECISION)
-            last_identifier = ele.identifier
-        matrix = element_matrix.dot(matrix)
-        file.write(str(element_matrix) + '\n')
-        file.write('full matrix:\n')
-        file.write(str(matrix))
-        file.close()
-
-    def output_equilibrium_beam(self, filename: str = 'equilibrium_beam.txt'):
-        """output the equilibrium beam matrix along the ring to txt file."""
-
-        file = open(filename, 'w')
-        location = 0.0
-        last_identifier = 123465
-        for ele in self.ele_slices:
-            if ele.identifier != last_identifier:
-                file.write(f'{ele.type()} {ele.name} at s={location} \n')
-                file.write(f'closed orbit: {ele.closed_orbit}\n')
-                file.write('equilibrium beam:\n')
-                file.write(str(ele.beam))
-                file.write('\n\n--------------------------------------------\n\n')
-            location = round(location + ele.length, LENGTH_PRECISION)
-            last_identifier = ele.identifier
-        file.close()
+    # def output_equilibrium_beam(self, filename: str = 'equilibrium_beam.txt'):
+    #     """output the equilibrium beam matrix along the ring to txt file."""
+    #
+    #     file = open(filename, 'w')
+    #     location = 0.0
+    #     last_identifier = 123465
+    #     for ele in self.ele_slices:
+    #         if ele.identifier != last_identifier:
+    #             file.write(f'{ele.type()} {ele.name} at s={location} \n')
+    #             file.write(f'closed orbit: {ele.closed_orbit}\n')
+    #             file.write('equilibrium beam:\n')
+    #             file.write(str(ele.beam))
+    #             file.write('\n\n--------------------------------------------\n\n')
+    #         location = round(location + ele.length, LENGTH_PRECISION)
+    #         last_identifier = ele.identifier
+    #     file.close()
 
 
 def compute_twiss_of_slim_method(slim_ring: SlimRing):
