@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from .components import Element, assin_twiss
-from .constants import Cr, LENGTH_PRECISION
-from .particles import RefParticle, Beam7
+from .globalvars import Cr, LENGTH_PRECISION, RefParticle
 from .exceptions import ParticleLost
 from .functions import next_twiss
 import numpy as np
@@ -73,7 +72,7 @@ class Quadrupole(Element):
         try:
             d1 = np.sqrt(1 + 2 * dp0 / beta0 + dp0 * dp0)
         except FloatingPointError:
-            print(f'particle lost in {self.name} at {self.s + i * ds}\n')
+            print(f'particle lost in {self.name} at {self.s}\n')
             raise ParticleLost(' just lost')
         w = np.sqrt(complex(k1, 0) / d1)
         w_2 = np.real(w ** 2)

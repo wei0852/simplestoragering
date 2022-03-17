@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from .components import Element, assin_twiss
-from .constants import Cr, LENGTH_PRECISION
-from .particles import RefParticle, Beam7
+from .globalvars import Cr, LENGTH_PRECISION, RefParticle
 from .Drift import drift_matrix
 from .exceptions import ParticleLost
 from .functions import next_twiss

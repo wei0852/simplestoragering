@@ -3,12 +3,9 @@
 Drift:
 ........."""
 
-from .particles import Beam7
 import numpy as np
 from abc import ABCMeta, abstractmethod
-from copy import deepcopy
-from .constants import pi, LENGTH_PRECISION
-from .particles import RefParticle
+from .globalvars import pi
 
 
 class Element(metaclass=ABCMeta):

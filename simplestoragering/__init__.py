@@ -9,7 +9,7 @@ two method to solve lattice:
 """
 
 
-from simplestoragering.particles import RefParticle, calculate_beta, Beam7
+from simplestoragering.globalvars import set_ref_energy
 from simplestoragering.components import Mark
 from simplestoragering.Drift import Drift
 from simplestoragering.HBend import HBend

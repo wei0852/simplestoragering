@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 from .components import Element, assin_twiss
-from .particles import RefParticle, Beam7
 from .exceptions import ParticleLost
-from .constants import LENGTH_PRECISION
+from .globalvars import LENGTH_PRECISION, RefParticle
 from .functions import next_twiss
 import numpy as np
 

@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from .Sextupole import Sextupole
 from .Quadrupole import Quadrupole
 from .HBend import HBend
-from .constants import pi
 from simplestoragering.exceptions import UnfinishedWork
 
 

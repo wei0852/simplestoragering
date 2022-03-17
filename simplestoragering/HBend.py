@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 from .components import Element, assin_twiss
-from .constants import Cr, LENGTH_PRECISION, pi
-from .particles import RefParticle, Beam7, calculate_beta
+from .globalvars import Cr, LENGTH_PRECISION, pi, RefParticle, calculate_beta
 from .functions import next_twiss
 from .exceptions import ParticleLost
-from copy import deepcopy
 import numpy as np
 
 

@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 import copy
 
-from .particles import Beam7
 import numpy as np
 import time
 import simplestoragering as ssr
-from .constants import pi
+from .globalvars import pi
 
 
 def next_twiss(matrix, twiss0):

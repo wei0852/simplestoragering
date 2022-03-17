@@ -3,8 +3,7 @@ import numpy as np
 import copy
 from .components import LineEnd, Mark
 from .RFCavity import RFCavity
-from .constants import pi, c, Cq, Cr, LENGTH_PRECISION
-from .particles import RefParticle
+from .globalvars import pi, c, Cq, Cr, LENGTH_PRECISION, RefParticle
 from .HBend import HBend
 from .Drift import Drift
 from .Quadrupole import Quadrupole
