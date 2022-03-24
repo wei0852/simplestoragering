@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import copy
 
 import numpy as np
 import time
@@ -104,53 +103,6 @@ def track_4d_closed_orbit(element_list, delta):
     return_data = {'closed_orbit': xco[:4], 'nux': nux - np.floor(nux), 'nuy': nuy - np.floor(nuy)}
     return return_data
 
-    # print('\n-------------------\ntracking 4D closed orbit:\n')
-    # xco = np.array([0, 0, 0, 0, 0, delta])
-    # matrix = np.zeros([6, 6])
-    # resdl = 1
-    # j = 1
-    # precision = 1e-9
-    # while j <= 10 and resdl > 1e-16:
-    #     beam = np.eye(6, 7) * precision
-    #     for i in range(7):
-    #         beam[:, i] = beam[:, i] + xco
-    #     for ele in element_list:
-    #         # ele.closed_orbit = beam[:, 6]
-    #         beam = ele.symplectic_track(beam)
-    #     for i in range(7):
-    #         beam[4, i] = 0
-    #         beam[5, i] = delta
-    #     for i in range(6):
-    #         matrix[:, i] = (beam[:, i] - beam[:, 6]) / precision
-    #     d = beam[:, 6] - xco
-    #     dco = np.linalg.inv(np.identity(6) - matrix).dot(d)
-    #     xco = xco + dco
-    #     resdl = dco.dot(dco.T)
-    #     print(f'iterated {j} times, current result is \n    {beam[:, 6]}\n')
-    #     # if abs(matrix[0, 0] + matrix[1, 1]) < 2 and abs(matrix[2, 2] + matrix[3, 3]) < 2:
-    #     #     break
-    #     j += 1
-    # print(f'closed orbit at s=0 is \n    {xco}\n')
-    # beam = np.eye(6, 7) * precision
-    # for i in range(7):
-    #     beam[:, i] = beam[:, i] + xco
-    # for el in element_list:
-    #     el.closed_orbit = beam[:, 6]
-    #     beam = el.symplectic_track(beam)
-    # print(f'\nclosed orbit at end is \n    {beam[:, 6]}')
-    # for i in range(6):
-    #     matrix[:, i] = (beam[:, i] - beam[:, 6]) / precision
-    # cos_mu = (matrix[0, 0] + matrix[1, 1]) / 2
-    # # eig_val, v = np.linalg.eig(matrix)
-    # # print(np.angle(eig_val) / 2 / pi)
-    # assert abs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
-    # nux = np.arccos(cos_mu) * np.sign(matrix[0, 1]) / 2 / pi
-    # nuy = np.arccos((matrix[2, 2] + matrix[3, 3]) / 2) * np.sign(matrix[2, 3]) / 2 / pi
-    # print(f'tune is {nux - np.floor(nux):.6f}, {nuy - np.floor(nuy):.6f}')
-    # return_data = {'closed_orbit': xco[:4], 'nux': nux - np.floor(nux), 'nuy': nuy - np.floor(nuy)}
-    # return return_data
-
-
 
 def output_opa_file(lattice, file_name=None):
     file_name = 'output_opa.opa' if file_name is None else file_name + '.opa'
@@ -200,17 +152,6 @@ def output_opa_file(lattice, file_name=None):
         file.write(';\r\n')
 
 
-# def read_opa_file(filename):
-#     """read opa file and return cs_lattice, Only some components can be recognized
-#
-#     Only the file output by opa can be recognized. If the opening fails,
-#     you can try to open and save the file with opa first."""
-#
-#     with open(filename, 'r') as file:
-#         for line in file.readlines():
-#             item
-
-
 def output_elegant_file(lattice, filename=None):
     filename = 'output_lte.lte' if filename is None else filename + '.lte'
     with open(filename, 'w') as file:
@@ -226,7 +167,7 @@ def output_elegant_file(lattice, filename=None):
                 if ele.type == 'Drift':
                     drift_list.append(f'{ele.name:6}: EDRIFT, l = {ele.length:.6f}\n')
                 elif ele.type == 'Quadrupole':
-                    quad_list.append(f'{ele.name:6}: KQUAD, l = {ele.length:.6f}, k1 = {ele.k1:.6f}, N_SLICES = {ele.n_slices}\n')
+                    quad_list.append(f'{ele.name:6}: KQUAD, l = {ele.length:.6f}, k1 = {ele.k1:.6f}, N_SLICES = 4\n')
                 elif ele.type == 'HBend':
                     bend_list.append(f'{ele.name:6}: csbend, l = {ele.length:.6f}, angle = {ele.theta:.6f}, k1 '
                                      f'= {ele.k1:.6f}, e1 = {ele.theta_in:.6f}, e2 = '
@@ -259,13 +200,13 @@ def output_elegant_file(lattice, filename=None):
         file.write(')\n')
 
 
-def chromaticity_correction(lattice, sextupole_name_list: list, target=None, initial_k2=None, update_data=True):
+def chromaticity_correction(lattice, sextupole_name_list: list, target=None, initial_k2=None, update_data=True, printout=True):
     """correct chromaticity. target = [xi_x, xi_y], initial_k2 should have the same length as sextupole_name_list."""
 
-    target = [1, 1] if target is None else target
+    target = [1 / lattice.periods_number, 1 / lattice.periods_number] if target is None else [i / lattice.periods_number for i in target]
     num_sext = len(sextupole_name_list)
-    remaining_xi_x = lattice.natural_xi_x
-    remaining_xi_y = lattice.natural_xi_y
+    remaining_xi_x = lattice.natural_xi_x / lattice.periods_number
+    remaining_xi_y = lattice.natural_xi_y / lattice.periods_number
     # initialize the weight
     weight_x = {n: 0 for n in sextupole_name_list}
     weight_y = {n: 0 for n in sextupole_name_list}
@@ -296,7 +237,8 @@ def chromaticity_correction(lattice, sextupole_name_list: list, target=None, ini
     delta_target = np.array([-xi_x + target[0], -xi_y + target[1]])
     solution = np.linalg.pinv(weight_matrix).dot(delta_target)
     initial_k2 = [initial_k2[i] + solution[i] for i in range(num_sext)]
-    print(f'result is\n{initial_k2}\n')
+    if printout:
+        print(f'result is\n{initial_k2}\n')
     if update_data:
         for ele in lattice.elements:
             if ele.name in sextupole_name_list:

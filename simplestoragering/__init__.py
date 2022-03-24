@@ -2,14 +2,14 @@
 """
 simple storage ring
 define different components:
-    Drift, HBend, Quadrupole, Sextupole, RFCavity
+    Drift, HBend, Quadrupole, Sextupole, RFCavity, Mark
 two method to solve lattice:
     Courant-Snyder method for uncoupled motion, solving twiss parameters of vertical and horizontal direction.
     Slim method developed by A. Chao, calculating equilibrium beam matrix by transfer matrix.
 """
 
 
-from simplestoragering.globalvars import set_ref_energy
+from simplestoragering.globalvars import set_ref_energy, RefParticle
 from simplestoragering.components import Mark
 from simplestoragering.Drift import Drift
 from simplestoragering.HBend import HBend
