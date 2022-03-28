@@ -201,8 +201,8 @@ class CSLattice(object):
         return ele_slices
 
     def s_dependent_nonlinear_terms(self):
-        """compute resonance driving terms. return a dictionary of list
-                nonlinear_terms = {'h21000': , 'h30000': , 'h10110': , 'h10020': ,
+        """compute resonance driving terms. return a dictionary, each value is a np.ndarray.
+                nonlinear_terms = {'s':, 'h21000': , 'h30000': , 'h10110': , 'h10020': ,
                                    'h10200': , 'Qxx': , 'Qxy': , 'Qyy': ,
                                    'h31000': , 'h40000': , 'h20110': , 'h11200': ,
                                    'h20020': , 'h20200': , 'h00310': , 'h00400': }
@@ -223,31 +223,31 @@ class CSLattice(object):
             else:
                 ele_list.append(ele)
                 current_ind += 1
-        del current_ind
         pi_nux = self.elements[-1].psix / 2
         pi_nuy = self.elements[-1].psiy / 2
         periodic_psix = self.elements[-1].psix
         periodic_psiy = self.elements[-1].psiy
-        qxx = []
-        qxy = []
-        qyy = []
-        f21000 = []
-        f30000 = []
-        f10110 = []
-        f10020 = []
-        f10200 = []
-        f31000 = []
-        f40000 = []
-        f20110 = []
-        f11200 = []
-        f20020 = []
-        f20200 = []
-        f00310 = []
-        f00400 = []
-        s = [0]
-        for k in sext_index:    # 起点在直线段变化时，四阶项和ADTS项只关心相对相移，三阶项角度变化，绝对值不变
-            s.append(ele_list[k].s)
-            s.append(ele_list[k].s)
+        qxx = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        qxy = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        qyy = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        f21000 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        f30000 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        f10110 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        f10020 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        f10200 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        f31000 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        f40000 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        f20110 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        f11200 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        f20020 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        f20200 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        f00310 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        f00400 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        s = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        current_ind = 0
+        for k in sext_index:    # 起点在直线段变化时，四阶项和ADTS项只关心相对相移，三阶项角度变化，绝对值不变，所以只计算六极铁处就够了
+            s[current_ind*2 + 1] = ele_list[k].s
+            s[current_ind*2 + 2] = ele_list[k].s
             Qxx = Qxy = Qyy = 0
             h21000 = h30000 = h10110 = h10020 = h10200 = 0
             h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
@@ -321,47 +321,48 @@ class CSLattice(object):
                                     np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy))) / 32
                             h00400 += const * beta_xij ** 0.5 * beta_yi * beta_yj * np.exp(
                                 complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy)) / 64
-            f21000.append(abs(h21000))
-            f30000.append(abs(h30000))
-            f10110.append(abs(h10110))
-            f10200.append(abs(h10200))
-            f10020.append(abs(h10020))
-            qxx.append(Qxx)
-            qxy.append(Qxy)
-            qyy.append(Qyy)
-            f31000.append(abs(h31000))
-            f40000.append(abs(h40000))
-            f00310.append(abs(h00310))
-            f20020.append(abs(h20020))
-            f20110.append(abs(h20110))
-            f00400.append(abs(h00400))
-            f20200.append(abs(h20200))
-            f11200.append(abs(h11200))
-            f21000.append(abs(h21000))
-            f30000.append(abs(h30000))
-            f10110.append(abs(h10110))
-            f10200.append(abs(h10200))
-            f10020.append(abs(h10020))
-            qxx.append(Qxx)
-            qxy.append(Qxy)
-            qyy.append(Qyy)
-            f31000.append(abs(h31000))
-            f40000.append(abs(h40000))
-            f00310.append(abs(h00310))
-            f20020.append(abs(h20020))
-            f20110.append(abs(h20110))
-            f00400.append(abs(h00400))
-            f20200.append(abs(h20200))
-            f11200.append(abs(h11200))
-        s.append(ele_list[-1].s)
+            f21000[current_ind*2] = abs(h21000)
+            f30000[current_ind*2] = abs(h30000)
+            f10110[current_ind*2] = abs(h10110)
+            f10200[current_ind*2] = abs(h10200)
+            f10020[current_ind*2] = abs(h10020)
+            qxx[current_ind*2] = Qxx
+            qxy[current_ind*2] = Qxy
+            qyy[current_ind*2] = Qyy
+            f31000[current_ind*2] = abs(h31000)
+            f40000[current_ind*2] = abs(h40000)
+            f00310[current_ind*2] = abs(h00310)
+            f20020[current_ind*2] = abs(h20020)
+            f20110[current_ind*2] = abs(h20110)
+            f00400[current_ind*2] = abs(h00400)
+            f20200[current_ind*2] = abs(h20200)
+            f11200[current_ind*2] = abs(h11200)
+            f21000[current_ind*2 + 1] = abs(h21000)
+            f30000[current_ind*2 + 1] = abs(h30000)
+            f10110[current_ind*2 + 1] = abs(h10110)
+            f10200[current_ind*2 + 1] = abs(h10200)
+            f10020[current_ind*2 + 1] = abs(h10020)
+            qxx[current_ind*2 + 1] = Qxx
+            qxy[current_ind*2 + 1] = Qxy
+            qyy[current_ind*2 + 1] = Qyy
+            f31000[current_ind*2 + 1] = abs(h31000)
+            f40000[current_ind*2 + 1] = abs(h40000)
+            f00310[current_ind*2 + 1] = abs(h00310)
+            f20020[current_ind*2 + 1] = abs(h20020)
+            f20110[current_ind*2 + 1] = abs(h20110)
+            f00400[current_ind*2 + 1] = abs(h00400)
+            f20200[current_ind*2 + 1] = abs(h20200)
+            f11200[current_ind*2 + 1] = abs(h11200)
+            current_ind += 1
+        s[-1] = ele_list[-1].s
         nonlinear = {'s': s, 'h21000': f21000, 'h30000': f30000, 'h10110': f10110, 'h10020': f10020,
                      'h10200': f10200, 'Qxx': qxx, 'Qxy': qxy, 'Qyy': qyy,
                      'h31000': f31000, 'h40000': f40000, 'h20110': f20110, 'h11200': f11200,
                      'h20020': f20020, 'h20200': f20200, 'h00310': f00310, 'h00400': f00400}
         for k in nonlinear:
             if k != 's':
-                nonlinear[k].append(nonlinear[k][0])
-                nonlinear[k].append(nonlinear[k][0])
+                nonlinear[k][-1] = nonlinear[k][0]
+                nonlinear[k][-2] = nonlinear[k][0]
         return nonlinear
 
     def nonlinear_terms(self, print_out=True):
