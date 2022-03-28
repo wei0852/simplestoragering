@@ -189,7 +189,7 @@ def quad_matrix(length, k1):
                          [0, 0, sqk * np.sinh(sqkl), np.cosh(sqkl), 0, 0],
                          [0, 0, 0, 0, 1, length / RefParticle.gamma ** 2],
                          [0, 0, 0, 0, 0, 1]])
-    else:
+    elif k1 < 0:
         sqk = np.sqrt(-k1)
         sqkl = sqk * length
         return np.array([[np.cosh(sqkl), np.sinh(sqkl) / sqk, 0, 0, 0, 0],
@@ -197,4 +197,12 @@ def quad_matrix(length, k1):
                          [0, 0, np.cos(sqkl), np.sin(sqkl) / sqk, 0, 0],
                          [0, 0, - sqk * np.sin(sqkl), np.cos(sqkl), 0, 0],
                          [0, 0, 0, 0, 1, length / RefParticle.gamma ** 2],
+                         [0, 0, 0, 0, 0, 1]])
+
+    else:
+        return np.array([[1, length, 0, 0, 0, 0],
+                         [0, 1, 0, 0, 0, 0],
+                         [0, 0, 1, length, 0, 0],
+                         [0, 0, 0, 1, 0, 0],
+                         [0, 0, 0, 0, 1, length / (RefParticle.gamma * RefParticle.beta) ** 2],
                          [0, 0, 0, 0, 0, 1]])

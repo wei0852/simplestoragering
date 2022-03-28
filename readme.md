@@ -13,7 +13,7 @@ A storage ring consists of many magnets to guide electron beam,
 * `HBend(name: str, length: float, theta: float, theta_in: float, theta_out: float)`, horizontal bend.
 * `Quadrupole(name: str, length: float, k1: float)`
 * `Sextupole(name: str, length: float, k2: float, n_slices: int)`, $k_2 = \dfrac{q}{P_0} \dfrac{\partial^2 B_y}{\partial x^2}$
-* `Mark(`
+* `Mark(name: str`
 
 All the components are child classes of the Element class. The following five necessary methods must be rewritten in each subclass:
 

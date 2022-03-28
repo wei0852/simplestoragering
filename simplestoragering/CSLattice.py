@@ -86,11 +86,32 @@ class CSLattice(object):
         self.sigma_z = None
         # self.global_parameters()
 
-    def linear_optics(self):
+    def linear_optics(self, compute_ring_parameters=True):
         """calculate optical functions and ring parameters."""
 
         self.__solve_along()
-        self.__global_parameters()
+        self.U0 = Cr * RefParticle.energy ** 4 * self.I2 / (2 * pi)
+        if self.abs_angle != 0:
+            self.f_c = c * RefParticle.beta / (self.length * self.periods_number)
+            self.Jx = 1 - self.I4 / self.I2
+            self.Jy = 1
+            self.Js = 2 + self.I4 / self.I2
+            self.sigma_e = RefParticle.gamma * np.sqrt(Cq * self.I3 / (self.Js * self.I2))
+            self.emittance = Cq * RefParticle.gamma * RefParticle.gamma * self.I5 / (self.Jx * self.I2)
+            self.tau0 = 2 * RefParticle.energy / self.U0 / self.f_c
+            self.tau_s = self.tau0 / self.Js
+            self.tau_x = self.tau0 / self.Jx
+            self.tau_y = self.tau0 / self.Jy
+            self.alpha = self.I1 * self.f_c / c  # momentum compaction factor
+            self.emitt_x = self.emittance / (1 + self.coup)
+            self.emitt_y = self.emittance * self.coup / (1 + self.coup)
+            self.etap = self.alpha - 1 / RefParticle.gamma ** 2  # phase slip factor
+            if self.rf_cavity is not None:
+                self.rf_cavity.f_c = self.f_c
+                self.nuz = (self.rf_cavity.voltage * self.rf_cavity.omega_rf * abs(
+                    np.cos(self.rf_cavity.phase) * self.etap)
+                            * self.length / RefParticle.energy / c) ** 0.5 / 2 / pi
+                self.sigma_z = self.sigma_e * abs(self.etap) * self.length / (2 * pi * self.nuz)
 
     def find_the_periodic_solution(self):
         """compute periodic solution and initialize twiss"""
@@ -227,23 +248,23 @@ class CSLattice(object):
         pi_nuy = self.elements[-1].psiy / 2
         periodic_psix = self.elements[-1].psix
         periodic_psiy = self.elements[-1].psiy
-        qxx = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
-        qxy = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
-        qyy = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
-        f21000 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
-        f30000 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
-        f10110 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
-        f10020 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
-        f10200 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
-        f31000 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
-        f40000 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
-        f20110 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
-        f11200 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
-        f20020 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
-        f20200 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
-        f00310 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
-        f00400 = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
-        s = np.zeros(2*(len(sext_index) + 1), dtype=np.float)
+        qxx = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        qxy = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        qyy = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        f21000 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        f30000 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        f10110 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        f10020 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        f10200 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        f31000 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        f40000 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        f20110 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        f11200 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        f20020 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        f20200 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        f00310 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        f00400 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        s = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
         current_ind = 0
         for k in sext_index:    # 起点在直线段变化时，四阶项和ADTS项只关心相对相移，三阶项角度变化，绝对值不变，所以只计算六极铁处就够了
             s[current_ind*2 + 1] = ele_list[k].s
@@ -508,8 +529,10 @@ class CSLattice(object):
             nux1, nuy1 = closed_orbit_tune(delta)
             nux_1, nuy_1 = closed_orbit_tune(-delta)
             nux_3, nuy_3 = closed_orbit_tune(-3 * delta)
-        except Exception:
-            print('!!!!!!!\ncan not find off-momentum closed orbit, try smaller delta.\n    !!!! you may need to change matrix_precision, too.')
+        except Exception as e:
+            print(e)
+            print('!!!!!!!\ncan not find off-momentum closed orbit, try smaller delta.\n '
+                  '   !!!! you may need to change matrix_precision, too.')
             return {'xi2x': 1e9, 'xi2y': 1e9, 'xi3x': 1e9, 'xi3y': 1e9}
         xi2x = (nux1 + nux_1 - 2 * (self.nux - int(self.nux))) / 2 / delta ** 2
         xi2y = (nuy1 + nuy_1 - 2 * (self.nuy - int(self.nuy))) / 2 / delta ** 2
@@ -517,28 +540,6 @@ class CSLattice(object):
         xi3y = (nuy3 - nuy_3 + 3 * nuy_1 - 3 * nuy1) / (delta * 2) ** 3 / 6
         print(f'xi2x: {xi2x:.2f}, xi2y: {xi2y:.2f}, xi3x: {xi3x:.2f}, xi3y: {xi3y:.2f}')
         return {'xi2x': xi2x, 'xi2y': xi2y, 'xi3x': xi3x, 'xi3y': xi3y}
-
-    def __global_parameters(self):
-        self.Jx = 1 - self.I4 / self.I2
-        self.Jy = 1
-        self.Js = 2 + self.I4 / self.I2
-        self.sigma_e = RefParticle.gamma * np.sqrt(Cq * self.I3 / (self.Js * self.I2))
-        self.emittance = Cq * RefParticle.gamma * RefParticle.gamma * self.I5 / (self.Jx * self.I2)
-        self.U0 = Cr * RefParticle.energy ** 4 * self.I2 / (2 * pi)
-        self.f_c = c * RefParticle.beta / (self.length * self.periods_number)
-        self.tau0 = 2 * RefParticle.energy / self.U0 / self.f_c
-        self.tau_s = self.tau0 / self.Js
-        self.tau_x = self.tau0 / self.Jx
-        self.tau_y = self.tau0 / self.Jy
-        self.alpha = self.I1 * self.f_c / c  # momentum compaction factor
-        self.emitt_x = self.emittance / (1 + self.coup)
-        self.emitt_y = self.emittance * self.coup / (1 + self.coup)
-        self.etap = self.alpha - 1 / RefParticle.gamma ** 2  # phase slip factor
-        if self.rf_cavity is not None:
-            self.rf_cavity.f_c = self.f_c
-            self.nuz = (self.rf_cavity.voltage * self.rf_cavity.omega_rf * abs(np.cos(self.rf_cavity.phase) * self.etap)
-                        * self.length / RefParticle.energy / c) ** 0.5 / 2 / pi
-            self.sigma_z = self.sigma_e * abs(self.etap) * self.length / (2 * pi * self.nuz)
 
     def output_matrix(self, file_name: str = 'matrix.txt'):
         """output uncoupled matrix for each element and contained matrix"""

@@ -152,11 +152,11 @@ class Element(metaclass=ABCMeta):
 class Mark(Element):
     """mark class. If record is True, the coordinates will be recorded every time the particle passes the Mark."""
 
-    def __init__(self, name: str, record=True):
+    def __init__(self, name: str):
         self.name = name
         self.n_slices = 1
         self.data = None
-        self.record = record
+        self.record = False
 
     @property
     def matrix(self):
