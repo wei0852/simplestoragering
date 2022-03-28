@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from .components import Element, assin_twiss
-from .globalvars import Cr, LENGTH_PRECISION, pi, RefParticle, calculate_beta
+from .globalvars import Cr, pi, RefParticle, calculate_beta
 from .functions import next_twiss
 from .exceptions import ParticleLost
 import numpy as np
@@ -59,7 +59,7 @@ class HBend(Element):
         try:
             d1 = np.sqrt(1 + 2 * dp0 / beta0 + dp0 * dp0)
         except FloatingPointError:
-            print(f'particle lost in {self.name} at {self.s + i * ds}\n')
+            print(f'particle lost in {self.name} at {self.s}\n')
             raise ParticleLost(' just lost')
         r10 = k0 * np.tan(self.theta_in)
         r32 = -k0 * np.tan(self.theta_in)
@@ -224,17 +224,17 @@ class HBend(Element):
         matrix = _hbend_matrix(length, self.h, self.theta_in, 0, self.k1)
         twiss1 = next_twiss(matrix, twiss0)
         self.__radiation_integrals(length, integrals, twiss0, twiss1)
-        current_s = round(current_s + length, LENGTH_PRECISION)
+        current_s = current_s + length
         for i in range(len(twiss0)):
             twiss0[i] = twiss1[i]
         while current_s < self.length - length:
             matrix = _hbend_matrix(length, self.h, 0, 0, self.k1)
             twiss1 = next_twiss(matrix, twiss0)
             self.__radiation_integrals(length, integrals, twiss0, twiss1)
-            current_s = round(current_s + length, LENGTH_PRECISION)
+            current_s = current_s + length
             for j in range(len(twiss0)):
                 twiss0[j] = twiss1[j]
-        length = round(self.length - current_s, LENGTH_PRECISION)
+        length = self.length - current_s
         matrix = _hbend_matrix(length, self.h, 0, self.theta_out, self.k1)
         twiss1 = next_twiss(matrix, twiss0)
         self.__radiation_integrals(length, integrals, twiss0, twiss1)
@@ -257,21 +257,21 @@ class HBend(Element):
             assin_twiss(ele, twiss0)
             ele.identifier = self.identifier
             return [ele]
-        length = round(self.length / n_slices, LENGTH_PRECISION)
+        length = self.length / n_slices
         ele = HBend(self.name, length, self.h * length, self.theta_in, 0, self.k1)
         ele.s = current_s
         assin_twiss(ele, twiss0)
         twiss0 = next_twiss(ele.matrix, twiss0)
         ele_list.append(ele)
-        current_s = round(current_s + ele.length, LENGTH_PRECISION)
+        current_s = current_s + ele.length
         for i in range(n_slices - 2):
             ele = HBend(self.name, length, self.h * length, 0, 0, self.k1)
             ele.s = current_s
             assin_twiss(ele, twiss0)
             twiss0 = next_twiss(ele.matrix, twiss0)
             ele_list.append(ele)
-            current_s = round(current_s + ele.length, LENGTH_PRECISION)
-        length = round(self.length + self.s - current_s, LENGTH_PRECISION)
+            current_s = current_s + ele.length
+        length = self.length + self.s - current_s
         ele = HBend(self.name, length, self.h * length, 0, self.theta_out, self.k1)
         ele.identifier = self.identifier
         ele.s = current_s

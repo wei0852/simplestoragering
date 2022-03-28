@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from .components import Element, assin_twiss
 from .exceptions import ParticleLost
-from .globalvars import LENGTH_PRECISION, RefParticle
+from .globalvars import RefParticle
 from .functions import next_twiss
 import numpy as np
 
@@ -9,16 +9,15 @@ import numpy as np
 class Drift(Element):
     """drift class"""
 
-    def __init__(self, name: str = None, length: float = 0.0, n_slices: int = 1):
+    def __init__(self, name: str = None, length: float = 0.0):
         self.name = name
         self.length = length
-        self.n_slices = n_slices
 
     def slice(self, n_slices: int) -> list:
         """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
         ele_list = []
         current_s = self.s
-        length = round(self.length / n_slices, LENGTH_PRECISION)
+        length = self.length / n_slices
         twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])
         for i in range(n_slices - 1):
             ele = Drift(self.name, length)
@@ -27,8 +26,8 @@ class Drift(Element):
             assin_twiss(ele, twiss0)
             twiss0 = next_twiss(ele.matrix, twiss0)
             ele_list.append(ele)
-            current_s = round(current_s + ele.length, LENGTH_PRECISION)
-        length = round(self.length + self.s - current_s, LENGTH_PRECISION)
+            current_s = current_s + ele.length
+        length = self.length + self.s - current_s
         ele = Drift(self.name, length)
         ele.identifier = self.identifier
         ele.s = current_s

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from .components import Element, assin_twiss
-from .globalvars import Cr, LENGTH_PRECISION, RefParticle
+from .globalvars import Cr, RefParticle
 from .exceptions import ParticleLost
 from .functions import next_twiss
 import numpy as np
@@ -18,7 +18,7 @@ class Quadrupole(Element):
         """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
         ele_list = []
         current_s = self.s
-        length = round(self.length / n_slices, LENGTH_PRECISION)
+        length = self.length / n_slices
         twiss0 = np.array(
             [self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp,
              self.etay, self.etayp, self.psix, self.psiy])
@@ -29,8 +29,8 @@ class Quadrupole(Element):
             assin_twiss(ele, twiss0)
             twiss0 = next_twiss(ele.matrix, twiss0)
             ele_list.append(ele)
-            current_s = round(current_s + ele.length, LENGTH_PRECISION)
-        length = round(self.length + self.s - current_s, LENGTH_PRECISION)
+            current_s = current_s + ele.length
+        length = self.length + self.s - current_s
         ele = Quadrupole(self.name, length, self.k1)
         ele.identifier = self.identifier
         ele.s = current_s
@@ -166,10 +166,10 @@ class Quadrupole(Element):
             betay = (twiss0[3] + twiss1[3]) / 2
             integrals[5] += - self.k1 * length * betax / 4 / np.pi
             integrals[6] += self.k1 * length * betay / 4 / np.pi
-            current_s = round(current_s + length, LENGTH_PRECISION)
+            current_s = current_s + length
             for i in range(len(twiss0)):
                 twiss0[i] = twiss1[i]
-        length = round(self.length - current_s, LENGTH_PRECISION)
+        length = self.length - current_s
         matrix = quad_matrix(length, self.k1)
         twiss1 = next_twiss(matrix, twiss0)
         betax = (twiss0[0] + twiss1[0]) / 2

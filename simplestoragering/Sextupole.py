@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from .components import Element, assin_twiss
-from .globalvars import Cr, LENGTH_PRECISION, RefParticle
+from .globalvars import Cr, RefParticle
 from .Drift import drift_matrix
 from .exceptions import ParticleLost
 from .functions import next_twiss
@@ -21,7 +21,7 @@ class Sextupole(Element):
         """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
         ele_list = []
         current_s = self.s
-        length = round(self.length / n_slices, LENGTH_PRECISION)
+        length = self.length / n_slices
         twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])
         for i in range(n_slices - 1):
             ele = Sextupole(self.name, length, self.k2)
@@ -30,8 +30,8 @@ class Sextupole(Element):
             ele.s = current_s
             twiss0 = next_twiss(ele.matrix, twiss0)
             ele_list.append(ele)
-            current_s = round(current_s + ele.length, LENGTH_PRECISION)
-        length = round(self.length + self.s - current_s, LENGTH_PRECISION)
+            current_s = current_s + ele.length
+        length = self.length + self.s - current_s
         ele = Sextupole(self.name, length, self.k2)
         ele.identifier = self.identifier
         ele.s = current_s
@@ -171,10 +171,10 @@ class Sextupole(Element):
             etax = (twiss0[6] + twiss1[6]) / 2
             integrals[5] += etax * self.k2 * length * betax / 4 / np.pi
             integrals[6] += - etax * self.k2 * length * betay / 4 / np.pi
-            current_s = round(current_s + length, LENGTH_PRECISION)
+            current_s = current_s + length
             for i in range(len(twiss0)):
                 twiss0[i] = twiss1[i]
-        length = round(self.length - current_s, LENGTH_PRECISION)
+        length = self.length - current_s
         matrix = sext_matrix(length, self.k2, orbit)
         twiss1 = next_twiss(matrix, twiss0)
         betax = (twiss0[0] + twiss1[0]) / 2

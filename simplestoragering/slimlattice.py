@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from .components import LineEnd, Mark
-from .globalvars import pi, c, Cl, Cr, LENGTH_PRECISION, RefParticle
+from .globalvars import pi, c, Cl, Cr, RefParticle
 from .RFCavity import RFCavity
 from .HBend import HBend
 import numpy as np
@@ -33,12 +33,12 @@ class SlimRing(object):
             if isinstance(ele, RFCavity):
                 self.rf_cavity = ele
             self.elements.append(ele)
-            self.length = round(self.length + ele.length, LENGTH_PRECISION)
+            self.length = self.length + ele.length
             if isinstance(ele, HBend):
                 self.angle += ele.theta
                 self.abs_angle += abs(ele.theta)
             current_identifier += 1
-            current_s = round(current_s + ele.length, LENGTH_PRECISION)
+            current_s = current_s + ele.length
         last_ele = LineEnd(s=self.length, identifier=current_identifier)
         self.elements.append(last_ele)
         self.angle = self.angle * 180 / pi
@@ -346,7 +346,7 @@ class SlimRing(object):
         location = 0.0
         for ele in self.elements:
             file.write(f'{ele.type()} {ele.name} at s={location},  {ele.magnets_data()}\n')
-            location = round(location + ele.length, LENGTH_PRECISION)
+            location = location + ele.length
             file.write(str(ele.matrix) + '\n')
             file.write('contained matrix:\n')
             matrix = ele.matrix.dot(matrix)
