@@ -210,7 +210,7 @@ class Mark(Element):
         self.data = None
 
     def copy(self):
-        return Mark(self.name, self.record)
+        return Mark(self.name)
 
 
 class LineEnd(Element):

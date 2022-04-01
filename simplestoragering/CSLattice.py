@@ -86,12 +86,21 @@ class CSLattice(object):
         self.sigma_z = None
         # self.global_parameters()
 
-    def linear_optics(self, compute_ring_parameters=True):
-        """calculate optical functions and ring parameters."""
+    def linear_optics(self, periodicity=True, line_mode=False):
+        """calculate optical functions.
+        periodicity: if True, the periodic solution will be the initial twiss data. Otherwise initial twiss should be set
+                    by CSLattice.set_initial_twiss(betax, alphax, betay, alphay, etax, etaxp, etay, etayp)
+        line_mode: if True, the storage ring parameters such as emittance and damping time are not calculated."""
 
+        if periodicity:
+            self._the_periodic_solution()
+        else:
+            if self.twiss_x0 is None or self.twiss_y0 is None or self.eta_x0 is None or self.eta_y0 is None:
+                raise Exception('need initial twiss data. use set_initial_twiss() or linear_optics(periodicity=True)')
         self.__solve_along()
         self.U0 = Cr * RefParticle.energy ** 4 * self.I2 / (2 * pi)
-        if self.abs_angle != 0:
+        if not line_mode:
+            np.seterr(all='raise')
             self.f_c = c * RefParticle.beta / (self.length * self.periods_number)
             self.Jx = 1 - self.I4 / self.I2
             self.Jy = 1
@@ -113,7 +122,7 @@ class CSLattice(object):
                             * self.length / RefParticle.energy / c) ** 0.5 / 2 / pi
                 self.sigma_z = self.sigma_e * abs(self.etap) * self.length / (2 * pi * self.nuz)
 
-    def find_the_periodic_solution(self):
+    def _the_periodic_solution(self):
         """compute periodic solution and initialize twiss"""
         matrix = np.identity(6)
         for ele in self.elements:
@@ -142,10 +151,11 @@ class CSLattice(object):
         matrix_etay = np.array([matrix[2, 5], matrix[3, 5]])
         self.eta_y0 = np.linalg.inv(np.identity(2) - sub_matrix_y).dot(matrix_etay)
 
-    def set_initial_twiss(self, twiss_x0, twiss_y0, eta_x0):
-        self.twiss_x0 = copy.deepcopy(twiss_x0)
-        self.twiss_y0 = copy.deepcopy(twiss_y0)
-        self.eta_x0 = copy.deepcopy(eta_x0)
+    def set_initial_twiss(self, betax, alphax, betay, alphay, etax, etaxp, etay, etayp):
+        self.twiss_x0 = np.array([betax, alphax, (1 + alphax**2) / betax])
+        self.twiss_y0 = np.array([betay, alphay, (1 + alphay**2) / betay])
+        self.eta_x0 = np.array([etax, etaxp])
+        self.eta_y0 = np.array([etay, etayp])
 
     def __solve_along(self):
         [betax, alphax, gammax] = self.twiss_x0
@@ -572,6 +582,7 @@ class CSLattice(object):
 
     def __str__(self):
         val = ""
+        val += f'\n{str("Length ="):11} {self.length * self.periods_number:9.3f} m'
         val += f'{str("angle ="):11} {self.angle:9.3f}'
         val += f'\n{str("abs_angle ="):11} {self.abs_angle:9.3f}'
         val += f'\n{str("nux ="):11} {self.nux:9.4f}'
@@ -581,14 +592,13 @@ class CSLattice(object):
         val += f'\n{str("I3 ="):11} {self.I3:9.5e}'
         val += f'\n{str("I4 ="):11} {self.I4:9.5e}'
         val += f'\n{str("I5 ="):11} {self.I5:9.5e}'
-        val += f'\n{str("Js ="):11} {self.Js:9.4f}'
-        val += f'\n{str("Jx ="):11} {self.Jx:9.4f}'
         val += f'\n{str("energy ="):11} {RefParticle.energy:9.2e} MeV'
         # val += f'\n{str("gamma ="):11} {RefParticle.gamma:9.2f}'
+        val += f'\n{str("U0 ="):11} {self.U0 * 1000:9.2f} keV'
         val += f'\n{str("sigma_e ="):11} {self.sigma_e:9.3e}'
         val += f'\n{str("emittance ="):11} {self.emittance:9.3e} m*rad'
-        val += f'\n{str("Length ="):11} {self.length * self.periods_number:9.3f} m'
-        val += f'\n{str("U0 ="):11} {self.U0 * 1000:9.2f} keV'
+        val += f'\n{str("Jx ="):11} {self.Jx:9.4f}'
+        val += f'\n{str("Js ="):11} {self.Js:9.4f}'
         val += f'\n{str("Tperiod ="):11} {1 / self.f_c:9.3e} sec'
         val += f'\n{str("alpha ="):11} {self.alpha:9.3e}'
         val += f'\n{str("eta_p ="):11} {self.etap:9.3e}'
