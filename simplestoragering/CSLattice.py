@@ -483,7 +483,7 @@ class CSLattice(object):
                                 np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy))) / 32
                         h00400 += const * beta_xij ** 0.5 * beta_yi * beta_yj * np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy)) / 64
         nonlinear_terms = {'h21000': abs(h21000), 'h30000': abs(h30000), 'h10110': abs(h10110), 'h10020': abs(h10020),
-                           'h10200': abs(h10200), 'Qxx': Qxx / 2, 'Qxy': Qxy / 2, 'Qyy': Qyy / 2,
+                           'h10200': abs(h10200), 'Qxx': Qxx, 'Qxy': Qxy, 'Qyy': Qyy,
                            'h31000': abs(h31000), 'h40000': abs(h40000), 'h20110': abs(h20110), 'h11200': abs(h11200),
                            'h20020': abs(h20020), 'h20200': abs(h20200), 'h00310': abs(h00310), 'h00400': abs(h00400)}
         if print_out:
@@ -491,6 +491,192 @@ class CSLattice(object):
             for i, j in nonlinear_terms.items():
                 print(f'    {str(i):7}: {j:.4f}')
         return nonlinear_terms
+
+    def nonlinear_terms_along_ring(self):
+        """different from s_dependent_nonlinear_terms().
+        compute resonance driving terms. return a dictionary, each value is a np.ndarray.
+                nonlinear_terms = {'s':, 'h21000': , 'h30000': , 'h10110': , 'h10020': ,
+                                   'h10200': , 'Qxx': , 'Qxy': , 'Qyy': ,
+                                   'h31000': , 'h40000': , 'h20110': , 'h11200': ,
+                                   'h20020': , 'h20200': , 'h00310': , 'h00400': }
+
+        references:
+        1. The Sextupole Scheme for the SLS: An Analytic Approach, SLS Note 09/97, Johan Bengtsson
+        2. Explicit formulas for 2nd-order driving terms due to sextupoles and chromatic effects of quadrupoles, Chun-xi Wang"""
+
+        ele_list = []
+        sext_index = []
+        current_ind = 0
+        for ele in self.elements:
+            if isinstance(ele, Sextupole):
+                ele_list += ele.slice(ele.n_slices)
+                for i in range(ele.n_slices):
+                    sext_index.append(current_ind)
+                    current_ind += 1
+            else:
+                ele_list.append(ele)
+                current_ind += 1
+        sext_num = len(sext_index)
+        pi_nux = self.elements[-1].psix / 2
+        pi_nuy = self.elements[-1].psiy / 2
+        qxx = np.zeros(2 * (sext_num + 1))
+        qxy = np.zeros(2 * (sext_num + 1))
+        qyy = np.zeros(2 * (sext_num + 1))
+        f21000 = np.zeros(2 * (sext_num + 1))
+        f30000 = np.zeros(2 * (sext_num + 1))
+        f10110 = np.zeros(2 * (sext_num + 1))
+        f10020 = np.zeros(2 * (sext_num + 1))
+        f10200 = np.zeros(2 * (sext_num + 1))
+        f31000 = np.zeros(2 * (sext_num + 1))
+        f40000 = np.zeros(2 * (sext_num + 1))
+        f20110 = np.zeros(2 * (sext_num + 1))
+        f11200 = np.zeros(2 * (sext_num + 1))
+        f20020 = np.zeros(2 * (sext_num + 1))
+        f20200 = np.zeros(2 * (sext_num + 1))
+        f00310 = np.zeros(2 * (sext_num + 1))
+        f00400 = np.zeros(2 * (sext_num + 1))
+        s = np.zeros(2 * (sext_num + 1))
+        qsxx = np.zeros((sext_num, sext_num))
+        qsxy = np.zeros((sext_num, sext_num))
+        qsyy = np.zeros((sext_num, sext_num))
+        h31000 = np.zeros((sext_num, sext_num), dtype='complex_')
+        h40000 = np.zeros((sext_num, sext_num), dtype='complex_')
+        h20110 = np.zeros((sext_num, sext_num), dtype='complex_')
+        h11200 = np.zeros((sext_num, sext_num), dtype='complex_')
+        h20020 = np.zeros((sext_num, sext_num), dtype='complex_')
+        h20200 = np.zeros((sext_num, sext_num), dtype='complex_')
+        h00310 = np.zeros((sext_num, sext_num), dtype='complex_')
+        h00400 = np.zeros((sext_num, sext_num), dtype='complex_')
+        h21000 = 0
+        h30000 = 0
+        h10110 = 0
+        h10020 = 0
+        h10200 = 0
+        current_ind = 1
+
+        for i in range(sext_num):
+            b3l_i = ele_list[sext_index[i]].k2 * ele_list[sext_index[i]].length / 2  # k2 = 2 * b3, k1 = b2
+            if b3l_i != 0:
+                beta_xi = (ele_list[sext_index[i]].betax + ele_list[sext_index[i] + 1].betax) / 2
+                beta_yi = (ele_list[sext_index[i]].betay + ele_list[sext_index[i] + 1].betay) / 2
+                mu_ix = (ele_list[sext_index[i]].psix + ele_list[sext_index[i] + 1].psix) / 2
+                mu_iy = (ele_list[sext_index[i]].psiy + ele_list[sext_index[i] + 1].psiy) / 2
+                h21000 += - b3l_i * beta_xi ** 1.5 * np.exp(complex(0, mu_ix)) / 8
+                h30000 += - b3l_i * beta_xi ** 1.5 * np.exp(complex(0, 3 * mu_ix)) / 24
+                h10110 += + b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(complex(0, mu_ix)) / 4
+                h10020 += + b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(complex(0, mu_ix - 2 * mu_iy)) / 8
+                h10200 += + b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(complex(0, mu_ix + 2 * mu_iy)) / 8
+                f21000[current_ind*2] = abs(h21000)
+                f30000[current_ind*2] = abs(h30000)
+                f10110[current_ind*2] = abs(h10110)
+                f10020[current_ind*2] = abs(h10020)
+                f10200[current_ind*2] = abs(h10200)
+                f21000[current_ind * 2 + 1] = f21000[current_ind*2]
+                f30000[current_ind * 2 + 1] = f30000[current_ind*2]
+                f10110[current_ind * 2 + 1] = f10110[current_ind*2]
+                f10020[current_ind * 2 + 1] = f10020[current_ind*2]
+                f10200[current_ind * 2 + 1] = f10200[current_ind*2]
+                current_ind += 1
+                for j in range(sext_num):
+                    b3l_j = ele_list[sext_index[j]].k2 * ele_list[sext_index[j]].length / 2
+                    b3l = b3l_j * b3l_i
+                    if b3l != 0:
+                        beta_xj = (ele_list[sext_index[j]].betax + ele_list[sext_index[j] + 1].betax) / 2
+                        beta_yj = (ele_list[sext_index[j]].betay + ele_list[sext_index[j] + 1].betay) / 2
+                        mu_jx = (ele_list[sext_index[j]].psix + ele_list[sext_index[j] + 1].psix) / 2
+                        mu_ijx = abs(mu_ix - mu_jx)
+                        mu_jy = (ele_list[sext_index[j]].psiy + ele_list[sext_index[j] + 1].psiy) / 2
+                        mu_ijy = abs(mu_iy - mu_jy)
+                        beta_xij = beta_xj * beta_xi
+                        mu_ij_x2y = mu_ijx + 2 * mu_ijy
+                        mu_ij_x_2y = mu_ijx - 2 * mu_ijy
+                        qsxx[i, j] = b3l / (-16 * pi) * pow(beta_xi * beta_xj, 1.5) * (
+                                3 * np.cos(mu_ijx - pi_nux) / np.sin(pi_nux)
+                                + np.cos(3 * mu_ijx - 3 * pi_nux) / np.sin(3 * pi_nux))
+                        qsxy[i, j] = b3l / (8 * pi) * pow(beta_xij, 0.5) * beta_yj * (
+                                2 * beta_xi * np.cos(mu_ijx - pi_nux) / np.sin(pi_nux)
+                                - beta_yi * np.cos(mu_ij_x2y - pi_nux - 2 * pi_nuy) / np.sin(pi_nux + 2 * pi_nuy)
+                                + beta_yi * np.cos(mu_ij_x_2y - pi_nux + 2 * pi_nuy) / np.sin(pi_nux - 2 * pi_nuy))
+                        qsyy[i, j] = b3l / (-16 * pi) * pow(beta_xij, 0.5) * beta_yj * beta_yi * (
+                                4 * np.cos(mu_ijx - pi_nux) / np.sin(pi_nux)
+                                + np.cos(mu_ij_x2y - pi_nux - 2 * pi_nuy) / np.sin(pi_nux + 2 * pi_nuy)
+                                + np.cos(mu_ij_x_2y - pi_nux + 2 * pi_nuy) / np.sin(pi_nux - 2 * pi_nuy))
+                        sign = - np.sign(mu_ix - mu_jx)
+                        jj = complex(0, 1)
+                        const = sign * jj * b3l
+                        h31000[i, j] = const * beta_xij ** 1.5 * np.exp(complex(0, 3 * mu_ix - mu_jx)) / 32
+                        h40000[i, j] = const * beta_xij ** 1.5 * np.exp(complex(0, 3 * mu_ix + mu_jx)) / 64
+                        h20110[i, j] = const * beta_xij ** 0.5 * beta_yi * (
+                                beta_xj * (np.exp(complex(0, 3 * mu_jx - mu_ix)) - np.exp(complex(0, mu_ix + mu_jx))) +
+                                2 * beta_yj * np.exp(complex(0, mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy))) / 32
+                        h11200[i, j] = const * beta_xij ** 0.5 * beta_yi * (
+                                beta_xj * (np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy)) - np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy))) +
+                                2 * beta_yj * (np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy)) + np.exp(complex(0, - mu_ix + mu_jx + 2 * mu_iy)))) / 32
+                        h20020[i, j] = const * beta_xij ** 0.5 * beta_yi * (
+                                beta_xj * np.exp(complex(0, -mu_ix + 3 * mu_jx - 2 * mu_iy)) -
+                                (beta_xj + 4 * beta_yj) * np.exp(complex(0, mu_ix + mu_jx - 2 * mu_iy))) / 64
+                        h20200[i, j] = const * beta_xij ** 0.5 * beta_yi * (
+                                beta_xj * np.exp(complex(0, -mu_ix + 3 * mu_jx + 2 * mu_iy))
+                                - (beta_xj - 4 * beta_yj) * np.exp((complex(0, mu_ix + mu_jx + 2 * mu_iy)))) / 64
+                        h00310[i, j] = const * beta_xij ** 0.5 * beta_yi * beta_yj * (
+                                np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy)) -
+                                np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy))) / 32
+                        h00400[i, j] = const * beta_xij ** 0.5 * beta_yi * beta_yj * np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy)) / 64
+
+        current_ind = 0
+        for k in sext_index:  # 四阶项和ADTS项只关心相对相移，三阶项角度变化，绝对值不变，所以只计算六极铁处就够了
+            s[current_ind * 2 + 1] = ele_list[k].s
+            s[current_ind * 2 + 2] = ele_list[k].s
+            current_ind += 1
+        s[-1] = ele_list[-1].s
+        current_ind = 1
+        for k in range(sext_num):
+            hts31000 = 0
+            hts40000 = 0
+            hts00310 = 0
+            hts20020 = 0
+            hts20110 = 0
+            hts00400 = 0
+            hts20200 = 0
+            hts11200 = 0
+            for i in range(k+1):
+                for j in range(k+1):
+                    qxx[current_ind * 2] += qsxx[i, j]
+                    qxy[current_ind * 2] += qsxy[i, j]
+                    qyy[current_ind * 2] += qsyy[i, j]
+                    hts31000 += h31000[i, j]
+                    hts40000 += h40000[i, j]
+                    hts00310 += h00310[i, j]
+                    hts20020 += h20020[i, j]
+                    hts20110 += h20110[i, j]
+                    hts00400 += h00400[i, j]
+                    hts20200 += h20200[i, j]
+                    hts11200 += h11200[i, j]
+            f31000[current_ind * 2] = abs(hts31000)
+            f40000[current_ind * 2] = abs(hts40000)
+            f00310[current_ind * 2] = abs(hts00310)
+            f20020[current_ind * 2] = abs(hts20020)
+            f20110[current_ind * 2] = abs(hts20110)
+            f00400[current_ind * 2] = abs(hts00400)
+            f20200[current_ind * 2] = abs(hts20200)
+            f11200[current_ind * 2] = abs(hts11200)
+            qxx[current_ind * 2 + 1] = qxx[current_ind * 2]
+            qxy[current_ind * 2 + 1] = qxy[current_ind * 2]
+            qyy[current_ind * 2 + 1] = qyy[current_ind * 2]
+            f31000[current_ind * 2 + 1] = f31000[current_ind * 2]
+            f40000[current_ind * 2 + 1] = f40000[current_ind * 2]
+            f00310[current_ind * 2 + 1] = f00310[current_ind * 2]
+            f20020[current_ind * 2 + 1] = f20020[current_ind * 2]
+            f20110[current_ind * 2 + 1] = f20110[current_ind * 2]
+            f00400[current_ind * 2 + 1] = f00400[current_ind * 2]
+            f20200[current_ind * 2 + 1] = f20200[current_ind * 2]
+            f11200[current_ind * 2 + 1] = f11200[current_ind * 2]
+            current_ind += 1
+        nonlinear = {'s': s, 'h21000': f21000, 'h30000': f30000, 'h10110': f10110, 'h10020': f10020,
+                     'h10200': f10200, 'Qxx': qxx, 'Qxy': qxy, 'Qyy': qyy,
+                     'h31000': f31000, 'h40000': f40000, 'h20110': f20110, 'h11200': f11200,
+                     'h20020': f20020, 'h20200': f20200, 'h00310': f00310, 'h00400': f00400}
+        return nonlinear
 
     def higher_order_chromaticity(self, delta=1e-3, matrix_precision=1e-9, resdl_limit=1e-16):
         """compute higher order chromaticity with the tunes of 4d off-momentum closed orbit.
