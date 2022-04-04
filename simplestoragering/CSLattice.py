@@ -423,6 +423,7 @@ class CSLattice(object):
         Qxx = Qxy = Qyy = 0
         h21000 = h30000 = h10110 = h10020 = h10200 = 0
         h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
+        h22000 = h11110 = h00220 = 0
         pi_nux = self.elements[-1].psix / 2
         pi_nuy = self.elements[-1].psiy / 2
         for i in sext_index:
@@ -464,28 +465,36 @@ class CSLattice(object):
                         sign = - np.sign(mu_ix - mu_jx)
                         jj = complex(0, 1)
                         const = sign * jj * b3l
-                        h31000 += const * beta_xij ** 1.5 * np.exp(complex(0, 3 * mu_ix - mu_jx)) / 32
-                        h40000 += const * beta_xij ** 1.5 * np.exp(complex(0, 3 * mu_ix + mu_jx)) / 64
+                        h22000 += const * beta_xij ** 1.5 * (np.exp(complex(0, 3 * (mu_ix - mu_jx))) + 3 * np.exp(complex(0, mu_ix - mu_jx)))
+                        h11110 += const * beta_xij ** 0.5 * beta_yi * (beta_xj * (np.exp(complex(0, mu_jx - mu_ix)) - np.exp(complex(0, mu_ix - mu_jx))) +
+                                                                       beta_yj * (np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy - 2 * mu_jy)) +
+                                                                                  np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy))))
+                        h00220 += const * beta_xij ** 0.5 * beta_yi * beta_yj * (np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy - 2 * mu_jy)) +
+                                                                                 4 * np.exp(complex(0, mu_ix - mu_jx)) -
+                                                                                 np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy)))
+                        h31000 += const * beta_xij ** 1.5 * np.exp(complex(0, 3 * mu_ix - mu_jx))
+                        h40000 += const * beta_xij ** 1.5 * np.exp(complex(0, 3 * mu_ix + mu_jx))
                         h20110 += const * beta_xij ** 0.5 * beta_yi * (
                                 beta_xj * (np.exp(complex(0, 3 * mu_jx - mu_ix)) - np.exp(complex(0, mu_ix + mu_jx))) +
-                                2 * beta_yj * np.exp(complex(0, mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy))) / 32
+                                2 * beta_yj * np.exp(complex(0, mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy)))
                         h11200 += const * beta_xij ** 0.5 * beta_yi * (
                                 beta_xj * (np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy)) - np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy))) +
-                                2 * beta_yj * (np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy)) + np.exp(complex(0, - mu_ix + mu_jx + 2 * mu_iy)))) / 32
+                                2 * beta_yj * (np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy)) + np.exp(complex(0, - mu_ix + mu_jx + 2 * mu_iy))))
                         h20020 += const * beta_xij ** 0.5 * beta_yi * (
                                 beta_xj * np.exp(complex(0, -mu_ix + 3 * mu_jx - 2 * mu_iy)) -
-                                (beta_xj + 4 * beta_yj) * np.exp(complex(0, mu_ix + mu_jx - 2 * mu_iy))) / 64
+                                (beta_xj + 4 * beta_yj) * np.exp(complex(0, mu_ix + mu_jx - 2 * mu_iy)))
                         h20200 += const * beta_xij ** 0.5 * beta_yi * (
                                 beta_xj * np.exp(complex(0, -mu_ix + 3 * mu_jx + 2 * mu_iy))
-                                - (beta_xj - 4 * beta_yj) * np.exp((complex(0, mu_ix + mu_jx + 2 * mu_iy)))) / 64
+                                - (beta_xj - 4 * beta_yj) * np.exp((complex(0, mu_ix + mu_jx + 2 * mu_iy))))
                         h00310 += const * beta_xij ** 0.5 * beta_yi * beta_yj * (
                                 np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy)) -
-                                np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy))) / 32
-                        h00400 += const * beta_xij ** 0.5 * beta_yi * beta_yj * np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy)) / 64
+                                np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy)))
+                        h00400 += const * beta_xij ** 0.5 * beta_yi * beta_yj * np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy))
         nonlinear_terms = {'h21000': abs(h21000), 'h30000': abs(h30000), 'h10110': abs(h10110), 'h10020': abs(h10020),
                            'h10200': abs(h10200), 'Qxx': Qxx, 'Qxy': Qxy, 'Qyy': Qyy,
-                           'h31000': abs(h31000), 'h40000': abs(h40000), 'h20110': abs(h20110), 'h11200': abs(h11200),
-                           'h20020': abs(h20020), 'h20200': abs(h20200), 'h00310': abs(h00310), 'h00400': abs(h00400)}
+                           'h31000': abs(h31000) / 32, 'h40000': abs(h40000) / 64, 'h20110': abs(h20110) / 32, 'h11200': abs(h11200) / 32,
+                           'h20020': abs(h20020) / 64, 'h20200': abs(h20200) / 64, 'h00310': abs(h00310) / 32, 'h00400': abs(h00400) / 64,
+                           'h22000': abs(h22000) / 64, 'h11110': abs(h11110) / 16, 'h00220': abs(h00220) / 64}
         if print_out:
             print('\nnonlinear terms:')
             for i, j in nonlinear_terms.items():
