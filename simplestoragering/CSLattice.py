@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import copy
 from .components import LineEnd, Mark
 from .RFCavity import RFCavity
 from .globalvars import pi, c, Cq, Cr, RefParticle
@@ -777,8 +776,8 @@ class CSLattice(object):
 
     def __str__(self):
         val = ""
-        val += f'\n{str("Length ="):11} {self.length * self.periods_number:9.3f} m'
-        val += f'{str("angle ="):11} {self.angle:9.3f}'
+        val += f'{str("Length ="):11} {self.length * self.periods_number:9.3f} m'
+        val += f'\n{str("angle ="):11} {self.angle:9.3f}'
         val += f'\n{str("abs_angle ="):11} {self.abs_angle:9.3f}'
         val += f'\n{str("nux ="):11} {self.nux:9.4f}'
         val += f'\n{str("nuy ="):11} {self.nuy:9.4f}'

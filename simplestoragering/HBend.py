@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from .components import Element, assin_twiss
+from .components import Element, assin_twiss, next_twiss
 from .globalvars import Cr, pi, RefParticle, calculate_beta
-from .functions import next_twiss
 from .exceptions import ParticleLost
 import numpy as np
 

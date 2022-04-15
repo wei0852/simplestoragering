@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from .components import Element, assin_twiss
+from .components import Element, assin_twiss, next_twiss
 from .exceptions import ParticleLost
 from .globalvars import RefParticle
-from .functions import next_twiss
 import numpy as np
 
 
@@ -67,19 +66,6 @@ class Drift(Element):
         y1 = y0 + ds * py0 / d1
         z1 = z0 + ds * (1 - (1 + RefParticle.beta * delta0) / d1) / RefParticle.beta
         return np.array([x1, px0, y1, py0, z1, delta0])
-
-        # [x0, px0, y0, py0, z0, delta0] = beam
-        # ds = self.length
-        # np.seterr(all='raise')
-        # d1 = 1
-        # # try:
-        # #     d1 = np.sqrt(1 - px0 ** 2 - py0 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
-        # # except FloatingPointError:
-        # #     raise ParticleLost(self.s)
-        # x1 = x0 + ds * px0 / d1
-        # y1 = y0 + ds * py0 / d1
-        # z1 = z0 + ds * (1 - (1 + RefParticle.beta * delta0) / d1) / RefParticle.beta
-        # return np.array([x1, px0, y1, py0, z1, delta0])
 
     def real_track(self, beam):
         return self.symplectic_track(beam)

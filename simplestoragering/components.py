@@ -27,10 +27,8 @@ class Element(metaclass=ABCMeta):
     h = 0
     k1 = 0
     k2 = 0
-    n_slices = 1
     identifier = None
     closed_orbit = np.zeros(6)
-    tune = None
     beam = None
     betax = 0
     alphax = 0
@@ -44,8 +42,6 @@ class Element(metaclass=ABCMeta):
     etaxp = 0
     etay = 0
     etayp = 0
-
-    # matrix = None
 
     @property
     @abstractmethod
@@ -77,11 +73,6 @@ class Element(metaclass=ABCMeta):
     def symplectic_track(self, beam):
         """assuming that the energy is constant, the result is symplectic."""
         pass
-
-    # @abstractmethod
-    # def real_track(self, beam: Beam7) -> Beam7:
-    #     """tracking with energy loss, the result is not symplectic"""
-    #     pass
 
     @abstractmethod
     def copy(self):
@@ -154,7 +145,6 @@ class Mark(Element):
 
     def __init__(self, name: str):
         self.name = name
-        self.n_slices = 1
         self.data = None
         self.record = False
 
@@ -182,8 +172,6 @@ class Mark(Element):
         return self.closed_orbit
 
     def symplectic_track(self, particle: np.ndarray):
-        # assert isinstance(beam, Beam7)
-        # if particle.ndim == 2:
         if self.record:
             if self.data is None:
                 if particle.ndim == 2:
@@ -196,14 +184,6 @@ class Mark(Element):
                 elif particle.ndim == 1:
                     self.data = np.vstack((self.data, particle))
         return particle
-
-    # def real_track(self, beam: Beam7) -> Beam7:
-    #     if self.record:
-    #         if self.data is None:
-    #             self.data = beam.get_particle_array()
-    #         else:
-    #             self.data = np.vstack((self.data, beam.get_particle_array()))
-    #     return beam
 
     def clear(self):
         """clear the particle coordinate data."""
@@ -220,7 +200,6 @@ class LineEnd(Element):
         self.name = name
         self.s = s
         self.identifier = identifier
-        self.n_slices = 1
 
     @property
     def matrix(self):
@@ -266,3 +245,28 @@ def assin_twiss(ele: Element, twiss):
     ele.etayp = twiss[9]
     ele.psix = twiss[10]
     ele.psiy = twiss[11]
+
+
+def next_twiss(matrix, twiss0):
+    sub = matrix[:2, :2]
+    twiss1 = np.zeros(12)
+    matrix_cal = np.array([[sub[0, 0] ** 2, -2 * sub[0, 0] * sub[0, 1], sub[0, 1] ** 2],
+                           [-sub[0, 0] * sub[1, 0], 2 * sub[0, 1] * sub[1, 0] + 1, -sub[0, 1] * sub[1, 1]],
+                           [sub[1, 0] ** 2, -2 * sub[1, 0] * sub[1, 1], sub[1, 1] ** 2]])
+    twiss1[:3] = matrix_cal.dot(twiss0[:3])
+    sub = matrix[2:4, 2:4]
+    matrix_cal = np.array([[sub[0, 0] ** 2, -2 * sub[0, 0] * sub[0, 1], sub[0, 1] ** 2],
+                           [-sub[0, 0] * sub[1, 0], 2 * sub[0, 1] * sub[1, 0] + 1, -sub[0, 1] * sub[1, 1]],
+                           [sub[1, 0] ** 2, -2 * sub[1, 0] * sub[1, 1], sub[1, 1] ** 2]])
+    twiss1[3:6] = matrix_cal.dot(twiss0[3:6])
+    twiss1[6:8] = matrix[:2, :2].dot(twiss0[6:8]) + np.array([matrix[0, 5], matrix[1, 5]])
+    twiss1[8:10] = matrix[2:4, 2:4].dot(twiss0[8:10]) + np.array([matrix[2, 5], matrix[3, 5]])
+    dpsix = np.arctan(matrix[0, 1] / (matrix[0, 0] * twiss0[0] - matrix[0, 1] * twiss0[1]))
+    while dpsix < 0:
+        dpsix += pi
+    twiss1[10] = twiss0[10] + dpsix
+    dpsiy = np.arctan(matrix[2, 3] / (matrix[2, 2] * twiss0[3] - matrix[2, 3] * twiss0[4]))
+    while dpsiy < 0:
+        dpsiy += pi
+    twiss1[11] = twiss0[11] + dpsiy
+    return twiss1

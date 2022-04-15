@@ -12,7 +12,7 @@ from simplestoragering.exceptions import UnfinishedWork
 
 
 def get_col(ele_list, parameter: str):
-    """get column data"""
+    """get column data of parameter in ele_list. return list"""
     def __get_closed_orbit_delta():
         __col = []
         for ele in ele_list:

@@ -13,9 +13,9 @@ A storage ring consists of many magnets to guide electron beam,
 * `HBend(name: str, length: float, theta: float, theta_in: float, theta_out: float)`, horizontal bend.
 * `Quadrupole(name: str, length: float, k1: float)`
 * `Sextupole(name: str, length: float, k2: float, n_slices: int)`, $k_2 = \dfrac{q}{P_0} \dfrac{\partial^2 B_y}{\partial x^2}$
-* `Mark(name: str`
+* `Mark(name: str)`, marker
 
-All the components are child classes of the Element class. The following five necessary methods must be rewritten in each subclass:
+All the components are child classes of the Element class.
 
 
 ## slim method
@@ -23,3 +23,9 @@ A. Chao, “SLIM Formalism — Orbital Motion”， Lecture notes on special top
 physics
 
 ## Courant-Snyder
+
+`CSLattice(element_list: list, periods_number: int = 1,  coupling: float = 0.00)`
+
+CSLattice class has some methods to calculate twiss parameters, storage ring parameters, resonance driving terms and higer order chromaticity
+
+There are some auxiliary functions in plotlib.py to plot twiss parameters.
