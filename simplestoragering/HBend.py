@@ -217,7 +217,7 @@ class HBend(Element):
         current_s = 0
         length = 0.01
         # inlet
-        integrals[3] += 2 * self.h ** 2 * self.etax * np.tan(self.theta_in)
+        integrals[3] += - self.h ** 2 * self.etax * np.tan(self.theta_in)
         integrals[5] += (self.h * np.tan(self.theta_in) * self.betax - 2 * self.k1 * np.tan(self.theta_in) * self.etax * self.betax) / 4 / pi
         integrals[6] += (- self.h * np.tan(self.theta_in) * self.betay + 2 * self.k1 * np.tan(self.theta_in) * self.etax * self.betay) / 4 / pi
         matrix = _hbend_matrix(length, self.h, self.theta_in, 0, self.k1)
@@ -237,7 +237,7 @@ class HBend(Element):
         matrix = _hbend_matrix(length, self.h, 0, self.theta_out, self.k1)
         twiss1 = next_twiss(matrix, twiss0)
         self.__radiation_integrals(length, integrals, twiss0, twiss1)
-        integrals[3] += - 2 * self.h ** 2 * twiss1[6] * np.tan(self.theta_out)
+        integrals[3] += - self.h ** 2 * twiss1[6] * np.tan(self.theta_out)
         integrals[5] += (self.h * np.tan(self.theta_out) * twiss1[0] - 2 * self.k1 * np.tan(self.theta_out) * twiss1[6] * twiss1[0]) / 4 / pi
         integrals[6] += (- self.h * np.tan(self.theta_out) * twiss1[3] + 2 * self.k1 * np.tan(self.theta_out) * twiss1[6] * twiss1[3]) / 4 / pi
         return integrals, twiss1
@@ -291,6 +291,12 @@ class HBend(Element):
         if self.k1 != 0:
             text += f',   k1 = {self.k1: .6f}'
         return text
+
+    def __repr__(self):
+        return f"HBend('{self.name}', length = {self.length}, theta = {self.theta}, theta_in = {self.theta_in}, theta_out = {self.theta_out}, k1 = {self.k1})"
+
+    def __neg__(self):
+        return HBend(self.name, self.length, self.theta, self.theta_out, self.theta_in, self.k1)
 
 
 def _hbend_matrix(length, h, theta_in, theta_out, k1):

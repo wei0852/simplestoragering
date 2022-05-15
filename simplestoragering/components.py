@@ -192,6 +192,9 @@ class Mark(Element):
     def copy(self):
         return Mark(self.name)
 
+    def __repr__(self):
+        return f"Mark('{self.name}')"
+
 
 class LineEnd(Element):
     """mark the end of a line, store the data at the end."""
@@ -230,6 +233,9 @@ class LineEnd(Element):
 
     def copy(self):
         return LineEnd(self.s, self.identifier, self.name)
+
+    def __repr__(self):
+        return f'LineEnd()'
 
 
 def assin_twiss(ele: Element, twiss):

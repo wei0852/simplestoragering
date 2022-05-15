@@ -73,6 +73,9 @@ class Drift(Element):
     def copy(self):
         return Drift(self.name, self.length)
 
+    def __repr__(self):
+        return f"Drift('{self.name}', length = {self.length})"
+
 
 def drift_matrix(length):
     return np.array([[1, length, 0, 0, 0, 0],

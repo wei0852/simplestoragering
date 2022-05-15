@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from .Sextupole import Sextupole
 from .Quadrupole import Quadrupole
 from .HBend import HBend
+from .Octupole import Octupole
 from simplestoragering.exceptions import UnfinishedWork
 
 
@@ -218,7 +219,7 @@ def plot_layout_in_ax(ele_list, ax, ratio=0.03):
             layout_s += [(begin_s + current_s) / 2, current_s, current_s]
             draw_data = ele_list[i].k1 / abs(ele_list[i].k1) if ele_list[i].k1 != 0 else 0
             layout_data = [0, 1, 1 + 0.3 * draw_data, 1, 0]
-            ax.fill(layout_s, layout_data, color='#cd3e3e')
+            ax.fill(layout_s, layout_data, color='#EE3030')
         elif isinstance(ele_list[i], HBend):
             layout_s = [current_s, current_s]
             current_s += ele_list[i].length
@@ -239,6 +240,15 @@ def plot_layout_in_ax(ele_list, ax, ratio=0.03):
             draw_data = ele_list[i].k2 / abs(ele_list[i].k2) if ele_list[i].k2 != 0 else 0
             layout_data = [0, 1, 1 + 0.3 * draw_data, 1, 0]
             ax.fill(layout_s, layout_data, color='#3dcd3d')
+        elif isinstance(ele_list[i], Octupole):
+            layout_s = [current_s, current_s]
+            current_s += ele_list[i].length
+            while ele_list[i + 1].identifier == ele_list[i].identifier:
+                i += 1
+                current_s += ele_list[i].length
+            layout_s += [current_s, current_s]
+            layout_data = [0, 1, 1, 0]
+            ax.fill(layout_s, layout_data, color='#8B3A3A')
         else:
             current_s += ele_list[i].length
         i += 1

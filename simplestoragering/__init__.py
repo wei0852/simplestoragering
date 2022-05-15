@@ -15,6 +15,7 @@ from simplestoragering.Drift import Drift
 from simplestoragering.HBend import HBend
 from simplestoragering.Quadrupole import Quadrupole
 from simplestoragering.Sextupole import Sextupole
+from simplestoragering.Octupole import Octupole
 from simplestoragering.RFCavity import RFCavity
 from simplestoragering.CSLattice import CSLattice
 from simplestoragering.slimlattice import SlimRing, compute_twiss_of_slim_method

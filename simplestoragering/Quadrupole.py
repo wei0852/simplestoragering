@@ -177,6 +177,9 @@ class Quadrupole(Element):
         integrals[6] += self.k1 * length * betay / 4 / np.pi
         return integrals, twiss1
 
+    def __repr__(self):
+        return f"Quadrupole('{self.name}', length = {self.length}, k1 = {self.k1})"
+
 
 def quad_matrix(length, k1):
     if k1 > 0:

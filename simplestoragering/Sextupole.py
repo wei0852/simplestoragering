@@ -183,6 +183,9 @@ class Sextupole(Element):
         integrals[6] += - etax * self.k2 * length * betay / 4 / np.pi
         return integrals, twiss1
 
+    def __repr__(self):
+        return f"Sextupole('{self.name}', length = {self.length}, k2 = {self.k2}, n_slices = {self.n_slices})"
+
 
 def sext_matrix(length, k2, closed_orbit):
     k2l = k2 * length
