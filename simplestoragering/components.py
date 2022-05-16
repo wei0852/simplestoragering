@@ -27,6 +27,7 @@ class Element(metaclass=ABCMeta):
     h = 0
     k1 = 0
     k2 = 0
+    k3 = 0
     identifier = None
     closed_orbit = np.zeros(6)
     beam = None
