@@ -9,13 +9,14 @@ class HBend(Element):
     """horizontal Bend"""
 
     def __init__(self, name: str = None, length: float = 0, theta: float = 0, theta_in: float = 0, theta_out: float = 0,
-                 k1: float = 0):
+                 k1: float = 0, n_slices: int = 1):
         self.name = name
         self.length = length
         self.h = theta / self.length
         self.theta_in = theta_in
         self.theta_out = theta_out
         self.k1 = k1
+        self.n_slices = n_slices
 
     @property
     def theta(self):

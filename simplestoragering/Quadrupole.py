@@ -8,10 +8,11 @@ import numpy as np
 class Quadrupole(Element):
     """normal Quadrupole"""
 
-    def __init__(self, name: str = None, length: float = 0, k1: float = 0):
+    def __init__(self, name: str = None, length: float = 0, k1: float = 0, n_slices: int = 4):
         self.name = name
         self.length = length
         self.k1 = k1
+        self.n_slices = n_slices
 
     def slice(self, n_slices: int) -> list:
         """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
