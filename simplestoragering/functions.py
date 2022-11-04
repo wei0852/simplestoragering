@@ -115,7 +115,7 @@ def output_opa_file(lattice, file_name=None):
         for ele in sext_list:
             file.write(ele)
         file.write('\r\n\r\n{------ table of segments --------------------------}\r\n\r\n')
-        if lattice.periodicity == 1:
+        if lattice.n_periods == 1:
             file.write(f'ring : {ele_list[0]}')
             for i in range(len(ele_list)-1):
                 file.write(f', {ele_list[i+1]}')
@@ -123,7 +123,7 @@ def output_opa_file(lattice, file_name=None):
             file.write(f'cell : {ele_list[0]}')
             for i in range(len(ele_list)-1):
                 file.write(f', {ele_list[i+1]}')
-            file.write(f';\r\nring : {lattice.periodicity}*cell')
+            file.write(f';\r\nring : {lattice.n_periods}*cell')
         file.write(';\r\n')
 
 
@@ -163,7 +163,7 @@ def output_elegant_file(lattice, filename=None):
         for ele in sext_list:
             file.write(ele)
         file.write('\n\n{------ table of segments --------------------------}\n\n')
-        if lattice.periodicity == 1:
+        if lattice.n_periods == 1:
             file.write(f'ring : line=({ele_list[0]}')
             for i in range(len(ele_list) - 1):
                 file.write(f', {ele_list[i + 1]}')
@@ -171,17 +171,17 @@ def output_elegant_file(lattice, filename=None):
             file.write(f'cell : line=({ele_list[0]}')
             for i in range(len(ele_list) - 1):
                 file.write(f', {ele_list[i + 1]}')
-            file.write(f')\nring : line=({lattice.periodicity}*cell')
+            file.write(f')\nring : line=({lattice.n_periods}*cell')
         file.write(')\n')
 
 
 def chromaticity_correction(lattice, sextupole_name_list: list, target=None, initial_k2=None, update_data=True, printout=True):
     """correct chromaticity. target = [xi_x, xi_y], initial_k2 should have the same length as sextupole_name_list."""
 
-    target = [1 / lattice.periodicity, 1 / lattice.periodicity] if target is None else [i / lattice.periodicity for i in target]
+    target = [1 / lattice.n_periods, 1 / lattice.n_periods] if target is None else [i / lattice.n_periods for i in target]
     num_sext = len(sextupole_name_list)
-    remaining_xi_x = lattice.natural_xi_x / lattice.periodicity
-    remaining_xi_y = lattice.natural_xi_y / lattice.periodicity
+    remaining_xi_x = lattice.natural_xi_x / lattice.n_periods
+    remaining_xi_y = lattice.natural_xi_y / lattice.n_periods
     # initialize the weight
     weight_x = {n: 0 for n in sextupole_name_list}
     weight_y = {n: 0 for n in sextupole_name_list}

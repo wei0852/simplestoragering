@@ -13,9 +13,9 @@ from .Octupole import Octupole
 class CSLattice(object):
     """lattice object, solve by Courant-Snyder method"""
 
-    def __init__(self, ele_list: list, periodicity: int = 1, coupling: float = 0.00):
+    def __init__(self, ele_list: list, n_periods: int = 1, coupling: float = 0.00):
         self.length = 0
-        self.periodicity = periodicity
+        self.n_periods = n_periods
         self.coup = coupling
         self.elements = []
         self.mark = {}
@@ -44,9 +44,9 @@ class CSLattice(object):
             current_s = current_s + ele.length
         last_ele = LineEnd(s=self.length, identifier=current_identifier)
         self.elements.append(last_ele)
-        self.length = self.length * periodicity
-        self.angle = self.angle * 180 / pi * periodicity
-        self.abs_angle = self.abs_angle * 180 / pi * periodicity
+        self.length = self.length * n_periods
+        self.angle = self.angle * 180 / pi * n_periods
+        self.abs_angle = self.abs_angle * 180 / pi * n_periods
         # initialize twiss
         self.twiss_x0 = None
         self.twiss_y0 = None
@@ -89,7 +89,7 @@ class CSLattice(object):
 
     def linear_optics(self, periodicity=True, line_mode=False):
         """calculate optical functions.
-        periodicity: if True, the periodic solution will be the initial twiss data. Otherwise initial twiss should be set
+        n_periods: if True, the periodic solution will be the initial twiss data. Otherwise initial twiss should be set
                     by CSLattice.set_initial_twiss(betax, alphax, betay, alphay, etax, etaxp, etay, etayp)
         line_mode: if True, the storage ring parameters such as emittance and damping time are not calculated."""
 
@@ -97,7 +97,7 @@ class CSLattice(object):
             self._the_periodic_solution()
         else:
             if self.twiss_x0 is None or self.twiss_y0 is None or self.eta_x0 is None or self.eta_y0 is None:
-                raise Exception('need initial twiss data. use set_initial_twiss() or linear_optics(periodicity=True)')
+                raise Exception('need initial twiss data. use set_initial_twiss() or linear_optics(n_periods=True)')
         self.__solve_along()
         self.U0 = Cr * RefParticle.energy ** 4 * self.I2 / (2 * pi)
         if not line_mode:
@@ -153,8 +153,8 @@ class CSLattice(object):
         self.eta_y0 = np.linalg.inv(np.identity(2) - sub_matrix_y).dot(matrix_etay)
 
     def set_initial_twiss(self, betax, alphax, betay, alphay, etax, etaxp, etay, etayp):
-        self.twiss_x0 = np.array([betax, alphax, (1 + alphax**2) / betax])
-        self.twiss_y0 = np.array([betay, alphay, (1 + alphay**2) / betay])
+        self.twiss_x0 = np.array([betax, alphax, (1 + alphax ** 2) / betax])
+        self.twiss_y0 = np.array([betay, alphay, (1 + alphay ** 2) / betay])
         self.eta_x0 = np.array([etax, etaxp])
         self.eta_y0 = np.array([etay, etayp])
 
@@ -203,17 +203,17 @@ class CSLattice(object):
             else:
                 natural_xi_x += xix
                 natural_xi_y += xiy
-        self.I1 = integral1 * self.periodicity
-        self.I2 = integral2 * self.periodicity
-        self.I3 = integral3 * self.periodicity
-        self.I4 = integral4 * self.periodicity
-        self.I5 = integral5 * self.periodicity
-        self.natural_xi_x = natural_xi_x * self.periodicity
-        self.natural_xi_y = natural_xi_y * self.periodicity
-        self.xi_x = (natural_xi_x + sextupole_part_xi_x) * self.periodicity
-        self.xi_y = (natural_xi_y + sextupole_part_xi_y) * self.periodicity
-        self.nux = self.elements[-1].nux * self.periodicity
-        self.nuy = self.elements[-1].nuy * self.periodicity
+        self.I1 = integral1 * self.n_periods
+        self.I2 = integral2 * self.n_periods
+        self.I3 = integral3 * self.n_periods
+        self.I4 = integral4 * self.n_periods
+        self.I5 = integral5 * self.n_periods
+        self.natural_xi_x = natural_xi_x * self.n_periods
+        self.natural_xi_y = natural_xi_y * self.n_periods
+        self.xi_x = (natural_xi_x + sextupole_part_xi_x) * self.n_periods
+        self.xi_y = (natural_xi_y + sextupole_part_xi_y) * self.n_periods
+        self.nux = self.elements[-1].nux * self.n_periods
+        self.nuy = self.elements[-1].nuy * self.n_periods
 
     def slice_elements(self, drift_length=10.0, bend_length=10.0, quad_length=10.0, sext_length=10.0):
         """slice elements of ring, the twiss data of each slice will be calculated.
@@ -261,27 +261,27 @@ class CSLattice(object):
         pi_nuy = self.elements[-1].psiy / 2
         periodic_psix = self.elements[-1].psix
         periodic_psiy = self.elements[-1].psiy
-        qxx = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
-        qxy = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
-        qyy = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
-        f21000 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
-        f30000 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
-        f10110 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
-        f10020 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
-        f10200 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
-        f31000 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
-        f40000 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
-        f20110 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
-        f11200 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
-        f20020 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
-        f20200 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
-        f00310 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
-        f00400 = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
-        s = np.zeros(2*(len(sext_index) + 1), dtype=np.float64)
+        qxx = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
+        qxy = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
+        qyy = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
+        f21000 = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
+        f30000 = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
+        f10110 = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
+        f10020 = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
+        f10200 = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
+        f31000 = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
+        f40000 = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
+        f20110 = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
+        f11200 = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
+        f20020 = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
+        f20200 = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
+        f00310 = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
+        f00400 = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
+        s = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
         current_ind = 0
-        for k in sext_index:    # 起点在直线段变化时，四阶项和ADTS项只关心相对相移，三阶项角度变化，绝对值不变，所以只计算六极铁处就够了
-            s[current_ind*2 + 1] = ele_list[k].s
-            s[current_ind*2 + 2] = ele_list[k].s
+        for k in sext_index:  # 起点在直线段变化时，四阶项和ADTS项只关心相对相移，三阶项角度变化，绝对值不变，所以只计算六极铁处就够了
+            s[current_ind * 2 + 1] = ele_list[k].s
+            s[current_ind * 2 + 2] = ele_list[k].s
             Qxx = Qxy = Qyy = 0
             h21000 = h30000 = h10110 = h10020 = h10200 = 0
             h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
@@ -337,7 +337,7 @@ class CSLattice(object):
                             h40000 += const * beta_xij ** 1.5 * np.exp(complex(0, 3 * mu_ix + mu_jx)) / 64
                             h20110 += const * beta_xij ** 0.5 * beta_yi * (
                                     beta_xj * (
-                                        np.exp(complex(0, 3 * mu_jx - mu_ix)) - np.exp(complex(0, mu_ix + mu_jx))) +
+                                    np.exp(complex(0, 3 * mu_jx - mu_ix)) - np.exp(complex(0, mu_ix + mu_jx))) +
                                     2 * beta_yj * np.exp(complex(0, mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy))) / 32
                             h11200 += const * beta_xij ** 0.5 * beta_yi * (
                                     beta_xj * (np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy)) - np.exp(
@@ -355,38 +355,38 @@ class CSLattice(object):
                                     np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy))) / 32
                             h00400 += const * beta_xij ** 0.5 * beta_yi * beta_yj * np.exp(
                                 complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy)) / 64
-            f21000[current_ind*2] = abs(h21000)
-            f30000[current_ind*2] = abs(h30000)
-            f10110[current_ind*2] = abs(h10110)
-            f10200[current_ind*2] = abs(h10200)
-            f10020[current_ind*2] = abs(h10020)
-            qxx[current_ind*2] = Qxx
-            qxy[current_ind*2] = Qxy
-            qyy[current_ind*2] = Qyy
-            f31000[current_ind*2] = abs(h31000)
-            f40000[current_ind*2] = abs(h40000)
-            f00310[current_ind*2] = abs(h00310)
-            f20020[current_ind*2] = abs(h20020)
-            f20110[current_ind*2] = abs(h20110)
-            f00400[current_ind*2] = abs(h00400)
-            f20200[current_ind*2] = abs(h20200)
-            f11200[current_ind*2] = abs(h11200)
-            f21000[current_ind*2 + 1] = abs(h21000)
-            f30000[current_ind*2 + 1] = abs(h30000)
-            f10110[current_ind*2 + 1] = abs(h10110)
-            f10200[current_ind*2 + 1] = abs(h10200)
-            f10020[current_ind*2 + 1] = abs(h10020)
-            qxx[current_ind*2 + 1] = Qxx
-            qxy[current_ind*2 + 1] = Qxy
-            qyy[current_ind*2 + 1] = Qyy
-            f31000[current_ind*2 + 1] = abs(h31000)
-            f40000[current_ind*2 + 1] = abs(h40000)
-            f00310[current_ind*2 + 1] = abs(h00310)
-            f20020[current_ind*2 + 1] = abs(h20020)
-            f20110[current_ind*2 + 1] = abs(h20110)
-            f00400[current_ind*2 + 1] = abs(h00400)
-            f20200[current_ind*2 + 1] = abs(h20200)
-            f11200[current_ind*2 + 1] = abs(h11200)
+            f21000[current_ind * 2] = abs(h21000)
+            f30000[current_ind * 2] = abs(h30000)
+            f10110[current_ind * 2] = abs(h10110)
+            f10200[current_ind * 2] = abs(h10200)
+            f10020[current_ind * 2] = abs(h10020)
+            qxx[current_ind * 2] = Qxx
+            qxy[current_ind * 2] = Qxy
+            qyy[current_ind * 2] = Qyy
+            f31000[current_ind * 2] = abs(h31000)
+            f40000[current_ind * 2] = abs(h40000)
+            f00310[current_ind * 2] = abs(h00310)
+            f20020[current_ind * 2] = abs(h20020)
+            f20110[current_ind * 2] = abs(h20110)
+            f00400[current_ind * 2] = abs(h00400)
+            f20200[current_ind * 2] = abs(h20200)
+            f11200[current_ind * 2] = abs(h11200)
+            f21000[current_ind * 2 + 1] = abs(h21000)
+            f30000[current_ind * 2 + 1] = abs(h30000)
+            f10110[current_ind * 2 + 1] = abs(h10110)
+            f10200[current_ind * 2 + 1] = abs(h10200)
+            f10020[current_ind * 2 + 1] = abs(h10020)
+            qxx[current_ind * 2 + 1] = Qxx
+            qxy[current_ind * 2 + 1] = Qxy
+            qyy[current_ind * 2 + 1] = Qyy
+            f31000[current_ind * 2 + 1] = abs(h31000)
+            f40000[current_ind * 2 + 1] = abs(h40000)
+            f00310[current_ind * 2 + 1] = abs(h00310)
+            f20020[current_ind * 2 + 1] = abs(h20020)
+            f20110[current_ind * 2 + 1] = abs(h20110)
+            f00400[current_ind * 2 + 1] = abs(h00400)
+            f20200[current_ind * 2 + 1] = abs(h20200)
+            f11200[current_ind * 2 + 1] = abs(h11200)
             current_ind += 1
         s[-1] = ele_list[-1].s
         nonlinear = {'s': s, 'h21000': f21000, 'h30000': f30000, 'h10110': f10110, 'h10020': f10020,
@@ -399,38 +399,30 @@ class CSLattice(object):
                 nonlinear[k][-2] = nonlinear[k][0]
         return nonlinear
 
-    def nonlinear_terms(self, periodicity: int = None, print_out=True):
-        """compute resonance driving terms. return a dictionary
-        nonlinear_terms = {'h21000': , 'h30000': , 'h10110': , 'h10020': ,
-                           'h10200': , 'Qxx': , 'Qxy': , 'Qyy': ,
-                           'h31000': , 'h40000': , 'h20110': , 'h11200': ,
-                           'h20020': , 'h20200': , 'h00310': , 'h00400': }
+    def nonlinear_terms(self, periodicity: int = None, printout=True):
+        """nonlinear_terms(self, printout=True)
+        compute resonance driving terms.
+
+        Return:
+            NonlinearTerms:
+               {'h21000': , 'h30000': , 'h10110': , 'h10020': ,
+                'h10200': , 'h20001': , 'h00201': , 'h10002': ,
+                'h11001': , 'h00111': , 'dQxx': , 'dQxy': , 'dQyy': ,
+                'h31000': , 'h40000': , 'h20110': , 'h11200': ,
+                'h20020': , 'h20200': , 'h00310': , 'h00400': ,
+                'h22000': , 'h11110': , 'h00220': }
+                .set_periods(n_periods)
 
         references:
         1. The Sextupole Scheme for the SLS: An Analytic Approach, SLS Note 09/97, Johan Bengtsson
-        2. Explicit formulas for 2nd-order driving terms due to sextupoles and chromatic effects of quadrupoles, Chun-xi Wang"""
-
-        # def coeff_s2(j1, k1, l1, m1, j2, k2, l2, m2):
-        #     pmiu = (j1 - k1) * 2 * pi_nux + (l1 - m1) * 2 * pi_nuy
-        #     qmiu = (j2 - k2) * 2 * pi_nux + (l2 - m2) * 2 * pi_nuy
-        #     snpq = np.sin(pmiu) - np.sin(-periodicity * pmiu) + np.sin((1 - periodicity) * pmiu + qmiu) - np.sin((1 - periodicity) * pmiu - periodicity * qmiu)
-        #     snqp = np.sin(qmiu) - np.sin(-periodicity * qmiu) + np.sin((1 - periodicity) * qmiu + pmiu) - np.sin((1 - periodicity) * qmiu - periodicity * pmiu)
-        #     cnpq = np.cos(pmiu) - np.cos(-periodicity * pmiu) + np.cos((1 - periodicity) * pmiu + qmiu) - np.cos((1 - periodicity) * pmiu - periodicity * qmiu)
-        #     cnqp = np.cos(qmiu) - np.cos(-periodicity * qmiu) + np.cos((1 - periodicity) * qmiu + pmiu) - np.cos((1 - periodicity) * qmiu - periodicity * pmiu)
-        #     return (-snpq + snqp - complex(0, 1) * (-cnpq + cnqp)) / (8 * np.sin(pmiu / 2) * np.sin(qmiu / 2) * np.sin(pmiu / 2 + qmiu / 2))
-
-        def coeff_s2(j1, k1, l1, m1, j2, k2, l2, m2):
-            pmu = (j1 - k1) * 2 * pi_nux + (l1 - m1) * 2 * pi_nuy  # m1
-            qmu = (j2 - k2) * 2 * pi_nux + (l2 - m2) * 2 * pi_nuy  # m2
-            return (np.exp(complex(0, qmu)) * (1 - np.exp(complex(0, (periodicity - 1) * (pmu + qmu)))) / (1 - np.exp(complex(0, pmu + qmu)))
-            - np.exp(complex(0, periodicity * qmu)) * (1 - np.exp(complex(0, (periodicity - 1) * pmu))) / (1 - np.exp(complex(0, pmu)))) / (1 - np.exp(complex(0, qmu)))
-
+        2. Explicit formulas for 2nd-order driving terms due to sextupoles and chromatic effects of quadrupoles, Chun-xi Wang
+        3. Perspectives for future light source lattices incorporating yet uncommon magnets, S. C. Leemann and A. Streun"""
 
         ele_list = []
         quad_index = []
         sext_index = []
         oct_index = []
-        periodicity = periodicity if periodicity is not None else self.periodicity
+        periodicity = periodicity if periodicity is not None else self.n_periods
         current_ind = 0
         for ele in self.elements:
             if isinstance(ele, Sextupole):
@@ -452,7 +444,7 @@ class CSLattice(object):
                 ele_list.append(ele)
                 current_ind += 1
         del current_ind
-        Qxx = Qxy = Qyy = 0
+        dQxx = dQxy = dQyy = 0
         h20001 = h00201 = h10002 = h11001 = h00111 = 0
         h21000 = h30000 = h10110 = h10020 = h10200 = 0
         h31000s1 = h40000s1 = h20110s1 = h11200s1 = h20020s1 = h20200s1 = h00310s1 = h00400s1 = 0  # sext, same period
@@ -522,15 +514,15 @@ class CSLattice(object):
             h10200h21000 += h10200j * h21000j
             h10110h10200 += h10110j * h10200j
             h10200h01200 += h10200j * np.conj(h10020j)
-            Qxx += b3l_j ** 2 / (-16 * pi) * beta_xj ** 3 * (
+            dQxx += b3l_j ** 2 / (-16 * pi) * beta_xj ** 3 * (
                     3 * np.cos(pi_nux) / np.sin(pi_nux)
                     + np.cos(3 * pi_nux) / np.sin(3 * pi_nux))
-            Qxy += b3l_j ** 2 / (8 * pi) * beta_xj * beta_yj * (
+            dQxy += b3l_j ** 2 / (8 * pi) * beta_xj * beta_yj * (
                     2 * beta_xj * np.cos(pi_nux) / np.sin(pi_nux)
                     - beta_yj * np.cos(- pi_nux - 2 * pi_nuy) / np.sin(pi_nux + 2 * pi_nuy)
                     + beta_yj * np.cos(- pi_nux + 2 * pi_nuy) / np.sin(pi_nux - 2 * pi_nuy))
-            Qyy += b3l_j ** 2 / (-16 * pi) * beta_xj * beta_yj ** 2 * (
-                    4 * np.cos( pi_nux) / np.sin(pi_nux)
+            dQyy += b3l_j ** 2 / (-16 * pi) * beta_xj * beta_yj ** 2 * (
+                    4 * np.cos(pi_nux) / np.sin(pi_nux)
                     + np.cos(pi_nux + 2 * pi_nuy) / np.sin(pi_nux + 2 * pi_nuy)
                     + np.cos(pi_nux - 2 * pi_nuy) / np.sin(pi_nux - 2 * pi_nuy))
             for i in range(j):
@@ -545,14 +537,14 @@ class CSLattice(object):
                 beta_xij = beta_xj * beta_xi
                 mu_ij_x2y = mu_ijx + 2 * mu_ijy
                 mu_ij_x_2y = mu_ijx - 2 * mu_ijy
-                Qxx += 2 * b3l / (-16 * pi) * pow(beta_xi * beta_xj, 1.5) * (
+                dQxx += 2 * b3l / (-16 * pi) * pow(beta_xi * beta_xj, 1.5) * (
                         3 * np.cos(mu_ijx - pi_nux) / np.sin(pi_nux)
                         + np.cos(3 * mu_ijx - 3 * pi_nux) / np.sin(3 * pi_nux))
-                Qxy += 2 * b3l / (8 * pi) * pow(beta_xij, 0.5) * beta_yi * (
+                dQxy += 2 * b3l / (8 * pi) * pow(beta_xij, 0.5) * beta_yi * (
                         2 * beta_xj * np.cos(mu_ijx - pi_nux) / np.sin(pi_nux)
                         - beta_yj * np.cos(mu_ij_x2y - pi_nux - 2 * pi_nuy) / np.sin(pi_nux + 2 * pi_nuy)
                         + beta_yj * np.cos(mu_ij_x_2y - pi_nux + 2 * pi_nuy) / np.sin(pi_nux - 2 * pi_nuy))
-                Qyy += 2 * b3l / (-16 * pi) * pow(beta_xij, 0.5) * beta_yj * beta_yi * (
+                dQyy += 2 * b3l / (-16 * pi) * pow(beta_xij, 0.5) * beta_yj * beta_yi * (
                         4 * np.cos(mu_ijx - pi_nux) / np.sin(pi_nux)
                         + np.cos(mu_ij_x2y - pi_nux - 2 * pi_nuy) / np.sin(pi_nux + 2 * pi_nuy)
                         + np.cos(mu_ij_x_2y - pi_nux + 2 * pi_nuy) / np.sin(pi_nux - 2 * pi_nuy))
@@ -607,9 +599,9 @@ class CSLattice(object):
             beta_y = (ele_list[i].betay + ele_list[i + 1].betay) / 2
             mu_x = (ele_list[i].psix + ele_list[i + 1].psix) / 2
             mu_y = (ele_list[i].psiy + ele_list[i + 1].psiy) / 2
-            Qxx += 3 * b4l * beta_x ** 2 / 8 / pi
-            Qxy -= 3 * b4l * beta_x * beta_y / (4 * pi)
-            Qyy += 3 * b4l * beta_y ** 2 / 8 / pi
+            dQxx += 3 * b4l * beta_x ** 2 / 8 / pi
+            dQxy -= 3 * b4l * beta_x * beta_y / (4 * pi)
+            dQyy += 3 * b4l * beta_y ** 2 / 8 / pi
             h31000o += -b4l * beta_x ** 2 * np.exp(complex(0, 2 * mu_x)) / 16
             h40000o += -b4l * beta_x ** 2 * np.exp(complex(0, 4 * mu_x)) / 64
             h20110o += 3 * b4l * beta_x * beta_y * np.exp(complex(0, 2 * mu_x)) / 16
@@ -619,78 +611,15 @@ class CSLattice(object):
             h00310o += -b4l * beta_y ** 2 * np.exp(complex(0, 2 * mu_y)) / 16
             h00400o += -b4l * beta_y ** 2 * np.exp(complex(0, 4 * mu_y)) / 64
 
-        phix = 2 * pi_nux
-        phiy = 2 * pi_nuy
-        q21000 = np.exp(complex(0, phix))
-        q30000 = np.exp(complex(0, phix * 3))
-        q10110 = np.exp(complex(0, phix))
-        q10020 = np.exp(complex(0, phix - 2 * phiy))
-        q10200 = np.exp(complex(0, phix + 2 * phiy))
-        q20001 = np.exp(complex(0, 2 * phix))
-        q00201 = np.exp(complex(0, 2 * phiy))
-        q10002 = np.exp(complex(0, phix))
-        h21000 = h21000 * (1 - q21000 ** periodicity) / (1 - q21000)
-        h30000 = h30000 * (1 - q30000 ** periodicity) / (1 - q30000)
-        h10110 = h10110 * (1 - q10110 ** periodicity) / (1 - q10110)
-        h10020 = h10020 * (1 - q10020 ** periodicity) / (1 - q10020)
-        h10200 = h10200 * (1 - q10200 ** periodicity) / (1 - q10200)
-        h11001 = h11001 * periodicity
-        h00111 = h00111 * periodicity
-        h20001 = h20001 * (1 - q20001 ** periodicity) / (1 - q20001)
-        h00201 = h00201 * (1 - q00201 ** periodicity) / (1 - q00201)
-        h10002 = h10002 * (1 - q10002 ** periodicity) / (1 - q10002)
-        q31000 = np.exp(complex(0, 2 * phix))
-        q40000 = np.exp(complex(0, 4 * phix))
-        q20110 = np.exp(complex(0, 2 * phix))
-        q11200 = np.exp(complex(0, 2 * phiy))
-        q20020 = np.exp(complex(0, 2 * phix - 2 * phiy))
-        q20200 = np.exp(complex(0, 2 * phix + 2 * phiy))
-        q00310 = np.exp(complex(0, 2 * phiy))
-        q00400 = np.exp(complex(0, 4 * phiy))
-        h31000o = h31000o * (1 - q31000 ** periodicity) / (1 - q31000)
-        h40000o = h40000o * (1 - q40000 ** periodicity) / (1 - q40000)
-        h20110o = h20110o * (1 - q20110 ** periodicity) / (1 - q20110)
-        h11200o = h11200o * (1 - q11200 ** periodicity) / (1 - q11200)
-        h20020o = h20020o * (1 - q20020 ** periodicity) / (1 - q20020)
-        h20200o = h20200o * (1 - q20200 ** periodicity) / (1 - q20200)
-        h00310o = h00310o * (1 - q00310 ** periodicity) / (1 - q00310)
-        h00400o = h00400o * (1 - q00400 ** periodicity) / (1 - q00400)
-        h30000h12000 = h30000h12000 * (coeff_s2(3, 0, 0, 0, 1, 2, 0, 0) - coeff_s2(1, 2, 0, 0, 3, 0, 0, 0))
-        h30000h21000 = h30000h21000 * (coeff_s2(3, 0, 0, 0, 2, 1, 0, 0) - coeff_s2(2, 1, 0, 0, 3, 0, 0, 0))
-        h30000h01110 = h30000h01110 * (coeff_s2(3, 0, 0, 0, 0, 1, 1, 1) - coeff_s2(0, 1, 1, 1, 3, 0, 0, 0))
-        h21000h10110 = h21000h10110 * (coeff_s2(2, 1, 0, 0, 1, 0, 1, 1) - coeff_s2(1, 0, 1, 1, 2, 1, 0, 0))
-        h10200h10020 = h10200h10020 * (coeff_s2(1, 0, 2, 0, 1, 0, 0, 2) - coeff_s2(1, 0, 0, 2, 1, 0, 2, 0))
-        h10200h12000 = h10200h12000 * (coeff_s2(1, 0, 2, 0, 1, 2, 0, 0) - coeff_s2(1, 2, 0, 0, 1, 0, 2, 0))
-        h21000h01200 = h21000h01200 * (coeff_s2(2, 1, 0, 0, 0, 1, 2, 0) - coeff_s2(0, 1, 2, 0, 2, 1, 0, 0))
-        h10200h01110 = h10200h01110 * (coeff_s2(1, 0, 2, 0, 0, 1, 1, 1) - coeff_s2(0, 1, 1, 1, 1, 0, 2, 0))
-        h10110h01200 = h10110h01200 * (coeff_s2(1, 0, 1, 1, 0, 1, 2, 0) - coeff_s2(0, 1, 2, 0, 1, 0, 1, 1))
-        h21000h10020 = h21000h10020 * (coeff_s2(2, 1, 0, 0, 1, 0, 0, 2) - coeff_s2(1, 0, 0, 2, 2, 1, 0, 0))
-        h30000h01020 = h30000h01020 * (coeff_s2(3, 0, 0, 0, 0, 1, 0, 2) - coeff_s2(0, 1, 0, 2, 3, 0, 0, 0))
-        h10110h10020 = h10110h10020 * (coeff_s2(1, 0, 1, 1, 1, 0, 0, 2) - coeff_s2(1, 0, 0, 2, 1, 0, 1, 1))
-        h30000h01200 = h30000h01200 * (coeff_s2(3, 0, 0, 0, 0, 1, 2, 0) - coeff_s2(0, 1, 2, 0, 3, 0, 0, 0))
-        h10200h21000 = h10200h21000 * (coeff_s2(1, 0, 2, 0, 2, 1, 0, 0) - coeff_s2(2, 1, 0, 0, 1, 0, 2, 0))
-        h10110h10200 = h10110h10200 * (coeff_s2(1, 0, 1, 1, 1, 0, 2, 0) - coeff_s2(1, 0, 2, 0, 1, 0, 1, 1))
-        h10200h01200 = h10200h01200 * (coeff_s2(1, 0, 2, 0, 0, 1, 2, 0) - coeff_s2(0, 1, 2, 0, 1, 0, 2, 0))
-        h31000s = h31000s1 * (1 - q31000 ** periodicity) / (1 - q31000) + jj * (6 * h30000h12000)
-        h40000s = h40000s1 * (1 - q40000 ** periodicity) / (1 - q40000) + jj * (3 * h30000h21000)
-        h20110s = h20110s1 * (1 - q20110 ** periodicity) / (1 - q20110) + jj * (3 * h30000h01110 - h21000h10110 + 4 * h10200h10020)
-        h11200s = h11200s1 * (1 - q11200 ** periodicity) / (1 - q11200) + jj * (2 * h10200h12000 + 2 * h21000h01200 + 2 * h10200h01110 - 2 * h10110h01200)
-        h20020s = h20020s1 * (1 - q20020 ** periodicity) / (1 - q20020) + jj * (-h21000h10020 + 3 * h30000h01020 + 2 * h10110h10020)
-        h20200s = h20200s1 * (1 - q20200 ** periodicity) / (1 - q20200) + jj * (3 * h30000h01200 + h10200h21000 - 2 * h10110h10200)
-        h00310s = h00310s1 * (1 - q00310 ** periodicity) / (1 - q00310) + jj * (h10200h01110 + h10110h01200)
-        h00400s = h00400s1 * (1 - q00400 ** periodicity) / (1 - q00400) + jj * (h10200h01200)
-        Qxx = Qxx * periodicity
-        Qxy = Qxy * periodicity
-        Qyy = Qyy * periodicity
-        nonlinear_terms = {'h21000': abs(h21000), 'h30000': abs(h30000), 'h10110': abs(h10110), 'h10020': abs(h10020),
-                           'h10200': abs(h10200), 'h20001': abs(h20001), 'h00201': abs(h00201), 'h10002': abs(h10002),
-                           'h11001': abs(h11001), 'h00111': abs(h00111), 'dQxx': Qxx, 'dQxy': Qxy, 'dQyy': Qyy,
-                           'h31000': abs(h31000o + h31000s), 'h40000': abs(h40000o + h40000s), 'h20110': abs(h20110o + h20110s), 'h11200': abs(h11200o + h11200s),
-                           'h20020': abs(h20020o + h20020s), 'h20200': abs(h20200o + h20200s), 'h00310': abs(h00310o + h00310s), 'h00400': abs(h00400o + h00400s)}
-        if print_out:
-            print('\nnonlinear terms:')
-            for i, j in nonlinear_terms.items():
-                print(f'    {str(i):7}: {j:.2f}')
+        nonlinear_terms = NonlinearTerm(periodicity, 2 * pi_nux, 2 * pi_nuy, h21000, h30000, h10110, h10020, h10200,
+                                        h11001, h00111, h20001, h00201, h10002, h31000s1, h40000s1, h20110s1, h11200s1,
+                                        h20020s1, h20200s1, h00310s1, h00400s1, h30000h12000, h30000h21000,
+                                        h30000h01110, h21000h10110, h10200h10020, h10200h12000, h21000h01200,
+                                        h10200h01110, h10110h01200, h21000h10020, h30000h01020, h10110h10020,
+                                        h30000h01200, h10200h21000, h10110h10200, h10200h01200, h31000o, h40000o,
+                                        h20110o, h11200o, h20020o, h20200o, h00310o, h00400o, dQxx, dQxy, dQyy)
+        if printout:
+            print(nonlinear_terms)
         return nonlinear_terms
 
     def nonlinear_terms_along_ring(self):
@@ -855,21 +784,23 @@ class CSLattice(object):
                         h22000[i, j] = const * beta_xij ** 1.5 * (np.exp(complex(0, 3 * (mu_ix - mu_jx))) + 3 * np.exp(
                             complex(0, mu_ix - mu_jx))) / 64
                         h11110[i, j] = const * beta_xij ** 0.5 * beta_yi * (
-                                    beta_xj * (np.exp(complex(0, mu_jx - mu_ix)) - np.exp(complex(0, mu_ix - mu_jx))) +
-                                    beta_yj * (np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy - 2 * mu_jy)) +
-                                               np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy)))) / 16
+                                beta_xj * (np.exp(complex(0, mu_jx - mu_ix)) - np.exp(complex(0, mu_ix - mu_jx))) +
+                                beta_yj * (np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy - 2 * mu_jy)) +
+                                           np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy)))) / 16
                         h00220[i, j] = const * beta_xij ** 0.5 * beta_yi * beta_yj * (
-                                    np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy - 2 * mu_jy)) +
-                                    4 * np.exp(complex(0, mu_ix - mu_jx)) -
-                                    np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy))) / 64
+                                np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy - 2 * mu_jy)) +
+                                4 * np.exp(complex(0, mu_ix - mu_jx)) -
+                                np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy))) / 64
                         h31000[i, j] = const * beta_xij ** 1.5 * np.exp(complex(0, 3 * mu_ix - mu_jx)) / 32
                         h40000[i, j] = const * beta_xij ** 1.5 * np.exp(complex(0, 3 * mu_ix + mu_jx)) / 64
                         h20110[i, j] = const * beta_xij ** 0.5 * beta_yi * (
                                 beta_xj * (np.exp(complex(0, 3 * mu_jx - mu_ix)) - np.exp(complex(0, mu_ix + mu_jx))) +
                                 2 * beta_yj * np.exp(complex(0, mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy))) / 32
                         h11200[i, j] = const * beta_xij ** 0.5 * beta_yi * (
-                                beta_xj * (np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy)) - np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy))) +
-                                2 * beta_yj * (np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy)) + np.exp(complex(0, - mu_ix + mu_jx + 2 * mu_iy)))) / 32
+                                beta_xj * (np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy)) - np.exp(
+                            complex(0, mu_ix - mu_jx + 2 * mu_iy))) +
+                                2 * beta_yj * (np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy)) + np.exp(
+                            complex(0, - mu_ix + mu_jx + 2 * mu_iy)))) / 32
                         h20020[i, j] = const * beta_xij ** 0.5 * beta_yi * (
                                 beta_xj * np.exp(complex(0, -mu_ix + 3 * mu_jx - 2 * mu_iy)) -
                                 (beta_xj + 4 * beta_yj) * np.exp(complex(0, mu_ix + mu_jx - 2 * mu_iy))) / 64
@@ -879,7 +810,8 @@ class CSLattice(object):
                         h00310[i, j] = const * beta_xij ** 0.5 * beta_yi * beta_yj * (
                                 np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy)) -
                                 np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy))) / 32
-                        h00400[i, j] = const * beta_xij ** 0.5 * beta_yi * beta_yj * np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy)) / 64
+                        h00400[i, j] = const * beta_xij ** 0.5 * beta_yi * beta_yj * np.exp(
+                            complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy)) / 64
 
         for i in range(oct_num):
             b4l = ele_list[oct_index[i]].k3 * ele_list[oct_index[i]].length / 6
@@ -887,9 +819,9 @@ class CSLattice(object):
             beta_y = (ele_list[oct_index[i]].betay + ele_list[oct_index[i] + 1].betay) / 2
             mu_x = (ele_list[oct_index[i]].psix + ele_list[oct_index[i] + 1].psix) / 2
             mu_y = (ele_list[oct_index[i]].psiy + ele_list[oct_index[i] + 1].psiy) / 2
-            ho22000[i] = -3 * b4l * beta_x**2 / 32
+            ho22000[i] = -3 * b4l * beta_x ** 2 / 32
             ho11110[i] = 3 * b4l * beta_x * beta_y / 8
-            ho00220[i] = -3 * b4l * beta_y**2 / 32
+            ho00220[i] = -3 * b4l * beta_y ** 2 / 32
             ho31000[i] = -b4l * beta_x ** 2 * np.exp(complex(0, 2 * mu_x)) / 16
             ho40000[i] = -b4l * beta_x ** 2 * np.exp(complex(0, 4 * mu_x)) / 64
             ho20110[i] = 3 * b4l * beta_x * beta_y * np.exp(complex(0, 2 * mu_x)) / 16
@@ -1060,6 +992,7 @@ class CSLattice(object):
             nux = np.arccos(cos_mu) * np.sign(matrix[0, 1]) / 2 / pi
             nuy = np.arccos((matrix[2, 2] + matrix[3, 3]) / 2) * np.sign(matrix[2, 3]) / 2 / pi
             return nux - np.floor(nux), nuy - np.floor(nuy)
+
         try:
             nux3, nuy3 = closed_orbit_tune(3 * delta)
             nux1, nuy1 = closed_orbit_tune(delta)
@@ -1108,7 +1041,7 @@ class CSLattice(object):
 
     def __add__(self, other):
         assert isinstance(other, CSLattice), 'can only add CSLattice.'
-        newlattice = CSLattice(self.elements * self.periodicity + other.elements * other.periodicity)
+        newlattice = CSLattice(self.elements * self.n_periods + other.elements * other.n_periods)
         return newlattice
 
     def __str__(self):
@@ -1144,3 +1077,240 @@ class CSLattice(object):
             val += ("\nnuz =       " + str(self.nuz))
             val += ("\nsigma_z =   " + str(self.sigma_z))
         return val
+
+
+class NonlinearTerm(object):
+
+    def __init__(self, n_periods, phix, phiy,
+                 h21000, h30000, h10110, h10020, h10200, h11001, h00111, h20001, h00201, h10002,
+                 h31000s1, h40000s1, h20110s1, h11200s1, h20020s1, h20200s1, h00310s1, h00400s1,
+                 h30000h12000, h30000h21000, h30000h01110, h21000h10110, h10200h10020, h10200h12000, h21000h01200,
+                 h10200h01110, h10110h01200, h21000h10020, h30000h01020, h10110h10020, h30000h01200, h10200h21000,
+                 h10110h10200, h10200h01200,
+                 h31000o, h40000o, h20110o, h11200o, h20020o, h20200o, h00310o, h00400o, dQxx, dQxy, dQyy):
+        self.n_periods = n_periods
+        self.phix = phix
+        self.phiy = phiy
+        self.h21000 = h21000
+        self.h30000 = h30000
+        self.h10110 = h10110
+        self.h10020 = h10020
+        self.h10200 = h10200
+        self.h11001 = h11001
+        self.h00111 = h00111
+        self.h20001 = h20001
+        self.h00201 = h00201
+        self.h10002 = h10002
+        self.h31000s1 = h31000s1
+        self.h40000s1 = h40000s1
+        self.h20110s1 = h20110s1
+        self.h11200s1 = h11200s1
+        self.h20020s1 = h20020s1
+        self.h20200s1 = h20200s1
+        self.h00310s1 = h00310s1
+        self.h00400s1 = h00400s1
+        self.h30000h12000 = h30000h12000
+        self.h30000h21000 = h30000h21000
+        self.h30000h01110 = h30000h01110
+        self.h21000h10110 = h21000h10110
+        self.h10200h10020 = h10200h10020
+        self.h10200h12000 = h10200h12000
+        self.h21000h01200 = h21000h01200
+        self.h10200h01110 = h10200h01110
+        self.h10110h01200 = h10110h01200
+        self.h21000h10020 = h21000h10020
+        self.h30000h01020 = h30000h01020
+        self.h10110h10020 = h10110h10020
+        self.h30000h01200 = h30000h01200
+        self.h10200h21000 = h10200h21000
+        self.h10110h10200 = h10110h10200
+        self.h10200h01200 = h10200h01200
+        self.h31000o = h31000o
+        self.h40000o = h40000o
+        self.h20110o = h20110o
+        self.h11200o = h11200o
+        self.h20020o = h20020o
+        self.h20200o = h20200o
+        self.h00310o = h00310o
+        self.h00400o = h00400o
+        self.dQxx = dQxx
+        self.dQxy = dQxy
+        self.dQyy = dQyy
+        self.terms = {}
+        self.set_periods(n_periods)
+
+    def set_periods(self, n_periods):
+        self.n_periods = n_periods
+        jj = complex(0, 1)
+        q21000 = np.exp(complex(0, self.phix))
+        q30000 = np.exp(complex(0, self.phix * 3))
+        q10110 = np.exp(complex(0, self.phix))
+        q10020 = np.exp(complex(0, self.phix - 2 * self.phiy))
+        q10200 = np.exp(complex(0, self.phix + 2 * self.phiy))
+        q20001 = np.exp(complex(0, 2 * self.phix))
+        q00201 = np.exp(complex(0, 2 * self.phiy))
+        q10002 = np.exp(complex(0, self.phix))
+        h21000 = self.h21000 * (1 - q21000 ** n_periods) / (1 - q21000)
+        h30000 = self.h30000 * (1 - q30000 ** n_periods) / (1 - q30000)
+        h10110 = self.h10110 * (1 - q10110 ** n_periods) / (1 - q10110)
+        h10020 = self.h10020 * (1 - q10020 ** n_periods) / (1 - q10020)
+        h10200 = self.h10200 * (1 - q10200 ** n_periods) / (1 - q10200)
+        h11001 = self.h11001 * n_periods
+        h00111 = self.h00111 * n_periods
+        h20001 = self.h20001 * (1 - q20001 ** n_periods) / (1 - q20001)
+        h00201 = self.h00201 * (1 - q00201 ** n_periods) / (1 - q00201)
+        h10002 = self.h10002 * (1 - q10002 ** n_periods) / (1 - q10002)
+        q31000 = np.exp(complex(0, 2 * self.phix))
+        q40000 = np.exp(complex(0, 4 * self.phix))
+        q20110 = np.exp(complex(0, 2 * self.phix))
+        q11200 = np.exp(complex(0, 2 * self.phiy))
+        q20020 = np.exp(complex(0, 2 * self.phix - 2 * self.phiy))
+        q20200 = np.exp(complex(0, 2 * self.phix + 2 * self.phiy))
+        q00310 = np.exp(complex(0, 2 * self.phiy))
+        q00400 = np.exp(complex(0, 4 * self.phiy))
+        h31000o = (self.h31000o + self.h31000s1) * (1 - q31000 ** n_periods) / (1 - q31000)
+        h40000o = (self.h40000o + self.h40000s1) * (1 - q40000 ** n_periods) / (1 - q40000)
+        h20110o = (self.h20110o + self.h20110s1) * (1 - q20110 ** n_periods) / (1 - q20110)
+        h11200o = (self.h11200o + self.h11200s1) * (1 - q11200 ** n_periods) / (1 - q11200)
+        h20020o = (self.h20020o + self.h20020s1) * (1 - q20020 ** n_periods) / (1 - q20020)
+        h20200o = (self.h20200o + self.h20200s1) * (1 - q20200 ** n_periods) / (1 - q20200)
+        h00310o = (self.h00310o + self.h00310s1) * (1 - q00310 ** n_periods) / (1 - q00310)
+        h00400o = (self.h00400o + self.h00400s1) * (1 - q00400 ** n_periods) / (1 - q00400)
+        h30000h12000 = self.h30000h12000 * (self.__coeff_s2(3, 0, 0, 0, 1, 2, 0, 0) - self.__coeff_s2(1, 2, 0, 0, 3, 0, 0, 0))
+        h30000h21000 = self.h30000h21000 * (self.__coeff_s2(3, 0, 0, 0, 2, 1, 0, 0) - self.__coeff_s2(2, 1, 0, 0, 3, 0, 0, 0))
+        h30000h01110 = self.h30000h01110 * (self.__coeff_s2(3, 0, 0, 0, 0, 1, 1, 1) - self.__coeff_s2(0, 1, 1, 1, 3, 0, 0, 0))
+        h21000h10110 = self.h21000h10110 * (self.__coeff_s2(2, 1, 0, 0, 1, 0, 1, 1) - self.__coeff_s2(1, 0, 1, 1, 2, 1, 0, 0))
+        h10200h10020 = self.h10200h10020 * (self.__coeff_s2(1, 0, 2, 0, 1, 0, 0, 2) - self.__coeff_s2(1, 0, 0, 2, 1, 0, 2, 0))
+        h10200h12000 = self.h10200h12000 * (self.__coeff_s2(1, 0, 2, 0, 1, 2, 0, 0) - self.__coeff_s2(1, 2, 0, 0, 1, 0, 2, 0))
+        h21000h01200 = self.h21000h01200 * (self.__coeff_s2(2, 1, 0, 0, 0, 1, 2, 0) - self.__coeff_s2(0, 1, 2, 0, 2, 1, 0, 0))
+        h10200h01110 = self.h10200h01110 * (self.__coeff_s2(1, 0, 2, 0, 0, 1, 1, 1) - self.__coeff_s2(0, 1, 1, 1, 1, 0, 2, 0))
+        h10110h01200 = self.h10110h01200 * (self.__coeff_s2(1, 0, 1, 1, 0, 1, 2, 0) - self.__coeff_s2(0, 1, 2, 0, 1, 0, 1, 1))
+        h21000h10020 = self.h21000h10020 * (self.__coeff_s2(2, 1, 0, 0, 1, 0, 0, 2) - self.__coeff_s2(1, 0, 0, 2, 2, 1, 0, 0))
+        h30000h01020 = self.h30000h01020 * (self.__coeff_s2(3, 0, 0, 0, 0, 1, 0, 2) - self.__coeff_s2(0, 1, 0, 2, 3, 0, 0, 0))
+        h10110h10020 = self.h10110h10020 * (self.__coeff_s2(1, 0, 1, 1, 1, 0, 0, 2) - self.__coeff_s2(1, 0, 0, 2, 1, 0, 1, 1))
+        h30000h01200 = self.h30000h01200 * (self.__coeff_s2(3, 0, 0, 0, 0, 1, 2, 0) - self.__coeff_s2(0, 1, 2, 0, 3, 0, 0, 0))
+        h10200h21000 = self.h10200h21000 * (self.__coeff_s2(1, 0, 2, 0, 2, 1, 0, 0) - self.__coeff_s2(2, 1, 0, 0, 1, 0, 2, 0))
+        h10110h10200 = self.h10110h10200 * (self.__coeff_s2(1, 0, 1, 1, 1, 0, 2, 0) - self.__coeff_s2(1, 0, 2, 0, 1, 0, 1, 1))
+        h10200h01200 = self.h10200h01200 * (self.__coeff_s2(1, 0, 2, 0, 0, 1, 2, 0) - self.__coeff_s2(0, 1, 2, 0, 1, 0, 2, 0))
+        h31000s = jj * (6 * h30000h12000)
+        h40000s = jj * (3 * h30000h21000)
+        h20110s = jj * (3 * h30000h01110 - h21000h10110 + 4 * h10200h10020)
+        h11200s = jj * (2 * h10200h12000 + 2 * h21000h01200 + 2 * h10200h01110 - 2 * h10110h01200)
+        h20020s = jj * (-h21000h10020 + 3 * h30000h01020 + 2 * h10110h10020)
+        h20200s = jj * (3 * h30000h01200 + h10200h21000 - 2 * h10110h10200)
+        h00310s = jj * (h10200h01110 + h10110h01200)
+        h00400s = jj * (h10200h01200)
+        dQxx = self.dQxx * n_periods
+        dQxy = self.dQxy * n_periods
+        dQyy = self.dQyy * n_periods
+        self.terms = {'h21000': abs(h21000), 'h30000': abs(h30000), 'h10110': abs(h10110), 'h10020': abs(h10020),
+                      'h10200': abs(h10200), 'h20001': abs(h20001), 'h00201': abs(h00201), 'h10002': abs(h10002),
+                      'h11001': abs(h11001), 'h00111': abs(h00111), 'dQxx': dQxx, 'dQxy': dQxy, 'dQyy': dQyy,
+                      'h31000': abs(h31000o + h31000s), 'h40000': abs(h40000o + h40000s),
+                      'h20110': abs(h20110o + h20110s), 'h11200': abs(h11200o + h11200s),
+                      'h20020': abs(h20020o + h20020s), 'h20200': abs(h20200o + h20200s),
+                      'h00310': abs(h00310o + h00310s), 'h00400': abs(h00400o + h00400s)}
+
+    def n_periods_list(self, n_periods):
+        jj = complex(0, 1)
+        h21000 = np.zeros(n_periods)
+        h30000 = np.zeros(n_periods)
+        h10110 = np.zeros(n_periods)
+        h10020 = np.zeros(n_periods)
+        h10200 = np.zeros(n_periods)
+        h11001 = np.zeros(n_periods)
+        h00111 = np.zeros(n_periods)
+        h20001 = np.zeros(n_periods)
+        h00201 = np.zeros(n_periods)
+        h10002 = np.zeros(n_periods)
+        h31000 = np.zeros(n_periods)
+        h40000 = np.zeros(n_periods)
+        h20110 = np.zeros(n_periods)
+        h11200 = np.zeros(n_periods)
+        h20020 = np.zeros(n_periods)
+        h20200 = np.zeros(n_periods)
+        h00310 = np.zeros(n_periods)
+        h00400 = np.zeros(n_periods)
+        dQxx = np.zeros(n_periods)
+        dQxy = np.zeros(n_periods)
+        dQyy = np.zeros(n_periods)
+        q21000 = np.exp(complex(0, self.phix))
+        q30000 = np.exp(complex(0, self.phix * 3))
+        q10110 = np.exp(complex(0, self.phix))
+        q10020 = np.exp(complex(0, self.phix - 2 * self.phiy))
+        q10200 = np.exp(complex(0, self.phix + 2 * self.phiy))
+        q20001 = np.exp(complex(0, 2 * self.phix))
+        q00201 = np.exp(complex(0, 2 * self.phiy))
+        q10002 = np.exp(complex(0, self.phix))
+        q31000 = np.exp(complex(0, 2 * self.phix))
+        q40000 = np.exp(complex(0, 4 * self.phix))
+        q20110 = np.exp(complex(0, 2 * self.phix))
+        q11200 = np.exp(complex(0, 2 * self.phiy))
+        q20020 = np.exp(complex(0, 2 * self.phix - 2 * self.phiy))
+        q20200 = np.exp(complex(0, 2 * self.phix + 2 * self.phiy))
+        q00310 = np.exp(complex(0, 2 * self.phiy))
+        q00400 = np.exp(complex(0, 4 * self.phiy))
+        for i in range(n_periods):
+            h21000[i] = abs(self.h21000 * (1 - q21000 ** i) / (1 - q21000))
+            h30000[i] = abs(self.h30000 * (1 - q30000 ** i) / (1 - q30000))
+            h10110[i] = abs(self.h10110 * (1 - q10110 ** i) / (1 - q10110))
+            h10020[i] = abs(self.h10020 * (1 - q10020 ** i) / (1 - q10020))
+            h10200[i] = abs(self.h10200 * (1 - q10200 ** i) / (1 - q10200))
+            h11001[i] = abs(self.h11001 * i)
+            h00111[i] = abs(self.h00111 * i)
+            h20001[i] = abs(self.h20001 * (1 - q20001 ** i) / (1 - q20001))
+            h00201[i] = abs(self.h00201 * (1 - q00201 ** i) / (1 - q00201))
+            h10002[i] = abs(self.h10002 * (1 - q10002 ** i) / (1 - q10002))
+            h30000h12000 = self.h30000h12000 * (self.__coeff_s2(3, 0, 0, 0, 1, 2, 0, 0) - self.__coeff_s2(1, 2, 0, 0, 3, 0, 0, 0))
+            h30000h21000 = self.h30000h21000 * (self.__coeff_s2(3, 0, 0, 0, 2, 1, 0, 0) - self.__coeff_s2(2, 1, 0, 0, 3, 0, 0, 0))
+            h30000h01110 = self.h30000h01110 * (self.__coeff_s2(3, 0, 0, 0, 0, 1, 1, 1) - self.__coeff_s2(0, 1, 1, 1, 3, 0, 0, 0))
+            h21000h10110 = self.h21000h10110 * (self.__coeff_s2(2, 1, 0, 0, 1, 0, 1, 1) - self.__coeff_s2(1, 0, 1, 1, 2, 1, 0, 0))
+            h10200h10020 = self.h10200h10020 * (self.__coeff_s2(1, 0, 2, 0, 1, 0, 0, 2) - self.__coeff_s2(1, 0, 0, 2, 1, 0, 2, 0))
+            h10200h12000 = self.h10200h12000 * (self.__coeff_s2(1, 0, 2, 0, 1, 2, 0, 0) - self.__coeff_s2(1, 2, 0, 0, 1, 0, 2, 0))
+            h21000h01200 = self.h21000h01200 * (self.__coeff_s2(2, 1, 0, 0, 0, 1, 2, 0) - self.__coeff_s2(0, 1, 2, 0, 2, 1, 0, 0))
+            h10200h01110 = self.h10200h01110 * (self.__coeff_s2(1, 0, 2, 0, 0, 1, 1, 1) - self.__coeff_s2(0, 1, 1, 1, 1, 0, 2, 0))
+            h10110h01200 = self.h10110h01200 * (self.__coeff_s2(1, 0, 1, 1, 0, 1, 2, 0) - self.__coeff_s2(0, 1, 2, 0, 1, 0, 1, 1))
+            h21000h10020 = self.h21000h10020 * (self.__coeff_s2(2, 1, 0, 0, 1, 0, 0, 2) - self.__coeff_s2(1, 0, 0, 2, 2, 1, 0, 0))
+            h30000h01020 = self.h30000h01020 * (self.__coeff_s2(3, 0, 0, 0, 0, 1, 0, 2) - self.__coeff_s2(0, 1, 0, 2, 3, 0, 0, 0))
+            h10110h10020 = self.h10110h10020 * (self.__coeff_s2(1, 0, 1, 1, 1, 0, 0, 2) - self.__coeff_s2(1, 0, 0, 2, 1, 0, 1, 1))
+            h30000h01200 = self.h30000h01200 * (self.__coeff_s2(3, 0, 0, 0, 0, 1, 2, 0) - self.__coeff_s2(0, 1, 2, 0, 3, 0, 0, 0))
+            h10200h21000 = self.h10200h21000 * (self.__coeff_s2(1, 0, 2, 0, 2, 1, 0, 0) - self.__coeff_s2(2, 1, 0, 0, 1, 0, 2, 0))
+            h10110h10200 = self.h10110h10200 * (self.__coeff_s2(1, 0, 1, 1, 1, 0, 2, 0) - self.__coeff_s2(1, 0, 2, 0, 1, 0, 1, 1))
+            h10200h01200 = self.h10200h01200 * (self.__coeff_s2(1, 0, 2, 0, 0, 1, 2, 0) - self.__coeff_s2(0, 1, 2, 0, 1, 0, 2, 0))
+            h31000[i] = abs((self.h31000o + self.h31000s1) * (1 - q31000 ** i) / (1 - q31000) + jj * (6 * h30000h12000))
+            h40000[i] = abs((self.h40000o + self.h40000s1) * (1 - q40000 ** i) / (1 - q40000) + jj * (3 * h30000h21000))
+            h20110[i] = abs((self.h20110o + self.h20110s1) * (1 - q20110 ** i) / (1 - q20110) + jj * (3 * h30000h01110 - h21000h10110 + 4 * h10200h10020))
+            h11200[i] = abs((self.h11200o + self.h11200s1) * (1 - q11200 ** i) / (1 - q11200) + jj * (2 * h10200h12000 + 2 * h21000h01200 + 2 * h10200h01110 - 2 * h10110h01200))
+            h20020[i] = abs((self.h20020o + self.h20020s1) * (1 - q20020 ** i) / (1 - q20020) + jj * (-h21000h10020 + 3 * h30000h01020 + 2 * h10110h10020))
+            h20200[i] = abs((self.h20200o + self.h20200s1) * (1 - q20200 ** i) / (1 - q20200) + jj * (3 * h30000h01200 + h10200h21000 - 2 * h10110h10200))
+            h00310[i] = abs((self.h00310o + self.h00310s1) * (1 - q00310 ** i) / (1 - q00310) + jj * (h10200h01110 + h10110h01200))
+            h00400[i] = abs((self.h00400o + self.h00400s1) * (1 - q00400 ** i) / (1 - q00400) + jj * (h10200h01200))
+            dQxx[i] = self.dQxx * i
+            dQxy[i] = self.dQxy * i
+            dQyy[i] = self.dQyy * i
+        return {'h21000': h21000, 'h30000': h30000, 'h10110': h10110, 'h10020': h10020,
+                'h10200': h10200, 'h20001': h20001, 'h00201': h00201, 'h10002': h10002,
+                'h11001': h11001, 'h00111': h00111, 'dQxx': dQxx, 'dQxy': dQxy, 'dQyy': dQyy,
+                'h31000': h31000, 'h40000': h40000,
+                'h20110': h20110, 'h11200': h11200,
+                'h20020': h20020, 'h20200': h20200,
+                'h00310': h00310, 'h00400': h00400}
+
+    def __coeff_s2(self, j1, k1, l1, m1, j2, k2, l2, m2, n_periods=None):
+        n_periods = n_periods if n_periods else self.n_periods
+        pmu = (j1 - k1) * self.phix + (l1 - m1) * self.phiy  # m1
+        qmu = (j2 - k2) * self.phix + (l2 - m2) * self.phiy  # m2
+        return ((np.exp(complex(0, qmu)) * (1 - np.exp(complex(0, (n_periods - 1) * (pmu + qmu))))
+                 / (1 - np.exp(complex(0, pmu + qmu)))
+                 - np.exp(complex(0, n_periods * qmu)) * (1 - np.exp(complex(0, (n_periods - 1) * pmu)))
+                 / (1 - np.exp(complex(0, pmu))))
+                / (1 - np.exp(complex(0, qmu))))
+
+    def __getitem__(self, item):
+        return self.terms[item]
+
+    def __str__(self):
+        text = f'nonlinear terms: {self.n_periods:d} periods\n'
+        for i, j in self.terms.items():
+            text += f'    {str(i):7}: {j:.2f}\n'
+        return text
