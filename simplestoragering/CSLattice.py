@@ -934,11 +934,11 @@ class CSLattice(object):
                          'h20020': f20020, 'h20200': f20200, 'h00310': f00310, 'h00400': f00400}
             return nonlinear
         else:
-            nonlinear = {'h21000': f21000, 'h30000': f30000, 'h10110': f10110, 'h10020': f10020,
-                         'h10200': f10200, 'h20001': f20001, 'h00201': f00201, 'h10002': f10002,
-                         'h11001': f11001, 'h00111': f00111, 'h22000': f22000, 'h11110': f11110, 'h00220': f00220,
-                         'h31000': f31000, 'h40000': f40000, 'h20110': f20110, 'h11200': f11200,
-                         'h20020': f20020, 'h20200': f20200, 'h00310': f00310, 'h00400': f00400}
+            nonlinear = {'h21000': abs(f21000), 'h30000': abs(f30000), 'h10110': abs(f10110), 'h10020': abs(f10020),
+                         'h10200': abs(f10200), 'h20001': abs(f20001), 'h00201': abs(f00201), 'h10002': abs(f10002),
+                         'h11001': abs(f11001), 'h00111': abs(f00111), 'h22000': abs(f22000), 'h11110': abs(f11110), 'h00220': abs(f00220),
+                         'h31000': abs(f31000), 'h40000': abs(f40000), 'h20110': abs(f20110), 'h11200': abs(f11200),
+                         'h20020': abs(f20020), 'h20200': abs(f20200), 'h00310': abs(f00310), 'h00400': abs(f00400)}
             return nonlinear
 
     def nonlinear_terms_plot_data(self):
@@ -1615,6 +1615,80 @@ class NonlinearTerm(object):
                  - np.exp(complex(0, n_periods * qmu)) * (1 - np.exp(complex(0, (n_periods - 1) * pmu)))
                  / (1 - np.exp(complex(0, pmu))))
                 / (1 - np.exp(complex(0, qmu))))
+
+    def __waves(self, j1, k1, l1, m1, j2, k2, l2, m2):
+        pmu = (j1 - k1) * self.phix + (l1 - m1) * self.phiy  # m1
+        qmu = (j2 - k2) * self.phix + (l2 - m2) * self.phiy  # m2
+        m1m2 = (np.exp(complex(0, pmu)) - np.exp(complex(0, qmu))) / (
+                    (1 - np.exp(complex(0, pmu + qmu))) * (1 - np.exp(complex(0, pmu))) * (1 - np.exp(complex(0, qmu))))
+        m1 = (1 - np.exp(complex(0, pmu + qmu))) / (
+                    (1 - np.exp(complex(0, pmu + qmu))) * (1 - np.exp(complex(0, pmu))) * (1 - np.exp(complex(0, qmu))))
+        return m1m2, m1
+
+    def constant_terms(self):
+        jj = complex(0, 1)
+        q21000 = np.exp(complex(0, self.phix))
+        q30000 = np.exp(complex(0, self.phix * 3))
+        q10110 = np.exp(complex(0, self.phix))
+        q10020 = np.exp(complex(0, self.phix - 2 * self.phiy))
+        q10200 = np.exp(complex(0, self.phix + 2 * self.phiy))
+        q20001 = np.exp(complex(0, 2 * self.phix))
+        q00201 = np.exp(complex(0, 2 * self.phiy))
+        q10002 = np.exp(complex(0, self.phix))
+        h21000 = self.h21000 / (1 - q21000)
+        h30000 = self.h30000 / (1 - q30000)
+        h10110 = self.h10110 / (1 - q10110)
+        h10020 = self.h10020 / (1 - q10020)
+        h10200 = self.h10200 / (1 - q10200)
+        h20001 = self.h20001 / (1 - q20001)
+        h00201 = self.h00201 / (1 - q00201)
+        h10002 = self.h10002 / (1 - q10002)
+        q31000 = np.exp(complex(0, 2 * self.phix))
+        q40000 = np.exp(complex(0, 4 * self.phix))
+        q20110 = np.exp(complex(0, 2 * self.phix))
+        q11200 = np.exp(complex(0, 2 * self.phiy))
+        q20020 = np.exp(complex(0, 2 * self.phix - 2 * self.phiy))
+        q20200 = np.exp(complex(0, 2 * self.phix + 2 * self.phiy))
+        q00310 = np.exp(complex(0, 2 * self.phiy))
+        q00400 = np.exp(complex(0, 4 * self.phiy))
+        h31000o = self.h31000s1 / (1 - q31000)
+        h40000o = self.h40000s1 / (1 - q40000)
+        h20110o = self.h20110s1 / (1 - q20110)
+        h11200o = self.h11200s1 / (1 - q11200)
+        h20020o = self.h20020s1 / (1 - q20020)
+        h20200o = self.h20200s1 / (1 - q20200)
+        h00310o = self.h00310s1 / (1 - q00310)
+        h00400o = self.h00400s1 / (1 - q00400)
+        h30000h12000 = - self.h30000h12000 * self.__waves(3, 0, 0, 0, 1, 2, 0, 0)[0]
+        h30000h21000 = - self.h30000h21000 * self.__waves(3, 0, 0, 0, 2, 1, 0, 0)[0]
+        h30000h01110 = - self.h30000h01110 * self.__waves(3, 0, 0, 0, 0, 1, 1, 1)[0]
+        h21000h10110 = - self.h21000h10110 * self.__waves(2, 1, 0, 0, 1, 0, 1, 1)[0]
+        h10200h10020 = - self.h10200h10020 * self.__waves(1, 0, 2, 0, 1, 0, 0, 2)[0]
+        h10200h12000 = - self.h10200h12000 * self.__waves(1, 0, 2, 0, 1, 2, 0, 0)[0]
+        h21000h01200 = - self.h21000h01200 * self.__waves(2, 1, 0, 0, 0, 1, 2, 0)[0]
+        h10200h01110 = - self.h10200h01110 * self.__waves(1, 0, 2, 0, 0, 1, 1, 1)[0]
+        h10110h01200 = - self.h10110h01200 * self.__waves(1, 0, 1, 1, 0, 1, 2, 0)[0]
+        h21000h10020 = - self.h21000h10020 * self.__waves(2, 1, 0, 0, 1, 0, 0, 2)[0]
+        h30000h01020 = - self.h30000h01020 * self.__waves(3, 0, 0, 0, 0, 1, 0, 2)[0]
+        h10110h10020 = - self.h10110h10020 * self.__waves(1, 0, 1, 1, 1, 0, 0, 2)[0]
+        h30000h01200 = - self.h30000h01200 * self.__waves(3, 0, 0, 0, 0, 1, 2, 0)[0]
+        h10200h21000 = - self.h10200h21000 * self.__waves(1, 0, 2, 0, 2, 1, 0, 0)[0]
+        h10110h10200 = - self.h10110h10200 * self.__waves(1, 0, 1, 1, 1, 0, 2, 0)[0]
+        h10200h01200 = - self.h10200h01200 * self.__waves(1, 0, 2, 0, 0, 1, 2, 0)[0]
+        h31000s = jj * (6 * h30000h12000)
+        h40000s = jj * (3 * h30000h21000)
+        h20110s = jj * (3 * h30000h01110 - h21000h10110 + 4 * h10200h10020)
+        h11200s = jj * (2 * h10200h12000 + 2 * h21000h01200 + 2 * h10200h01110 - 2 * h10110h01200)
+        h20020s = jj * (-h21000h10020 + 3 * h30000h01020 + 2 * h10110h10020)
+        h20200s = jj * (3 * h30000h01200 + h10200h21000 - 2 * h10110h10200)
+        h00310s = jj * (h10200h01110 + h10110h01200)
+        h00400s = jj * (h10200h01200)
+        return {'h21000': h21000, 'h30000': h30000, 'h10110': h10110, 'h10020': h10020,
+                'h10200': h10200, 'h20001': h20001, 'h00201': h00201, 'h10002': h10002,
+                'h31000': h31000o + h31000s, 'h40000': h40000o + h40000s,
+                'h20110': h20110o + h20110s, 'h11200': h11200o + h11200s,
+                'h20020': h20020o + h20020s, 'h20200': h20200o + h20200s,
+                'h00310': h00310o + h00310s, 'h00400': h00400o + h00400s}
 
     def __getitem__(self, item):
         return self.terms[item]
