@@ -183,6 +183,90 @@ class Sextupole(Element):
         integrals[6] += - etax * self.k2 * length * betay / 4 / np.pi
         return integrals, twiss1
 
+    def nonlinear_terms(self):
+        twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])
+        jj = complex(0, 1)
+        h20001 = h00201 = h10002 = h21000 = h30000 = h10110 = h10020 = h10200 = 0
+        h22000 = h11110 = h00220 = h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
+        length = self.length / self.n_slices
+        b3l = length * self.k2 / 2
+        for i in range(self.n_slices):
+            matrix = drift_matrix(length)
+            twiss1 = next_twiss(matrix, twiss0)
+            betax = (twiss0[0] + twiss1[0]) / 2
+            betay = (twiss0[3] + twiss1[3]) / 2
+            etax = (twiss0[6] + twiss1[6]) / 2
+            psix = (twiss0[10] + twiss1[10]) / 2
+            psiy = (twiss0[11] + twiss1[11]) / 2
+
+            h20001 += betax * etax * np.exp((complex(0, 2 * psix)))
+            h00201 += betay * etax * np.exp(complex(0, 2 * psiy))
+            h10002 += betax ** 0.5 * etax ** 2 * np.exp(complex(0, psix))
+
+            h21000j = betax ** 1.5 * np.exp(complex(0, psix))
+            h30000j = betax ** 1.5 * np.exp(complex(0, 3 * psix))
+            h10110j = betax ** 0.5 * betay * np.exp(complex(0, psix))
+            h10020j = betax ** 0.5 * betay * np.exp(complex(0, psix - 2 * psiy))
+            h10200j = betax ** 0.5 * betay * np.exp(complex(0, psix + 2 * psiy))
+
+            h12000j = h21000j.conjugate()
+            h01110j = h10110j.conjugate()
+            h01200j = h10020j.conjugate()
+            h22000 += ((h21000 * h12000j - h21000.conjugate() * h21000j) * 3
+                        +(h30000 * h30000j.conjugate() - h30000.conjugate() * h30000j))
+            h11110 += (-(h21000 * h01110j - h10110.conjugate() * h21000j)
+                        +(h21000.conjugate() * h10110j - h10110 * h12000j)
+                        -(h10020 * h01200j - h10020.conjugate() * h10020j)
+                        +(h10200 * h10200j.conjugate() - h10200.conjugate() * h10200j))
+            h00220 += ((h10020 * h01200j - h10020.conjugate() * h10020j)
+                        +(h10200 * h10200j.conjugate() - h10200.conjugate() * h10200j)
+                        +(h10110 * h01110j - h10110.conjugate() * h10110j) * 4)
+            h31000 += (h30000 * h12000j - h21000.conjugate() * h30000j)
+            h40000 += (h30000 * h21000j - h21000 * h30000j)
+            h20110 += (-(h30000 * h01110j - h10110.conjugate() * h30000j)
+                        +(h21000 * h10110j - h10110 * h21000j)
+                            +(h10200 * h10020j - h10020 * h10200j) * 2)
+            h11200 += (-(h10200 * h12000j - h21000.conjugate() * h10200j)
+                            -(h21000 * h01200j - h10020.conjugate() * h21000j)
+                            +(h10200 * h01110j - h10110.conjugate() * h10200j) * 2
+                            -(h10110 * h01200j - h10020.conjugate() * h10110j) * 2)
+            h20020 += ((h21000 * h10020j - h10020 * h21000j)
+                        -(h30000 * h10200j.conjugate() - h10200.conjugate() * h30000j)
+                        +(h10110 * h10020j - h10020 * h10110j) * 4)
+            h20200 += (-(h30000 * h01200j - h10020.conjugate() * h30000j)
+                        -(h10200 * h21000j - h21000 * h10200j)
+                        -(h10110 * h10200j - h10200 * h10110j) * 4)
+            h00310 += ((h10200 * h01110j - h10110.conjugate() * h10200j)
+                        +(h10110 * h01200j - h10020.conjugate() * h10110j))
+            h00400 += (h10200 * h01200j - h10020.conjugate() * h10200j)
+            h21000 += h21000j
+            h30000 += h30000j
+            h10110 += h10110j
+            h10020 += h10020j
+            h10200 += h10200j
+            twiss0 = twiss1
+        h20001 = -h20001 * b3l/ 4
+        h00201 = h00201 * b3l / 4
+        h10002 = -h10002 * b3l / 2
+        h21000 = - h21000 * b3l / 8
+        h30000 = - h30000 * b3l / 24
+        h10110 = h10110 * b3l / 4
+        h10020 = h10020 * b3l / 8
+        h10200 = h10200 * b3l / 8
+        h22000 = jj * b3l ** 2  * h22000 / 64
+        h11110 = jj * b3l ** 2  * h11110 / 16
+        h00220 = jj * b3l ** 2  * h00220 / 64
+        h31000 = jj * b3l ** 2  * h31000 / 32
+        h40000 = jj * b3l ** 2  * h40000 / 64
+        h20110 = jj * b3l ** 2  * h20110 / 32
+        h11200 = jj * b3l ** 2  * h11200 / 32
+        h20020 = jj * b3l ** 2  * h20020 / 64
+        h20200 = jj * b3l ** 2  * h20200 / 64
+        h00310 = jj * b3l ** 2  * h00310 / 32
+        h00400 = jj * b3l ** 2  * h00400 / 64
+        return np.array([h21000, h30000, h10110, h10020, h10200, h20001, h00201, h10002,
+                         h22000, h11110, h00220, h31000, h40000, h20110, h11200, h20020, h20200, h00310, h00400])
+
     def __repr__(self):
         return f"Sextupole('{self.name}', length = {self.length}, k2 = {self.k2}, n_slices = {self.n_slices})"
 

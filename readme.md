@@ -22,6 +22,8 @@ All the components are child classes of the Element class.
 A. Chao, “SLIM Formalism — Orbital Motion”， Lecture notes on special topics in accelerator 
 physics
 
+**Unfinished, Errors exist**
+
 ## Courant-Snyder
 
 `CSLattice(element_list: list, periods_number: int = 1,  coupling: float = 0.00)`

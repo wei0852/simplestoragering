@@ -150,7 +150,7 @@ class Quadrupole(Element):
         return np.array([x2, px1, y2, py1, z2, delta1])
 
     def copy(self):
-        return Quadrupole(self.name, self.length, self.k1)
+        return Quadrupole(name=self.name, length=self.length, k1=self.k1, n_slices=self.n_slices)
 
     def linear_optics(self):
         twiss0 = np.array(
@@ -177,6 +177,29 @@ class Quadrupole(Element):
         integrals[5] += - self.k1 * length * betax / 4 / np.pi
         integrals[6] += self.k1 * length * betay / 4 / np.pi
         return integrals, twiss1
+
+    def nonlinear_terms(self):
+        twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])
+        h20001 = h00201 = h10002 = 0
+        length = self.length / self.n_slices
+        for i in range(self.n_slices):
+            matrix = quad_matrix(length, self.k1)
+            twiss1 = next_twiss(matrix, twiss0)
+            betax = (twiss0[0] + twiss1[0]) / 2
+            betay = (twiss0[3] + twiss1[3]) / 2
+            etax = (twiss0[6] + twiss1[6]) / 2
+            psix = (twiss0[10] + twiss1[10]) / 2
+            psiy = (twiss0[11] + twiss1[11]) / 2
+
+            h20001 += betax * np.exp(complex(0, 2 * psix))
+            h00201 += betay * np.exp(complex(0, 2 * psiy))
+            h10002 += betax ** 0.5 * etax * np.exp(complex(0, psix))
+
+            twiss0 = twiss1
+        h20001 = h20001 * length * self.k1 / 8
+        h00201 = -h00201 * length * self.k1 / 8
+        h10002 = h10002 * length * self.k1 / 2
+        return np.array([h20001, h00201, h10002])
 
     def __repr__(self):
         return f"Quadrupole('{self.name}', length = {self.length}, k1 = {self.k1})"

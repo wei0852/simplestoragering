@@ -243,6 +243,32 @@ class HBend(Element):
         integrals[6] += (- self.h * np.tan(self.theta_out) * twiss1[3] + 2 * self.k1 * np.tan(self.theta_out) * twiss1[6] * twiss1[3]) / 4 / pi
         return integrals, twiss1
 
+    def nonlinear_terms(self):
+        twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp,
+                  self.etay, self.etayp, self.psix, self.psiy])
+        h20001 = h00201 = h10002 = 0
+        length = self.length / self.n_slices
+        matrix = _hbend_matrix(0, self.h, self.theta_in, 0, self.k1)
+        twiss0 = next_twiss(matrix, twiss0)
+        for i in range(self.n_slices):
+            matrix = _hbend_matrix(length, self.h, 0, 0, self.k1)
+            twiss1 = next_twiss(matrix, twiss0)
+            betax = (twiss0[0] + twiss1[0]) / 2
+            betay = (twiss0[3] + twiss1[3]) / 2
+            etax = (twiss0[6] + twiss1[6]) / 2
+            psix = (twiss0[10] + twiss1[10]) / 2
+            psiy = (twiss0[11] + twiss1[11]) / 2
+
+            h20001 += betax * np.exp(complex(0, 2 * psix))
+            h00201 += betay * np.exp(complex(0, 2 * psiy))
+            h10002 += betax ** 0.5 * etax * np.exp(complex(0, psix))
+
+            twiss0 = twiss1
+        h20001 = h20001 * length * self.k1 / 8
+        h00201 = -h00201 * length * self.k1 / 8
+        h10002 = h10002 * length * self.k1 / 2
+        return np.array([h20001, h00201, h10002])
+
     def slice(self, n_slices: int) -> list:
         """slice component to element list, return [ele_list, final_z]
 

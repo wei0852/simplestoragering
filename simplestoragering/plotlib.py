@@ -13,7 +13,7 @@ from simplestoragering.exceptions import UnfinishedWork
 
 
 def get_col(ele_list, parameter: str):
-    """get column data of parameter in ele_list. return list"""
+    """get column data of parameter in ele_list. return list"""  # TODO: use linear_optics() to get smoother lines
     def __get_closed_orbit_delta():
         __col = []
         for ele in ele_list:

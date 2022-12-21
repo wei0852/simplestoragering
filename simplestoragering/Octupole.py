@@ -149,6 +149,46 @@ class Octupole(Element):
         twiss1 = next_twiss(self.matrix, twiss0)
         return np.zeros(7), twiss1
 
+    def nonlinear_terms(self):
+        twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])
+        h22000 = h11110 = h00220 = 0
+        h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
+        length = self.length / self.n_slices
+        b4l = length * self.k3 / 6
+        for i in range(self.n_slices):
+            matrix = drift_matrix(length)
+            twiss1 = next_twiss(matrix, twiss0)
+            betax = (twiss0[0] + twiss1[0]) / 2
+            betay = (twiss0[3] + twiss1[3]) / 2
+            psix = (twiss0[10] + twiss1[10]) / 2
+            psiy = (twiss0[11] + twiss1[11]) / 2
+
+            h22000 += betax ** 2
+            h11110 += betax * betay
+            h00220 += betay ** 2
+
+            h31000 += betax ** 2 * np.exp(complex(0, 2 * psix))
+            h40000 += betax ** 2 * np.exp(complex(0, 4 * psix))
+            h20110 += betax * betay * np.exp(complex(0, 2 * psix))
+            h11200 += betax * betay * np.exp(complex(0, 2 * psiy))
+            h20020 += betax * betay * np.exp(complex(0, 2 * psix - 2 * psiy))
+            h20200 += betax * betay * np.exp(complex(0, 2 * psix + 2 * psiy))
+            h00310 += betay ** 2 * np.exp(complex(0, 2 * psiy))
+            h00400 += betay ** 2 * np.exp(complex(0, 4 * psiy))
+            twiss0 = twiss1
+        h31000 =  -b4l * h31000 / 16
+        h40000 =  -b4l * h40000 / 64
+        h20110 =  3 * b4l * h20110 / 16
+        h11200 =  3 * b4l * h11200 / 16
+        h20020 =  3 * b4l * h20020 / 32
+        h20200 =  3 * b4l * h20200 / 32
+        h00310 =  -b4l * h00310 / 16
+        h00400 =  -b4l * h00400 / 64
+        h22000 = -3 * b4l * h22000 / 32
+        h11110 =  3 * b4l * h11110 / 8
+        h00220 = -3 * b4l * h00220 / 32
+        return np.array([h22000, h11110, h00220, h31000, h40000, h20110, h11200, h20020, h20200, h00310, h00400])
+
     def __repr__(self):
         return f"Sextupole('{self.name}', length = {self.length}, k3 = {self.k3}, n_slices = {self.n_slices})"
 
