@@ -83,10 +83,6 @@ class NonlinearTerms(object):
         q20001 = np.exp(complex(0, 2 * self.phix)) ** n_periods
         q00201 = np.exp(complex(0, 2 * self.phiy)) ** n_periods
         q10002 = np.exp(complex(0, self.phix)) ** n_periods
-        R12000 = self.R21000.conjugate()
-        R01110 = self.R10110.conjugate()
-        R01200 = self.R10020.conjugate()
-        R01020 = self.R10200.conjugate()
         # 3rd-order 
         h21000 = self.R21000 * (1 - q21000)
         h30000 = self.R30000 * (1 - q30000)
@@ -175,11 +171,6 @@ class NonlinearTerms(object):
         q20001 = np.exp(complex(0, 2 * self.phix))
         q00201 = np.exp(complex(0, 2 * self.phiy))
         q10002 = np.exp(complex(0, self.phix))
-
-        R12000 = self.R21000.conjugate()
-        R01110 = self.R10110.conjugate()
-        R01200 = self.R10020.conjugate()
-        R01020 = self.R10200.conjugate()
 
         # 4th-order
         q31000 = np.exp(complex(0, 2 * self.phix))
@@ -341,11 +332,6 @@ class NonlinearTerms(object):
         h20001_fluct = np.array([[self.R20001, 1], [-self.R20001, q20001]])
         h00201_fluct = np.array([[self.R00201, 1], [-self.R00201, q00201]])
         h10002_fluct = np.array([[self.R10002, 1], [-self.R10002, q10002]])
-
-        R12000 = self.R21000.conjugate()
-        R01110 = self.R10110.conjugate()
-        R01200 = self.R10020.conjugate()
-        R01020 = self.R10200.conjugate()
 
         # 4th-order
         q31000 = np.exp(complex(0, 2 * self.phix))

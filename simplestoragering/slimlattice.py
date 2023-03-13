@@ -5,6 +5,7 @@ from .RFCavity import RFCavity
 from .HBend import HBend
 import numpy as np
 from copy import deepcopy
+import warnings
 
 
 class SlimRing(object):
@@ -14,6 +15,7 @@ class SlimRing(object):
     存在一些小问题，暂时没时间完善。但是大致是正确的，使用时需要提前将弯铁切片后传入"""
 
     def __init__(self, ele_list: list):
+        warnings.warn('The error in the code has not been checked completely, and the calculation result has deviation.')
         self.length = 0
         self.elements = []
         self.mark = {}
