@@ -8,7 +8,7 @@ from .Drift import Drift
 from .Quadrupole import Quadrupole
 from .Sextupole import Sextupole
 from .Octupole import Octupole
-from .NonlinearTerms import NonlinearTerms
+from .DrivingTerms import DrivingTerms
 
 
 class CSLattice(object):
@@ -402,7 +402,7 @@ class CSLattice(object):
                 nonlinear[k][-2] = nonlinear[k][0]
         return nonlinear
 
-    def nonlinear_terms(self, n_periods=None, printout=True):
+    def driving_terms(self, n_periods=None, printout=True):
         """Compute nonlinear terms fluctuations along the lattice.
         The starting position is fixed, and the ending position varies.
 
@@ -447,7 +447,7 @@ class CSLattice(object):
         jj = complex(0, 1)
         for ele in self.elements:  # TODO: quad-sext
             if isinstance(ele, Sextupole):  # 0        1      2       3       4       5       6       7
-                rdts = ele.nonlinear_terms()  # h21000, h30000, h10110, h10020, h10200, h20001, h00201, h10002
+                rdts = ele.driving_terms()  # h21000, h30000, h10110, h10020, h10200, h20001, h00201, h10002
                 h12000j = rdts[0].conjugate()
                 h01110j = rdts[2].conjugate()
                 h01200j = rdts[3].conjugate()
@@ -514,7 +514,7 @@ class CSLattice(object):
                 f10002[chr_3rd_idx] = h10002
                 chr_3rd_idx += 1
             elif isinstance(ele, Octupole):
-                rdts = ele.nonlinear_terms()  # h22000, h11110, h00220, h31000, h40000, h20110, h11200, h20020, h20200, h00310, h00400
+                rdts = ele.driving_terms()  # h22000, h11110, h00220, h31000, h40000, h20110, h11200, h20020, h20200, h00310, h00400
                 h22000 += rdts[0]
                 h11110 += rdts[1]
                 h00220 += rdts[2]
@@ -545,7 +545,7 @@ class CSLattice(object):
                 f00400[geo_4th_idx] = h00400
                 geo_4th_idx += 1
             elif ele.k1:
-                rdts = ele.nonlinear_terms()  # h20001, h00201, h10002
+                rdts = ele.driving_terms()  # h20001, h00201, h10002
                 h20001 += rdts[0]
                 h00201 += rdts[1]
                 h10002 += rdts[2]
@@ -611,25 +611,24 @@ class CSLattice(object):
         R00400 = h00400 / (1 - np.exp(complex(0, 4 * phiy)))
 
         n_periods = self.n_periods if n_periods is None else n_periods
-        nonlinear_terms = NonlinearTerms(n_periods, phix, phiy,
-                                         R21000, R30000, R10110, R10020, R10200, R20001, R00201, R10002,
-                                         h22000, h11110, h00220, R31000, R40000, R20110, R11200, R20020, R20200, R00310,
-                                         R00400,
+        nonlinear_terms = DrivingTerms(n_periods, phix, phiy,
+                                       R21000, R30000, R10110, R10020, R10200, R20001, R00201, R10002,
+                                       h22000, h11110, h00220, R31000, R40000, R20110, R11200, R20020, R20200, R00310,
+                                       R00400,
                                          f21000[:geo_3rd_idx], f30000[:geo_3rd_idx], f10110[:geo_3rd_idx],
                                          f10020[:geo_3rd_idx],
                                          f10200[:geo_3rd_idx], f20001[:chr_3rd_idx], f00201[:chr_3rd_idx],
                                          f10002[:chr_3rd_idx],
-                                         # f22000[:geo_4th_idx], f11110[:geo_4th_idx], f00220[:geo_4th_idx],
                                          f31000[:geo_4th_idx], f40000[:geo_4th_idx], f20110[:geo_4th_idx],
                                          f11200[:geo_4th_idx],
-                                         f20020[:geo_4th_idx], f20200[:geo_4th_idx], f00310[:geo_4th_idx],
-                                         f00400[:geo_4th_idx])
+                                       f20020[:geo_4th_idx], f20200[:geo_4th_idx], f00310[:geo_4th_idx],
+                                       f00400[:geo_4th_idx])
         if printout:
             print(nonlinear_terms)
         return nonlinear_terms
 
-    def nonlinear_terms_plot_data(self):
-        """Similar to nonlinear_terms_fluctuation. But the arrays in the result of nonlinear_terms_plot_data() have the
+    def driving_terms_plot_data(self):
+        """Similar to DrivingTerms.fluctuation(). But the arrays in the result of driving_terms_plot_data() have the
         same length in order to plot figure, and the length is double in order to plot steps.
         compute resonance driving terms. return a dictionary, each value is a np.ndarray.
                 nonlinear_terms = {'s':, 'h21000': , 'h30000': , 'h10110': , 'h10020': ,
@@ -940,6 +939,101 @@ class CSLattice(object):
                      'h20020': f20020, 'h20200': f20200, 'h00310': f00310, 'h00400': f00400}
         return nonlinear
 
+    def adts(self, n_periods=None, printout=True):
+        """adts(self, n_periods=None, printout=True)
+        compute ADTS terms.
+        Return:
+            {'dQxx': , 'dQxy': , 'dQyy':}
+
+        references:
+        1. The Sextupole Scheme for the SLS: An Analytic Approach, SLS Note 09/97, Johan Bengtsson"""
+
+        n_periods = self.n_periods if n_periods is None else n_periods
+        ele_list = []
+        sext_index = []
+        oct_index = []
+        current_ind = 0
+        sext_num = 0
+        for ele in self.elements:
+            if isinstance(ele, Sextupole):
+                ele_list += ele.slice(ele.n_slices)
+                for i in range(ele.n_slices):
+                    sext_index.append(current_ind)
+                    current_ind += 1
+            elif isinstance(ele, Octupole):
+                ele_list += ele.slice(ele.n_slices)
+                for i in range(ele.n_slices):
+                    oct_index.append(current_ind)
+                    current_ind += 1
+            else:
+                ele_list.append(ele)
+                current_ind += 1
+        Qxx = Qxy = Qyy = 0
+        pi_nux = ele_list[current_ind - 1].psix / 2
+        pi_nuy = ele_list[current_ind - 1].psiy / 2
+        if np.sin(pi_nux) == 0 or np.sin(3 * pi_nux) == 0 or np.sin(pi_nux + 2 * pi_nuy) == 0 or np.sin(
+                pi_nux - 2 * pi_nuy) == 0:
+            nonlinear_terms = {'Qxx': 1e60, 'Qxy': 1e60, 'Qyy': 1e60}
+            if printout:
+                print('\n on resonance line.')
+            return nonlinear_terms
+        sext_num = len(sext_index)
+        for i in range(sext_num):
+            b3l_i = ele_list[sext_index[i]].k2 * ele_list[sext_index[i]].length / 2  # k2 = 2 * b3, k1 = b2
+            if b3l_i != 0:
+                beta_xi = (ele_list[sext_index[i]].betax + ele_list[sext_index[i] + 1].betax) / 2
+                beta_yi = (ele_list[sext_index[i]].betay + ele_list[sext_index[i] + 1].betay) / 2
+                mu_ix = (ele_list[sext_index[i]].psix + ele_list[sext_index[i] + 1].psix) / 2
+                mu_iy = (ele_list[sext_index[i]].psiy + ele_list[sext_index[i] + 1].psiy) / 2
+                Qxx += b3l_i ** 2 / (-16 * pi) * pow(beta_xi, 3) * (
+                        3 * np.cos(0 - pi_nux) / np.sin(pi_nux)
+                        + np.cos(3 * 0 - 3 * pi_nux) / np.sin(3 * pi_nux))
+                Qxy += b3l_i ** 2 / (8 * pi) * beta_xi * beta_yi * (
+                        2 * beta_xi * np.cos(pi_nux) / np.sin(pi_nux)
+                        - beta_yi * np.cos(pi_nux + 2 * pi_nuy) / np.sin(pi_nux + 2 * pi_nuy)
+                        + beta_yi * np.cos(pi_nux - 2 * pi_nuy) / np.sin(pi_nux - 2 * pi_nuy))
+                Qyy += b3l_i ** 2 / (-16 * pi) * beta_xi * beta_yi * beta_yi * (
+                        4 * np.cos(pi_nux) / np.sin(pi_nux)
+                        + np.cos(pi_nux + 2 * pi_nuy) / np.sin(pi_nux + 2 * pi_nuy)
+                        + np.cos(pi_nux - 2 * pi_nuy) / np.sin(pi_nux - 2 * pi_nuy))
+                for j in range(i):
+                    b3l = ele_list[sext_index[j]].k2 * ele_list[sext_index[j]].length * b3l_i / 2
+                    if b3l != 0:
+                        beta_xj = (ele_list[sext_index[j]].betax + ele_list[sext_index[j] + 1].betax) / 2
+                        beta_yj = (ele_list[sext_index[j]].betay + ele_list[sext_index[j] + 1].betay) / 2
+                        mu_jx = (ele_list[sext_index[j]].psix + ele_list[sext_index[j] + 1].psix) / 2
+                        mu_ijx = abs(mu_ix - mu_jx)
+                        mu_jy = (ele_list[sext_index[j]].psiy + ele_list[sext_index[j] + 1].psiy) / 2
+                        mu_ijy = abs(mu_iy - mu_jy)
+                        beta_xij = beta_xj * beta_xi
+                        Qxx += 2 * b3l / (-16 * pi) * pow(beta_xi * beta_xj, 1.5) * (
+                                3 * np.cos(mu_ijx - pi_nux) / np.sin(pi_nux)
+                                + np.cos(3 * mu_ijx - 3 * pi_nux) / np.sin(3 * pi_nux))
+                        Qxy += 2 * b3l / (8 * pi) * pow(beta_xij, 0.5) * beta_yj * (
+                                2 * beta_xi * np.cos(mu_ijx - pi_nux) / np.sin(pi_nux)
+                                - beta_yi * np.cos(mu_ijx + 2 * mu_ijy - pi_nux - 2 * pi_nuy) / np.sin(
+                            pi_nux + 2 * pi_nuy)
+                                + beta_yi * np.cos(mu_ijx - 2 * mu_ijy - pi_nux + 2 * pi_nuy) / np.sin(
+                            pi_nux - 2 * pi_nuy))
+                        Qyy += 2 * b3l / (-16 * pi) * pow(beta_xij, 0.5) * beta_yj * beta_yi * (
+                                4 * np.cos(mu_ijx - pi_nux) / np.sin(pi_nux)
+                                + np.cos(mu_ijx + 2 * mu_ijy - pi_nux - 2 * pi_nuy) / np.sin(pi_nux + 2 * pi_nuy)
+                                + np.cos(mu_ijx - 2 * mu_ijy - pi_nux + 2 * pi_nuy) / np.sin(pi_nux - 2 * pi_nuy))
+        for i in oct_index:
+            b4l = ele_list[i].k3 * ele_list[i].length / 6
+            beta_xi = (ele_list[i].betax + ele_list[i + 1].betax) / 2
+            beta_yi = (ele_list[i].betay + ele_list[i + 1].betay) / 2
+            Qxx += 3 * b4l * beta_xi ** 2 / 8 / pi
+            Qxy -= 3 * b4l * beta_xi * beta_yi / (4 * pi)
+            Qyy += 3 * b4l * beta_yi ** 2 / 8 / pi
+
+        nonlinear_terms = {'dQxx': Qxx * n_periods, 'dQxy': Qxy * n_periods, 'dQyy': Qyy * n_periods}
+        if printout:
+            print(f'ADTS terms, {n_periods} periods:')
+            for k, b4l in nonlinear_terms.items():
+                print(f'    {str(k):7}: {b4l:.2f}')
+        return nonlinear_terms
+
     def higher_order_chromaticity(self, delta=1e-3, matrix_precision=1e-9, resdl_limit=1e-16):
         """compute higher order chromaticity with the tunes of 4d off-momentum closed orbit.
          delta: the momentum deviation.
@@ -968,8 +1062,9 @@ class CSLattice(object):
                 for i in range(7):
                     beam[:4, i] = beam[:4, i] + xco
                     beam[5, i] = beam[5, i] + deviation
-                for ele in self.elements:
-                    beam = ele.symplectic_track(beam)
+                for nper in range(self.n_periods):
+                    for ele in self.elements:
+                        beam = ele.symplectic_track(beam)
                 for i in range(4):
                     matrix[:, i] = (beam[:4, i] - beam[:4, 6]) / precision
                 d = beam[:4, 6] - xco

@@ -149,7 +149,7 @@ class Octupole(Element):
         twiss1 = next_twiss(self.matrix, twiss0)
         return np.zeros(7), twiss1
 
-    def nonlinear_terms(self):
+    def driving_terms(self):
         twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])
         h22000 = h11110 = h00220 = 0
         h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0

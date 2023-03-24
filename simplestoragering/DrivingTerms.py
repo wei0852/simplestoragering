@@ -2,8 +2,8 @@
 import numpy as np
 
 
-class NonlinearTerms(object):
-    """NonlinearTerms.
+class DrivingTerms(object):
+    """DrivingTerms.
             can get values by keys:
            {'h21000': , 'h30000': , 'h10110': , 'h10020': ,
             'h10200': , 'h20001': , 'h00201': , 'h10002': ,
@@ -403,7 +403,7 @@ class NonlinearTerms(object):
         return self.terms[item]
 
     def __str__(self):
-        text = f'nonlinear terms: {self.n_periods:d} periods\n'
+        text = f'driving terms: {self.n_periods:d} periods\n'
         for i, j in self.terms.items():
             text += f'    {str(i):7}: {abs(j):.2f}\n'
         return text

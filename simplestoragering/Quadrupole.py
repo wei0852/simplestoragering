@@ -178,7 +178,7 @@ class Quadrupole(Element):
         integrals[6] += self.k1 * length * betay / 4 / np.pi
         return integrals, twiss1
 
-    def nonlinear_terms(self):
+    def driving_terms(self):
         twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])
         h20001 = h00201 = h10002 = 0
         length = self.length / self.n_slices
