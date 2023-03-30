@@ -218,4 +218,4 @@ def chromaticity_correction(lattice, sextupole_name_list: list, target=None, ini
         for ele in lattice.elements:
             if ele.name in sextupole_name_list:
                 ele.k2 = initial_k2[sextupole_name_list.index(ele.name)]
-    # TODO: 如何控制六极磁铁强度上限
+    # TODO: limit the strength of sextupole

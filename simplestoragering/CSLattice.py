@@ -154,6 +154,9 @@ class CSLattice(object):
         self.eta_y0 = np.linalg.inv(np.identity(2) - sub_matrix_y).dot(matrix_etay)
 
     def set_initial_twiss(self, betax, alphax, betay, alphay, etax, etaxp, etay, etayp):
+        """set_initial_twiss(betax, alphax, betay, alphay, etax, etaxp, etay, etayp)
+        work if run CSLattice.linear_optics() with periodicity=False.
+        """
         self.twiss_x0 = np.array([betax, alphax, (1 + alphax ** 2) / betax])
         self.twiss_y0 = np.array([betay, alphay, (1 + alphay ** 2) / betay])
         self.eta_x0 = np.array([etax, etaxp])
@@ -242,9 +245,10 @@ class CSLattice(object):
                                    'h31000': , 'h40000': , 'h20110': , 'h11200': ,
                                    'h20020': , 'h20200': , 'h00310': , 'h00400': }
 
-                references:
-                1. The Sextupole Scheme for the SLS: An Analytic Approach, SLS Note 09/97, Johan Bengtsson
-                2. Explicit formulas for 2nd-order driving terms due to sextupoles and chromatic effects of quadrupoles, Chun-xi Wang"""
+        references:
+        1. The Sextupole Scheme for the SLS: An Analytic Approach, SLS Note 09/97, Johan Bengtsson
+        2. Explicit formulas for 2nd-order driving terms due to sextupoles and chromatic effects of quadrupoles, Chun-Xi Wang
+        3. First simultaneous measurement of sextupolar and octupolar resonance driving terms in a circular accelerator from turn-by-turn beam position monitor data, A. Franchi et al."""
 
         ele_list = []
         sext_index = []
@@ -402,17 +406,11 @@ class CSLattice(object):
                 nonlinear[k][-2] = nonlinear[k][0]
         return nonlinear
 
-    def driving_terms(self, n_periods=None, printout=True):
-        """Compute nonlinear terms fluctuations along the lattice.
-        The starting position is fixed, and the ending position varies.
+    def driving_terms(self, n_periods=None, printout: bool = True) -> DrivingTerms:
+        """Calculate the 3rd- and 4th-order RDTs and their fluctuations.
 
         Return:
-            {'h21000': np.ndarray, 'h30000': np.ndarray, 'h10110': np.ndarray, 'h10020': np.ndarray,
-             'h10200': np.ndarray, 'h20001': np.ndarray, 'h00201': np.ndarray, 'h10002': np.ndarray,
-             'h11001': np.ndarray, 'h00111': np.ndarray,
-             'h31000': np.ndarray, 'h40000': np.ndarray, 'h20110': np.ndarray, 'h11200': np.ndarray,
-             'h20020': np.ndarray, 'h20200': np.ndarray, 'h00310': np.ndarray, 'h00400': np.ndarray,
-             'h22000': np.ndarray, 'h11110': np.ndarray, 'h00220': np.ndarray}.
+            DrivingTerms.
 
         references:
         1. The Sextupole Scheme for the SLS: An Analytic Approach, SLS Note 09/97, Johan Bengtsson
@@ -627,14 +625,16 @@ class CSLattice(object):
             print(nonlinear_terms)
         return nonlinear_terms
 
-    def driving_terms_plot_data(self):
+    def driving_terms_plot_data(self) -> dict:
         """Similar to DrivingTerms.fluctuation(). But the arrays in the result of driving_terms_plot_data() have the
         same length in order to plot figure, and the length is double in order to plot steps.
-        compute resonance driving terms. return a dictionary, each value is a np.ndarray.
-                nonlinear_terms = {'s':, 'h21000': , 'h30000': , 'h10110': , 'h10020': ,
-                                   'h10200': , 'Qxx': , 'Qxy': , 'Qyy': ,
-                                   'h31000': , 'h40000': , 'h20110': , 'h11200': ,
-                                   'h20020': , 'h20200': , 'h00310': , 'h00400': }
+
+        Return:
+            {'s': , 'h21000': , 'h30000': , 'h10110': , 'h10020': , 'h10200': ,
+             'h20001': , 'h00201': , 'h10002': , 'h11001': , 'h00111': ,
+             'h31000': , 'h40000': , 'h20110': , 'h11200': ,
+             'h20020': , 'h20200': , 'h00310': , 'h00400': ,
+             'h22000': , 'h11110': , 'h00220': } each value is a np.ndarray.
 
         references:
         1. The Sextupole Scheme for the SLS: An Analytic Approach, SLS Note 09/97, Johan Bengtsson
@@ -939,7 +939,7 @@ class CSLattice(object):
                      'h20020': f20020, 'h20200': f20200, 'h00310': f00310, 'h00400': f00400}
         return nonlinear
 
-    def adts(self, n_periods=None, printout=True):
+    def adts(self, n_periods=None, printout: bool = True) -> dict:
         """adts(self, n_periods=None, printout=True)
         compute ADTS terms.
         Return:
