@@ -1,7 +1,7 @@
 # SimpleStorageRing
 SimpleStorageRing is a python project to simulate simple storage ring and calculate lattice data.
 
-Here is an [example](https://nbviewer.org/github/wei0852/simplestoragering/blob/master/Example.ipynb)
+Here is an [example](https://nbviewer.org/github/wei0852/simplestoragering/blob/master/Example.ipynb?flush_cache=true)
 
 -------------------------
 ## components

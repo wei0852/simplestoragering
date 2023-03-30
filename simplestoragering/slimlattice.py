@@ -22,11 +22,9 @@ class SlimRing(object):
         self.angle = 0
         self.abs_angle = 0
         current_s = 0
-        current_identifier = 0
         for oe in ele_list:
             ele = oe.copy()
             ele.s = current_s
-            ele.identifier = current_identifier
             if isinstance(ele, Mark):
                 if ele.name in self.mark:
                     self.mark[ele.name].append(ele)
@@ -39,9 +37,8 @@ class SlimRing(object):
             if isinstance(ele, HBend):
                 self.angle += ele.theta
                 self.abs_angle += abs(ele.theta)
-            current_identifier += 1
             current_s = current_s + ele.length
-        last_ele = LineEnd(s=self.length, identifier=current_identifier)
+        last_ele = LineEnd(s=self.length)
         self.elements.append(last_ele)
         self.angle = self.angle * 180 / pi
         self.abs_angle = self.abs_angle * 180 / pi

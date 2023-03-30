@@ -281,7 +281,6 @@ class HBend(Element):
             ele = HBend(self.name, self.length, self.theta, self.theta_in, self.theta_out, self.k1)
             ele.s = current_s
             assin_twiss(ele, twiss0)
-            ele.identifier = self.identifier
             return [ele]
         length = self.length / n_slices
         ele = HBend(self.name, length, self.h * length, self.theta_in, 0, self.k1)
@@ -299,7 +298,6 @@ class HBend(Element):
             current_s = current_s + ele.length
         length = self.length + self.s - current_s
         ele = HBend(self.name, length, self.h * length, 0, self.theta_out, self.k1)
-        ele.identifier = self.identifier
         ele.s = current_s
         assin_twiss(ele, twiss0)
         ele_list.append(ele)

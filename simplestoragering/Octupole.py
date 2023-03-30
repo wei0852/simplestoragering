@@ -25,14 +25,12 @@ class Octupole(Element):
         for i in range(n_slices - 1):
             ele = Octupole(self.name, length, self.k3)
             assin_twiss(ele, twiss0)
-            ele.identifier = self.identifier
             ele.s = current_s
             twiss0 = next_twiss(ele.matrix, twiss0)
             ele_list.append(ele)
             current_s = current_s + ele.length
         length = self.length + self.s - current_s
         ele = Octupole(self.name, length, self.k3)
-        ele.identifier = self.identifier
         ele.s = current_s
         assin_twiss(ele, twiss0)
         ele_list.append(ele)

@@ -24,7 +24,6 @@ class Quadrupole(Element):
              self.etay, self.etayp, self.psix, self.psiy])
         for i in range(n_slices - 1):
             ele = Quadrupole(self.name, length, self.k1)
-            ele.identifier = self.identifier
             ele.s = current_s
             assin_twiss(ele, twiss0)
             twiss0 = next_twiss(ele.matrix, twiss0)
@@ -32,7 +31,6 @@ class Quadrupole(Element):
             current_s = current_s + ele.length
         length = self.length + self.s - current_s
         ele = Quadrupole(self.name, length, self.k1)
-        ele.identifier = self.identifier
         ele.s = current_s
         assin_twiss(ele, twiss0)
         ele_list.append(ele)

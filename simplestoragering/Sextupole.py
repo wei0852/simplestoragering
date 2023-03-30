@@ -25,14 +25,12 @@ class Sextupole(Element):
         for i in range(n_slices - 1):
             ele = Sextupole(self.name, length, self.k2)
             assin_twiss(ele, twiss0)
-            ele.identifier = self.identifier
             ele.s = current_s
             twiss0 = next_twiss(ele.matrix, twiss0)
             ele_list.append(ele)
             current_s = current_s + ele.length
         length = self.length + self.s - current_s
         ele = Sextupole(self.name, length, self.k2)
-        ele.identifier = self.identifier
         ele.s = current_s
         assin_twiss(ele, twiss0)
         ele_list.append(ele)

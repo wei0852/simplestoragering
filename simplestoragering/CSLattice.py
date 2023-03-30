@@ -24,11 +24,9 @@ class CSLattice(object):
         self.angle = 0
         self.abs_angle = 0
         current_s = 0
-        current_identifier = 0
         for oe in ele_list:
             ele = oe.copy()
             ele.s = current_s
-            ele.identifier = current_identifier
             if isinstance(ele, Mark):
                 if ele.name in self.mark:
                     self.mark[ele.name].append(ele)
@@ -36,14 +34,15 @@ class CSLattice(object):
                     self.mark[ele.name] = [ele]
             if isinstance(ele, RFCavity):
                 self.rf_cavity = ele
+            if isinstance(ele, LineEnd):
+                continue
             self.elements.append(ele)
             self.length = self.length + ele.length
             if isinstance(ele, HBend):
                 self.angle += ele.theta
                 self.abs_angle += abs(ele.theta)
-            current_identifier += 1
             current_s = current_s + ele.length
-        last_ele = LineEnd(s=self.length, identifier=current_identifier)
+        last_ele = LineEnd(s=self.length)
         self.elements.append(last_ele)
         self.length = self.length * n_periods
         self.angle = self.angle * 180 / pi * n_periods
@@ -57,7 +56,6 @@ class CSLattice(object):
         self.nux = None
         self.nuy = None
         self.nuz = None
-        # self.__solve_along()
         # integration
         self.xi_x = None
         self.xi_y = None
@@ -68,7 +66,6 @@ class CSLattice(object):
         self.I3 = None
         self.I4 = None
         self.I5 = None
-        # self.radiation_integrals()
         # global parameters
         self.Jx = None
         self.Jy = None
@@ -86,7 +83,6 @@ class CSLattice(object):
         self.emitt_y = None
         self.etap = None
         self.sigma_z = None
-        # self.global_parameters()
 
     def linear_optics(self, periodicity=True, line_mode=False):
         """calculate optical functions.
@@ -1116,12 +1112,9 @@ class CSLattice(object):
 
         file1 = open(file_name, 'w')
         file1.write('& s, ElementName, betax, alphax, psix, betay, alphay, psiy, etax, etaxp\n')
-        last_identifier = 123465
         for ele in self.elements:
-            if ele.identifier != last_identifier:
-                file1.write(f'{ele.s:.6e} {ele.name:10} {ele.betax:.6e}  {ele.alphax:.6e}  {ele.psix / 2 / pi:.6e}  '
-                            f'{ele.betay:.6e}  {ele.alphay:.6e}  {ele.psiy / 2 / pi:.6e}  {ele.etax:.6e}  {ele.etaxp:.6e}\n')
-                last_identifier = ele.identifier
+            file1.write(f'{ele.s:.6e} {ele.name:10} {ele.betax:.6e}  {ele.alphax:.6e}  {ele.psix / 2 / pi:.6e}  '
+                        f'{ele.betay:.6e}  {ele.alphay:.6e}  {ele.psiy / 2 / pi:.6e}  {ele.etax:.6e}  {ele.etaxp:.6e}\n')
         file1.close()
 
     def __add__(self, other):

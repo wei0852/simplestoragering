@@ -20,7 +20,6 @@ class Drift(Element):
         twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])
         for i in range(n_slices - 1):
             ele = Drift(self.name, length)
-            ele.identifier = self.identifier
             ele.s = current_s
             assin_twiss(ele, twiss0)
             twiss0 = next_twiss(ele.matrix, twiss0)
@@ -28,7 +27,6 @@ class Drift(Element):
             current_s = current_s + ele.length
         length = self.length + self.s - current_s
         ele = Drift(self.name, length)
-        ele.identifier = self.identifier
         ele.s = current_s
         assin_twiss(ele, twiss0)
         ele_list.append(ele)

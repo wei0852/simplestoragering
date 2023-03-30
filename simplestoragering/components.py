@@ -28,7 +28,6 @@ class Element(metaclass=ABCMeta):
     k1 = 0
     k2 = 0
     k3 = 0
-    identifier = None
     closed_orbit = np.zeros(6)
     beam = None
     betax = 0
@@ -200,10 +199,9 @@ class Mark(Element):
 class LineEnd(Element):
     """mark the end of a line, store the data at the end."""
 
-    def __init__(self, s, identifier, name='_END_'):
+    def __init__(self, s, name='_END_'):
         self.name = name
         self.s = s
-        self.identifier = identifier
 
     @property
     def matrix(self):
@@ -233,7 +231,7 @@ class LineEnd(Element):
         return beam
 
     def copy(self):
-        return LineEnd(self.s, self.identifier, self.name)
+        return LineEnd(self.s, self.name)
 
     def __repr__(self):
         return f'LineEnd()'
