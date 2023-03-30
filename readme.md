@@ -9,8 +9,8 @@ A storage ring consists of many magnets to guide electron beam,
 
 * `Mark(name: str)`
 * `Drift(name: str, length: float)`
-* `HBend(name: str, length: float, theta: float, theta_in: float, theta_out: float)`, horizontal bend.
-* `Quadrupole(name: str, length: float, k1: float)`
+* `HBend(name: str, length: float, theta: float, theta_in: float, theta_out: float, n_slices: int)`, horizontal bend.
+* `Quadrupole(name: str, length: float, k1: float, n_slices: int = 4)`
 * `Sextupole(name: str, length: float, k2: float, n_slices: int)`
 * `Octupole(name: str = None, length: float = 0, k3: float = 0, n_slices: int = 1)`
 
@@ -25,7 +25,6 @@ Attributes:
     * h: float, curvature of the reference trajectory.
     * theta_in, theta_out: float, edge angle of bend.
     * k1, k2, k3: float, multipole strength.
-    * Ax, Ay: float, aperture.
     * n_slices: int, slice magnets for RDTs calculation and particle tracking (and higher-order chromaticities).
     * matrix: 6x6 np.ndarray, transport matrix.
 * data about beam and lattice.

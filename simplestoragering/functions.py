@@ -34,7 +34,10 @@ def compute_transfer_matrix_by_tracking(element_list: list, particle, with_e_los
 def track_4d_closed_orbit(element_list, delta):
     """4D track to compute closed orbit with energy deviation.
 
-    delta: momentum deviation."""
+    delta: momentum deviation.
+
+    reference: SAMM: Simple Accelerator Modelling in Matlab, A. Wolski, 2013
+   """
 
     print('\n-------------------\ntracking 4D closed orbit:\n')
     xco = np.array([0, 0, 0, 0])

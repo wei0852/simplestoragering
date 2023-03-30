@@ -208,15 +208,10 @@ def plot_layout_in_ax(ele_list, ax, ratio=0.03):
     current_s = 0
     i = 0
     while i < len(ele_list):
-    # for i in range(len(ele_list)):
-    # for ele in ele_list:
         if isinstance(ele_list[i], Quadrupole):
             begin_s = current_s
             layout_s = [current_s, current_s]
             current_s += ele_list[i].length
-            while ele_list[i+1].identifier == ele_list[i].identifier:
-                i += 1
-                current_s += ele_list[i].length
             layout_s += [(begin_s + current_s) / 2, current_s, current_s]
             draw_data = ele_list[i].k1 / abs(ele_list[i].k1) if ele_list[i].k1 != 0 else 0
             layout_data = [0, 1, 1 + 0.3 * draw_data, 1, 0]
@@ -224,9 +219,6 @@ def plot_layout_in_ax(ele_list, ax, ratio=0.03):
         elif isinstance(ele_list[i], HBend):
             layout_s = [current_s, current_s]
             current_s += ele_list[i].length
-            while ele_list[i+1].identifier == ele_list[i].identifier:
-                i += 1
-                current_s += ele_list[i].length
             layout_s += [current_s, current_s]
             layout_data = [0, 1, 1, 0]
             ax.fill(layout_s, layout_data, color='#3d3dcd')
@@ -234,9 +226,6 @@ def plot_layout_in_ax(ele_list, ax, ratio=0.03):
             begin_s = current_s
             layout_s = [current_s, current_s]
             current_s += ele_list[i].length
-            while ele_list[i+1].identifier == ele_list[i].identifier:
-                i += 1
-                current_s += ele_list[i].length
             layout_s += [(begin_s + current_s) / 2, current_s, current_s]
             draw_data = ele_list[i].k2 / abs(ele_list[i].k2) if ele_list[i].k2 != 0 else 0
             layout_data = [0, 1, 1 + 0.3 * draw_data, 1, 0]
@@ -244,9 +233,6 @@ def plot_layout_in_ax(ele_list, ax, ratio=0.03):
         elif isinstance(ele_list[i], Octupole):
             layout_s = [current_s, current_s]
             current_s += ele_list[i].length
-            while ele_list[i + 1].identifier == ele_list[i].identifier:
-                i += 1
-                current_s += ele_list[i].length
             layout_s += [current_s, current_s]
             layout_data = [0, 1, 1, 0]
             ax.fill(layout_s, layout_data, color='#8B3A3A')

@@ -13,23 +13,18 @@ class Drift(Element):
         self.length = length
 
     def slice(self, n_slices: int) -> list:
-        """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
+        """slice component to element list, return ele_list"""
         ele_list = []
         current_s = self.s
         length = self.length / n_slices
         twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])
-        for i in range(n_slices - 1):
+        for i in range(n_slices):
             ele = Drift(self.name, length)
             ele.s = current_s
             assin_twiss(ele, twiss0)
             twiss0 = next_twiss(ele.matrix, twiss0)
             ele_list.append(ele)
             current_s = current_s + ele.length
-        length = self.length + self.s - current_s
-        ele = Drift(self.name, length)
-        ele.s = current_s
-        assin_twiss(ele, twiss0)
-        ele_list.append(ele)
         return ele_list
 
     def linear_optics(self):

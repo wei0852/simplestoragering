@@ -154,7 +154,7 @@ class Mark(Element):
         return np.identity(6)
 
     def slice(self, n_slices: int) -> list:
-        """slice component to element list, return [ele_list, final_z], the identifier identifies different magnet"""
+        """slice component to element list, return ele_list"""
         ele_list = [self]
         return ele_list
 

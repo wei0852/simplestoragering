@@ -22,18 +22,13 @@ class Sextupole(Element):
         current_s = self.s
         length = self.length / n_slices
         twiss0 = np.array([self.betax, self.alphax, self.gammax, self.betay, self.alphay, self.gammay, self.etax, self.etaxp, self.etay, self.etayp, self.psix, self.psiy])
-        for i in range(n_slices - 1):
+        for i in range(n_slices):
             ele = Sextupole(self.name, length, self.k2)
             assin_twiss(ele, twiss0)
             ele.s = current_s
             twiss0 = next_twiss(ele.matrix, twiss0)
             ele_list.append(ele)
             current_s = current_s + ele.length
-        length = self.length + self.s - current_s
-        ele = Sextupole(self.name, length, self.k2)
-        ele.s = current_s
-        assin_twiss(ele, twiss0)
-        ele_list.append(ele)
         return ele_list
 
     @property

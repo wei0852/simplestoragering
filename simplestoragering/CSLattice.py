@@ -282,7 +282,7 @@ class CSLattice(object):
         f00400 = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
         s = np.zeros(2 * (len(sext_index) + 1), dtype=np.float64)
         current_ind = 0
-        for k in sext_index:  # 起点在直线段变化时，四阶项和ADTS项只关心相对相移，三阶项角度变化，绝对值不变，所以只计算六极铁处就够了
+        for k in sext_index:
             s[current_ind * 2 + 1] = ele_list[k].s
             s[current_ind * 2 + 2] = ele_list[k].s
             Qxx = Qxy = Qyy = 0
@@ -949,7 +949,6 @@ class CSLattice(object):
         sext_index = []
         oct_index = []
         current_ind = 0
-        sext_num = 0
         for ele in self.elements:
             if isinstance(ele, Sextupole):
                 ele_list += ele.slice(ele.n_slices)
@@ -1048,6 +1047,7 @@ class CSLattice(object):
         """
 
         def closed_orbit_tune(deviation):
+            """reference: SAMM: Simple Accelerator Modelling in Matlab, A. Wolski, 2013 """
             xco = np.array([0, 0, 0, 0])
             matrix = np.zeros([4, 4])
             resdl = 1

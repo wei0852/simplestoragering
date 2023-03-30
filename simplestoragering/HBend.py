@@ -270,7 +270,7 @@ class HBend(Element):
         return np.array([h20001, h00201, h10002])
 
     def slice(self, n_slices: int) -> list:
-        """slice component to element list, return [ele_list, final_z]
+        """slice component to element list, return ele_list
 
         this method is rewritten because of the edge angles."""
 
