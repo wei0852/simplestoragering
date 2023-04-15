@@ -2,8 +2,8 @@
 
 import numpy as np
 import time
-import simplestoragering as ssr
-from .globalvars import pi
+from .CSLattice import CSLattice
+from .globalvars import pi, RefParticle
 
 
 def compute_transfer_matrix_by_tracking(element_list: list, particle, with_e_loss=False, precision=1e-9):
@@ -85,7 +85,7 @@ def track_4d_closed_orbit(element_list, delta):
 def output_opa_file(lattice, file_name=None):
     file_name = 'output_opa.opa' if file_name is None else file_name + '.opa'
     with open(file_name, 'w') as file:
-        file.write(f'energy = {ssr.RefParticle.energy / 1000: 6f};\r\n')
+        file.write(f'energy = {RefParticle.energy / 1000: 6f};\r\n')
         file.write('\r\n\r\n{------ table of elements -----------------------------}\r\n\r\n')
         ele_list = []
         drift_list = []
@@ -178,7 +178,7 @@ def output_elegant_file(lattice, filename=None):
         file.write(')\n')
 
 
-def chromaticity_correction(lattice, sextupole_name_list: list, target=None, initial_k2=None, update_data=True, printout=True):
+def chromaticity_correction(lattice: CSLattice, sextupole_name_list: list, target=None, initial_k2=None, update_data=True):
     """correct chromaticity. target = [xi_x, xi_y], initial_k2 should have the same length as sextupole_name_list."""
 
     target = [1 / lattice.n_periods, 1 / lattice.n_periods] if target is None else [i / lattice.n_periods for i in target]
@@ -215,10 +215,9 @@ def chromaticity_correction(lattice, sextupole_name_list: list, target=None, ini
     delta_target = np.array([-xi_x + target[0], -xi_y + target[1]])
     solution = np.linalg.pinv(weight_matrix).dot(delta_target)
     initial_k2 = [initial_k2[i] + solution[i] for i in range(num_sext)]
-    if printout:
-        print(f'result is\n{initial_k2}\n')
     if update_data:
         for ele in lattice.elements:
             if ele.name in sextupole_name_list:
                 ele.k2 = initial_k2[sextupole_name_list.index(ele.name)]
     # TODO: limit the strength of sextupole
+    return initial_k2

@@ -5,12 +5,13 @@ this file is unnecessary, I use these functions to quickly visualize lattice dat
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
-
+from .CSLattice import CSLattice
+from .components import Element
 from .Sextupole import Sextupole
 from .Quadrupole import Quadrupole
 from .HBend import HBend
 from .Octupole import Octupole
-from simplestoragering.exceptions import UnfinishedWork
+from .exceptions import UnfinishedWork
 
 
 def get_col(ele_list, parameter: str):
@@ -160,10 +161,14 @@ def get_layout(ele_list):
     return s, magnet
 
 
-def plot_lattice(ele_list, parameters, with_layout=True):
+def plot_lattice(lattice, parameters, with_layout=True):
     """plot_lattice(lattice, parameters='betax', with_layout=True)
     plot_lattice(lattice, parameters=['betax', 'betay'], with_layout=True)
     """
+    if isinstance(lattice, CSLattice):
+        ele_list = lattice.elements
+    elif isinstance(lattice, list) and all(isinstance(i, Element) for i in lattice):
+        ele_list = lattice
     if with_layout:
         return plot_with_layout(ele_list, parameters)
     else:

@@ -435,9 +435,9 @@ class CSLattice(object):
         f00400 = np.zeros(num_ele, dtype='complex_')
         h21000 = h30000 = h10110 = h10020 = h10200 = h20001 = h00201 = h10002 = 0
         h22000 = h11110 = h00220 = h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
-        geo_3rd_idx = 1
-        geo_4th_idx = 1
-        chr_3rd_idx = 1
+        geo_3rd_idx = 0
+        geo_4th_idx = 0
+        chr_3rd_idx = 0
         jj = complex(0, 1)
         for ele in self.elements:  # TODO: quad-sext
             if isinstance(ele, Sextupole):  # 0        1      2       3       4       5       6       7
@@ -636,304 +636,237 @@ class CSLattice(object):
         1. The Sextupole Scheme for the SLS: An Analytic Approach, SLS Note 09/97, Johan Bengtsson
         2. Explicit formulas for 2nd-order driving terms due to sextupoles and chromatic effects of quadrupoles, Chun-xi Wang
         3. Perspectives for future light source lattices incorporating yet uncommon magnets, S. C. Leemann and A. Streun"""
+        num_ele = len(self.elements) * 2
+        f21000 = np.zeros(num_ele, dtype='complex_')
+        f30000 = np.zeros(num_ele, dtype='complex_')
+        f10110 = np.zeros(num_ele, dtype='complex_')
+        f10020 = np.zeros(num_ele, dtype='complex_')
+        f10200 = np.zeros(num_ele, dtype='complex_')
+        f20001 = np.zeros(num_ele, dtype='complex_')
+        f00201 = np.zeros(num_ele, dtype='complex_')
+        f10002 = np.zeros(num_ele, dtype='complex_')
+        f22000 = np.zeros(num_ele, dtype='complex_')
+        f11110 = np.zeros(num_ele, dtype='complex_')
+        f00220 = np.zeros(num_ele, dtype='complex_')
+        f31000 = np.zeros(num_ele, dtype='complex_')
+        f40000 = np.zeros(num_ele, dtype='complex_')
+        f20110 = np.zeros(num_ele, dtype='complex_')
+        f11200 = np.zeros(num_ele, dtype='complex_')
+        f20020 = np.zeros(num_ele, dtype='complex_')
+        f20200 = np.zeros(num_ele, dtype='complex_')
+        f00310 = np.zeros(num_ele, dtype='complex_')
+        f00400 = np.zeros(num_ele, dtype='complex_')
+        s = np.zeros(num_ele)
+        h21000 = h30000 = h10110 = h10020 = h10200 = h20001 = h00201 = h10002 = 0
+        h22000 = h11110 = h00220 = h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
+        idx = 0
+        jj = complex(0, 1)
+        for ele in self.elements:  # TODO: quad-sext
+            if isinstance(ele, Sextupole):  # 0        1      2       3       4       5       6       7
+                rdts = ele.driving_terms()  # h21000, h30000, h10110, h10020, h10200, h20001, h00201, h10002
+                h12000j = rdts[0].conjugate()
+                h01110j = rdts[2].conjugate()
+                h01200j = rdts[3].conjugate()
+                h01020j = rdts[4].conjugate()
+                h12000 = h21000.conjugate()
+                h01110 = h10110.conjugate()
+                h01200 = h10020.conjugate()
+                h01020 = h10200.conjugate()
+                h22000 += jj * ((h21000 * h12000j - h12000 * rdts[0]) * 3
+                                + (h30000 * rdts[1].conjugate() - h30000.conjugate() * rdts[1]) * 9) + rdts[8]
+                h11110 += jj * ((h21000 * h01110j - h01110 * rdts[0]) * 2
+                                - (h12000 * rdts[2] - h10110 * h12000j) * 2
+                                - (h10020 * h01200j - h01200 * rdts[3]) * 4
+                                + (h10200 * h01020j - h01020 * rdts[4]) * 4) + rdts[9]
+                h00220 += jj * ((h10020 * h01200j - h01200 * rdts[3])
+                                + (h10200 * h01020j - h01020 * rdts[4])
+                                + (h10110 * h01110j - h01110 * rdts[2])) + rdts[10]
+                h31000 += jj * 6 * (h30000 * h12000j - h12000 * rdts[1]) + rdts[11]
+                h40000 += jj * 3 * (h30000 * rdts[0] - h21000 * rdts[1]) + rdts[12]
+                h20110 += jj * ((h30000 * h01110j - h01110 * rdts[1]) * 3
+                                - (h21000 * rdts[2] - h10110 * rdts[0])
+                                + (h10200 * rdts[3] - h10020 * rdts[4]) * 4) + rdts[13]
+                h11200 += jj * ((h10200 * h12000j - h12000 * rdts[4]) * 2
+                                + (h21000 * h01200j - h01200 * rdts[0]) * 2
+                                + (h10200 * h01110j - h01110 * rdts[4]) * 2
+                                + (h10110 * h01200j - h01200 * rdts[2]) * (-2)) + rdts[14]
+                h20020 += jj * (-(h21000 * rdts[3] - h10020 * rdts[0])
+                                + (h30000 * h01020j - h01020 * rdts[1]) * 3
+                                + (h10110 * rdts[3] - h10020 * rdts[2]) * 2) + rdts[15]
+                h20200 += jj * ((h30000 * h01200j - h01200 * rdts[1]) * 3
+                                + (h10200 * rdts[0] - h21000 * rdts[4])
+                                + (h10110 * rdts[4] - h10200 * rdts[2]) * (-2)) + rdts[16]
+                h00310 += jj * ((h10200 * h01110j - h01110 * rdts[4])
+                                + (h10110 * h01200j - h01200 * rdts[2])) + rdts[17]
+                h00400 += jj * (h10200 * h01200j - h01200 * rdts[4]) + rdts[18]
 
-        ele_list = []
-        sext_index = []
-        quad_index = []
-        oct_index = []
-        nonlinear_index = []
-        sext_num = 0
-        oct_num = 0
-        quad_num = 0
-        nonlinear_num = np.zeros(3, dtype=np.int)
-        current_ind = 0
-        for ele in self.elements:
-            if isinstance(ele, Sextupole):
-                ele_list += ele.slice(ele.n_slices)
-                for i in range(ele.n_slices):
-                    sext_index.append(current_ind)
-                    nonlinear_index.append(current_ind)
-                    current_ind += 1
-                    sext_num += 1
-                    nonlinear_num = np.vstack((nonlinear_num, (0, 1, 0)))
+                h21000 = h21000 + rdts[0]
+                h30000 = h30000 + rdts[1]
+                h10110 = h10110 + rdts[2]
+                h10020 = h10020 + rdts[3]
+                h10200 = h10200 + rdts[4]
+                h20001 += rdts[5]
+                h00201 += rdts[6]
+                h10002 += rdts[7]
+
+                s[idx + 1] = ele.s
+                s[idx + 2] = s[idx + 1]
+                f22000[idx + 2] = h22000
+                f11110[idx + 2] = h11110
+                f00220[idx + 2] = h00220
+                f31000[idx + 2] = h31000
+                f40000[idx + 2] = h40000
+                f20110[idx + 2] = h20110
+                f11200[idx + 2] = h11200
+                f20020[idx + 2] = h20020
+                f20200[idx + 2] = h20200
+                f00310[idx + 2] = h00310
+                f00400[idx + 2] = h00400
+                f21000[idx + 2] = h21000
+                f30000[idx + 2] = h30000
+                f10110[idx + 2] = h10110
+                f10020[idx + 2] = h10020
+                f10200[idx + 2] = h10200
+                f20001[idx + 2] = h20001
+                f00201[idx + 2] = h00201
+                f10002[idx + 2] = h10002
+
+                f22000[idx + 3] = f22000[idx + 2]
+                f11110[idx + 3] = f11110[idx + 2]
+                f00220[idx + 3] = f00220[idx + 2]
+                f31000[idx + 3] = f31000[idx + 2]
+                f40000[idx + 3] = f40000[idx + 2]
+                f20110[idx + 3] = f20110[idx + 2]
+                f11200[idx + 3] = f11200[idx + 2]
+                f20020[idx + 3] = f20020[idx + 2]
+                f20200[idx + 3] = f20200[idx + 2]
+                f00310[idx + 3] = f00310[idx + 2]
+                f00400[idx + 3] = f00400[idx + 2]
+                f21000[idx + 3] = f21000[idx + 2]
+                f30000[idx + 3] = f30000[idx + 2]
+                f10110[idx + 3] = f10110[idx + 2]
+                f10020[idx + 3] = f10020[idx + 2]
+                f10200[idx + 3] = f10200[idx + 2]
+                f20001[idx + 3] = f20001[idx + 2]
+                f00201[idx + 3] = f00201[idx + 2]
+                f10002[idx + 3] = f10002[idx + 2]
+                idx += 2
             elif isinstance(ele, Octupole):
-                ele_list += ele.slice(ele.n_slices)
-                for i in range(ele.n_slices):
-                    oct_index.append(current_ind)
-                    nonlinear_index.append(current_ind)
-                    current_ind += 1
-                    oct_num += 1
-                    nonlinear_num = np.vstack((nonlinear_num, (0, 0, 1)))
+                rdts = ele.driving_terms()  # h22000, h11110, h00220, h31000, h40000, h20110, h11200, h20020, h20200, h00310, h00400
+                h22000 += rdts[0]
+                h11110 += rdts[1]
+                h00220 += rdts[2]
+                h31000 += rdts[3]
+                h40000 += rdts[4]
+                h20110 += rdts[5]
+                h11200 += rdts[6]
+                h20020 += rdts[7]
+                h20200 += rdts[8]
+                h00310 += rdts[9]
+                h00400 += rdts[10]
+
+                s[idx + 1] = ele.s
+                s[idx + 2] = s[idx + 1]
+                f22000[idx + 2] = h22000
+                f11110[idx + 2] = h11110
+                f00220[idx + 2] = h00220
+                f31000[idx + 2] = h31000
+                f40000[idx + 2] = h40000
+                f20110[idx + 2] = h20110
+                f11200[idx + 2] = h11200
+                f20020[idx + 2] = h20020
+                f20200[idx + 2] = h20200
+                f00310[idx + 2] = h00310
+                f00400[idx + 2] = h00400
+                f21000[idx + 2] = h21000
+                f30000[idx + 2] = h30000
+                f10110[idx + 2] = h10110
+                f10020[idx + 2] = h10020
+                f10200[idx + 2] = h10200
+                f20001[idx + 2] = h20001
+                f00201[idx + 2] = h00201
+                f10002[idx + 2] = h10002
+
+                f22000[idx + 3] = f22000[idx + 2]
+                f11110[idx + 3] = f11110[idx + 2]
+                f00220[idx + 3] = f00220[idx + 2]
+                f31000[idx + 3] = f31000[idx + 2]
+                f40000[idx + 3] = f40000[idx + 2]
+                f20110[idx + 3] = f20110[idx + 2]
+                f11200[idx + 3] = f11200[idx + 2]
+                f20020[idx + 3] = f20020[idx + 2]
+                f20200[idx + 3] = f20200[idx + 2]
+                f00310[idx + 3] = f00310[idx + 2]
+                f00400[idx + 3] = f00400[idx + 2]
+                f21000[idx + 3] = f21000[idx + 2]
+                f30000[idx + 3] = f30000[idx + 2]
+                f10110[idx + 3] = f10110[idx + 2]
+                f10020[idx + 3] = f10020[idx + 2]
+                f10200[idx + 3] = f10200[idx + 2]
+                f20001[idx + 3] = f20001[idx + 2]
+                f00201[idx + 3] = f00201[idx + 2]
+                f10002[idx + 3] = f10002[idx + 2]
+                idx += 2
             elif ele.k1:
-                ele_list += ele.slice(ele.n_slices)
-                for i in range(ele.n_slices):
-                    quad_index.append(current_ind)
-                    nonlinear_index.append(current_ind)
-                    current_ind += 1
-                    quad_num += 1
-                    nonlinear_num = np.vstack((nonlinear_num, (1, 0, 0)))
-            else:
-                ele_list.append(ele)
-                current_ind += 1
-        nonlinear_num = np.delete(nonlinear_num, 0, 0)
-        f20001 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f00201 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f10002 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f11001 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f00111 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f21000 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f30000 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f10110 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f10020 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f10200 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f31000 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f40000 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f20110 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f11200 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f20020 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f20200 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f00310 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f00400 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f22000 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f00220 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        f11110 = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
-        s = np.zeros(2 * (quad_num + sext_num + 1 + oct_num))
+                rdts = ele.driving_terms()  # h20001, h00201, h10002
+                h20001 += rdts[0]
+                h00201 += rdts[1]
+                h10002 += rdts[2]
+                s[idx + 1] = ele.s
+                s[idx + 2] = s[idx + 1]
+                f22000[idx + 2] = h22000
+                f11110[idx + 2] = h11110
+                f00220[idx + 2] = h00220
+                f31000[idx + 2] = h31000
+                f40000[idx + 2] = h40000
+                f20110[idx + 2] = h20110
+                f11200[idx + 2] = h11200
+                f20020[idx + 2] = h20020
+                f20200[idx + 2] = h20200
+                f00310[idx + 2] = h00310
+                f00400[idx + 2] = h00400
+                f21000[idx + 2] = h21000
+                f30000[idx + 2] = h30000
+                f10110[idx + 2] = h10110
+                f10020[idx + 2] = h10020
+                f10200[idx + 2] = h10200
+                f20001[idx + 2] = h20001
+                f00201[idx + 2] = h00201
+                f10002[idx + 2] = h10002
 
-        hs20001 = np.zeros(sext_num, dtype='complex_')
-        hs00201 = np.zeros(sext_num, dtype='complex_')
-        hs10002 = np.zeros(sext_num, dtype='complex_')
-        hs11001 = np.zeros(sext_num)
-        hs00111 = np.zeros(sext_num)
-
-        hs21000 = np.zeros(sext_num, dtype='complex_')
-        hs30000 = np.zeros(sext_num, dtype='complex_')
-        hs10110 = np.zeros(sext_num, dtype='complex_')
-        hs10020 = np.zeros(sext_num, dtype='complex_')
-        hs10200 = np.zeros(sext_num, dtype='complex_')
-
-        h31000 = np.zeros((sext_num, sext_num), dtype='complex_')
-        h40000 = np.zeros((sext_num, sext_num), dtype='complex_')
-        h20110 = np.zeros((sext_num, sext_num), dtype='complex_')
-        h11200 = np.zeros((sext_num, sext_num), dtype='complex_')
-        h20020 = np.zeros((sext_num, sext_num), dtype='complex_')
-        h20200 = np.zeros((sext_num, sext_num), dtype='complex_')
-        h00310 = np.zeros((sext_num, sext_num), dtype='complex_')
-        h00400 = np.zeros((sext_num, sext_num), dtype='complex_')
-        h22000 = np.zeros((sext_num, sext_num), dtype='complex_')
-        h00220 = np.zeros((sext_num, sext_num), dtype='complex_')
-        h11110 = np.zeros((sext_num, sext_num), dtype='complex_')
-
-        for i in range(sext_num):
-            b3l_i = ele_list[sext_index[i]].k2 * ele_list[sext_index[i]].length / 2  # k2 = 2 * b3, k1 = b2
-            beta_xi = (ele_list[sext_index[i]].betax + ele_list[sext_index[i] + 1].betax) / 2
-            eta_xi = (ele_list[sext_index[i]].etax + ele_list[sext_index[i] + 1].etax) / 2
-            beta_yi = (ele_list[sext_index[i]].betay + ele_list[sext_index[i] + 1].betay) / 2
-            mu_ix = (ele_list[sext_index[i]].psix + ele_list[sext_index[i] + 1].psix) / 2
-            mu_iy = (ele_list[sext_index[i]].psiy + ele_list[sext_index[i] + 1].psiy) / 2
-            hs11001[i] = -b3l_i * beta_xi * eta_xi / 2
-            hs00111[i] = b3l_i * beta_yi * eta_xi / 2
-            hs20001[i] = -b3l_i * beta_xi * eta_xi / 4 * np.exp(complex(0, 2 * mu_ix))
-            hs00201[i] = b3l_i * beta_yi * eta_xi / 4 * np.exp(complex(0, 2 * mu_iy))
-            hs10002[i] = -b3l_i * beta_xi ** 0.5 * eta_xi ** 2 / 2 * np.exp(complex(0, mu_ix))
-            hs21000[i] = - b3l_i * beta_xi ** 1.5 * np.exp(complex(0, mu_ix)) / 8
-            hs30000[i] = - b3l_i * beta_xi ** 1.5 * np.exp(complex(0, 3 * mu_ix)) / 24
-            hs10110[i] = + b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(complex(0, mu_ix)) / 4
-            hs10020[i] = + b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(complex(0, mu_ix - 2 * mu_iy)) / 8
-            hs10200[i] = + b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(complex(0, mu_ix + 2 * mu_iy)) / 8
-
-            for j in range(i):
-                b3l_j = ele_list[sext_index[j]].k2 * ele_list[sext_index[j]].length / 2
-                b3l = b3l_j * b3l_i
-                beta_xj = (ele_list[sext_index[j]].betax + ele_list[sext_index[j] + 1].betax) / 2
-                beta_yj = (ele_list[sext_index[j]].betay + ele_list[sext_index[j] + 1].betay) / 2
-                mu_jx = (ele_list[sext_index[j]].psix + ele_list[sext_index[j] + 1].psix) / 2
-                mu_jy = (ele_list[sext_index[j]].psiy + ele_list[sext_index[j] + 1].psiy) / 2
-                beta_xij = beta_xj * beta_xi
-                beta_yij = beta_yj * beta_yi
-                beta_xiyj = beta_xi * beta_yj
-                beta_xjyi = beta_xj * beta_yi
-                mu_ijx = mu_ix - mu_jx
-                mu_ijy = mu_iy - mu_jy
-                jj = complex(0, 1)
-                const = jj * b3l
-                h22000[i, j] = b3l * beta_xij ** 1.5 * (np.sin(3 * mu_ijx) + 3 * np.sin(mu_ijx)) / 32
-                h11110[i, j] = b3l * beta_xij ** 0.5 * (-np.sin(mu_ijx) * (beta_xjyi + beta_xiyj)
-                                                          + beta_yij * (np.sin(mu_ijx + 2 * mu_ijy)
-                                                                        - np.sin(mu_ijx - 2 * mu_ijy))) / 8
-                h00220[i, j] = b3l * beta_xij ** 0.5 * beta_yij * (np.sin(mu_ijx + 2 * mu_ijy)
-                                                                     + 4 * np.sin(mu_ijx)
-                                                                     + np.sin(mu_ijx - 2 * mu_ijy)) / 32
-                h31000[i, j] = const * beta_xij ** 1.5 * (np.exp(complex(0, 3 * mu_jx - mu_ix))
-                                                          - np.exp(complex(0, 3 * mu_ix - mu_jx))) / 32
-                h40000[i, j] = const * beta_xij ** 1.5 * (np.exp(complex(0, 3 * mu_jx + mu_ix))
-                                                          - np.exp(complex(0, 3 * mu_ix + mu_jx))) / 64
-                h20110[i, j] = const * beta_xij ** 0.5 * (
-                        beta_xiyj * (np.exp(complex(0, 3 * mu_ix - mu_jx)) - np.exp(complex(0, mu_jx + mu_ix)))
-                        - beta_xjyi * (np.exp(complex(0, 3 * mu_jx - mu_ix)) - np.exp(complex(0, mu_ix + mu_jx))) +
-                        2 * beta_yij * (np.exp(complex(0, mu_jx + mu_ix + 2 * mu_jy - 2 * mu_iy))
-                                        - np.exp(complex(0, mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy)))) / 32
-                h11200[i, j] = const * beta_xij ** 0.5 * (
-                        beta_xiyj * (np.exp(complex(0, -mu_jx + mu_ix + 2 * mu_jy)) - np.exp(complex(0, mu_jx - mu_ix + 2 * mu_jy)))
-                        - beta_xjyi * (np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy)) - np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy))) +
-                        2 * beta_yij * (np.exp(complex(0, mu_jx - mu_ix + 2 * mu_jy)) + np.exp(complex(0, - mu_jx + mu_ix + 2 * mu_jy)))
-                        - 2 * beta_yij * (np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy)) + np.exp(complex(0, - mu_ix + mu_jx + 2 * mu_iy)))) / 32
-                h20020[i, j] = const * beta_xij ** 0.5 * (
-                        beta_xiyj * np.exp(complex(0, -mu_jx + 3 * mu_ix - 2 * mu_jy))
-                        - beta_xjyi * np.exp(complex(0, -mu_ix + 3 * mu_jx - 2 * mu_iy))
-                        - beta_xiyj * np.exp(complex(0, mu_jx + mu_ix - 2 * mu_jy))
-                        + beta_xjyi * np.exp(complex(0, mu_ix + mu_jx - 2 * mu_iy))
-                        - 4 * beta_yij * (np.exp(complex(0, mu_jx + mu_ix - 2 * mu_jy))
-                                          - np.exp(complex(0, mu_ix + mu_jx - 2 * mu_iy)))) / 64
-                h20200[i, j] = const * beta_xij ** 0.5 * (
-                        beta_xiyj * np.exp(complex(0, -mu_jx + 3 * mu_ix + 2 * mu_jy))
-                        - beta_xjyi * np.exp(complex(0, -mu_ix + 3 * mu_jx + 2 * mu_iy))
-                        - beta_xiyj * np.exp((complex(0, mu_jx + mu_ix + 2 * mu_jy)))
-                        + beta_xjyi * np.exp((complex(0, mu_ix + mu_jx + 2 * mu_iy)))
-                        + 4 * beta_yij * (np.exp((complex(0, mu_jx + mu_ix + 2 * mu_jy)))
-                                          - np.exp((complex(0, mu_ix + mu_jx + 2 * mu_iy))))) / 64
-                h00310[i, j] = const * beta_xij ** 0.5 * beta_yij * (
-                        np.exp(complex(0, mu_jx - mu_ix + 2 * mu_jy)) - np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy))
-                        - np.exp(complex(0, -mu_jx + mu_ix + 2 * mu_jy)) + np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy))) / 32
-                h00400[i, j] = const * beta_xij ** 0.5 * beta_yij * (np.exp(complex(0, mu_jx - mu_ix + 2 * mu_jy + 2 * mu_iy))
-                                                                     - np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy))) / 64
-        current_ind = 0
-        for k in nonlinear_index:  # 四阶项和ADTS项只关心相对相移，三阶项角度变化，绝对值不变，所以只计算六极铁处就够了
-            s[current_ind * 2 + 1] = ele_list[k].s
-            s[current_ind * 2 + 2] = ele_list[k].s
-            current_ind += 1
-        s[-1] = ele_list[-1].s
-        current_ind = 1
-        hts11001 = 0
-        hts00111 = 0
-        hts20001 = 0
-        hts00201 = 0
-        hts10002 = 0
-        hts21000 = 0
-        hts30000 = 0
-        hts10110 = 0
-        hts10020 = 0
-        hts10200 = 0
-        hts31000 = 0
-        hts40000 = 0
-        hts00310 = 0
-        hts20020 = 0
-        hts20110 = 0
-        hts00400 = 0
-        hts20200 = 0
-        hts11200 = 0
-        hts22000 = 0
-        hts00220 = 0
-        hts11110 = 0
-        quad_idx_idx = 0
-        sext_idx_idx = 0
-        oct_idx_idx = 0
-        for (is_quad, is_sext, is_oct) in nonlinear_num:
-            if is_quad:
-                quad_idx = quad_index[quad_idx_idx]
-                b2l = ele_list[quad_idx].k1 * ele_list[quad_idx].length
-                beta_x = (ele_list[quad_idx].betax + ele_list[quad_idx + 1].betax) / 2
-                eta_x = (ele_list[quad_idx].etax + ele_list[quad_idx + 1].etax) / 2
-                beta_y = (ele_list[quad_idx].betay + ele_list[quad_idx + 1].betay) / 2
-                mu_x = (ele_list[quad_idx].psix + ele_list[quad_idx + 1].psix) / 2
-                mu_y = (ele_list[quad_idx].psiy + ele_list[quad_idx + 1].psiy) / 2
-                hts11001 += b2l * beta_x / 4
-                hts00111 += -b2l * beta_y / 4
-                hts20001 += b2l * beta_x / 8 * np.exp(complex(0, 2 * mu_x))
-                hts00201 += -b2l * beta_y / 8 * np.exp(complex(0, 2 * mu_y))
-                hts10002 += b2l * beta_x ** 0.5 * eta_x / 2 * np.exp(complex(0, mu_x))
-                quad_idx_idx += 1
-            if is_sext:
-                hts20001 += hs20001[sext_idx_idx]
-                hts00201 += hs00201[sext_idx_idx]
-                hts10002 += hs10002[sext_idx_idx]
-                hts11001 += hs11001[sext_idx_idx]
-                hts00111 += hs00111[sext_idx_idx]
-                hts21000 += hs21000[sext_idx_idx]
-                hts30000 += hs30000[sext_idx_idx]
-                hts10110 += hs10110[sext_idx_idx]
-                hts10020 += hs10020[sext_idx_idx]
-                hts10200 += hs10200[sext_idx_idx]
-                for j in range(sext_idx_idx):
-                    hts22000 += h22000[sext_idx_idx, j]
-                    hts00220 += h00220[sext_idx_idx, j]
-                    hts11110 += h11110[sext_idx_idx, j]
-                    hts31000 += h31000[sext_idx_idx, j]
-                    hts40000 += h40000[sext_idx_idx, j]
-                    hts00310 += h00310[sext_idx_idx, j]
-                    hts20020 += h20020[sext_idx_idx, j]
-                    hts20110 += h20110[sext_idx_idx, j]
-                    hts00400 += h00400[sext_idx_idx, j]
-                    hts20200 += h20200[sext_idx_idx, j]
-                    hts11200 += h11200[sext_idx_idx, j]
-                sext_idx_idx += 1
-            if is_oct:
-                oct_idx = oct_index[oct_idx_idx]
-                b4l = ele_list[oct_idx].k3 * ele_list[oct_idx].length / 6
-                beta_x = (ele_list[oct_idx].betax + ele_list[oct_idx + 1].betax) / 2
-                beta_y = (ele_list[oct_idx].betay + ele_list[oct_idx + 1].betay) / 2
-                mu_x = (ele_list[oct_idx].psix + ele_list[oct_idx + 1].psix) / 2
-                mu_y = (ele_list[oct_idx].psiy + ele_list[oct_idx + 1].psiy) / 2
-                hts22000 += -3 * b4l * beta_x ** 2 / 32
-                hts11110 += 3 * b4l * beta_x * beta_y / 8
-                hts00220 += -3 * b4l * beta_y ** 2 / 32
-                hts31000 += -b4l * beta_x ** 2 * np.exp(complex(0, 2 * mu_x)) / 16
-                hts40000 += -b4l * beta_x ** 2 * np.exp(complex(0, 4 * mu_x)) / 64
-                hts20110 += 3 * b4l * beta_x * beta_y * np.exp(complex(0, 2 * mu_x)) / 16
-                hts11200 += 3 * b4l * beta_x * beta_y * np.exp(complex(0, 2 * mu_y)) / 16
-                hts20020 += 3 * b4l * beta_x * beta_y * np.exp(complex(0, 2 * mu_x - 2 * mu_y)) / 32
-                hts20200 += 3 * b4l * beta_x * beta_y * np.exp(complex(0, 2 * mu_x + 2 * mu_y)) / 32
-                hts00310 += -b4l * beta_y ** 2 * np.exp(complex(0, 2 * mu_y)) / 16
-                hts00400 += -b4l * beta_y ** 2 * np.exp(complex(0, 4 * mu_y)) / 64
-                oct_idx_idx += 1
-            f20001[current_ind * 2] = abs(hts20001)
-            f00201[current_ind * 2] = abs(hts00201)
-            f10002[current_ind * 2] = abs(hts10002)
-            f11001[current_ind * 2] = abs(hts11001)
-            f00111[current_ind * 2] = abs(hts00111)
-            f21000[current_ind * 2] = abs(hts21000)
-            f30000[current_ind * 2] = abs(hts30000)
-            f10110[current_ind * 2] = abs(hts10110)
-            f10020[current_ind * 2] = abs(hts10020)
-            f10200[current_ind * 2] = abs(hts10200)
-            f20001[current_ind * 2 + 1] = f20001[current_ind * 2]
-            f00201[current_ind * 2 + 1] = f00201[current_ind * 2]
-            f10002[current_ind * 2 + 1] = f10002[current_ind * 2]
-            f11001[current_ind * 2 + 1] = f11001[current_ind * 2]
-            f00111[current_ind * 2 + 1] = f00111[current_ind * 2]
-            f21000[current_ind * 2 + 1] = f21000[current_ind * 2]
-            f30000[current_ind * 2 + 1] = f30000[current_ind * 2]
-            f10110[current_ind * 2 + 1] = f10110[current_ind * 2]
-            f10020[current_ind * 2 + 1] = f10020[current_ind * 2]
-            f10200[current_ind * 2 + 1] = f10200[current_ind * 2]
-            f31000[current_ind * 2] = abs(hts31000)
-            f40000[current_ind * 2] = abs(hts40000)
-            f00310[current_ind * 2] = abs(hts00310)
-            f20020[current_ind * 2] = abs(hts20020)
-            f20110[current_ind * 2] = abs(hts20110)
-            f00400[current_ind * 2] = abs(hts00400)
-            f20200[current_ind * 2] = abs(hts20200)
-            f11200[current_ind * 2] = abs(hts11200)
-            f22000[current_ind * 2] = abs(hts22000)
-            f00220[current_ind * 2] = abs(hts00220)
-            f11110[current_ind * 2] = abs(hts11110)
-            f22000[current_ind * 2 + 1] = f22000[current_ind * 2]
-            f00220[current_ind * 2 + 1] = f00220[current_ind * 2]
-            f11110[current_ind * 2 + 1] = f11110[current_ind * 2]
-            f31000[current_ind * 2 + 1] = f31000[current_ind * 2]
-            f40000[current_ind * 2 + 1] = f40000[current_ind * 2]
-            f00310[current_ind * 2 + 1] = f00310[current_ind * 2]
-            f20020[current_ind * 2 + 1] = f20020[current_ind * 2]
-            f20110[current_ind * 2 + 1] = f20110[current_ind * 2]
-            f00400[current_ind * 2 + 1] = f00400[current_ind * 2]
-            f20200[current_ind * 2 + 1] = f20200[current_ind * 2]
-            f11200[current_ind * 2 + 1] = f11200[current_ind * 2]
-            current_ind += 1
-        nonlinear = {'s': s, 'h21000': f21000, 'h30000': f30000, 'h10110': f10110, 'h10020': f10020,
-                     'h10200': f10200, 'h20001': f20001, 'h00201': f00201, 'h10002': f10002,
-                     'h11001': f11001, 'h00111': f00111, 'h22000': f22000, 'h11110': f11110, 'h00220': f00220,
-                     'h31000': f31000, 'h40000': f40000, 'h20110': f20110, 'h11200': f11200,
-                     'h20020': f20020, 'h20200': f20200, 'h00310': f00310, 'h00400': f00400}
-        return nonlinear
+                f22000[idx + 3] = f22000[idx + 2]
+                f11110[idx + 3] = f11110[idx + 2]
+                f00220[idx + 3] = f00220[idx + 2]
+                f31000[idx + 3] = f31000[idx + 2]
+                f40000[idx + 3] = f40000[idx + 2]
+                f20110[idx + 3] = f20110[idx + 2]
+                f11200[idx + 3] = f11200[idx + 2]
+                f20020[idx + 3] = f20020[idx + 2]
+                f20200[idx + 3] = f20200[idx + 2]
+                f00310[idx + 3] = f00310[idx + 2]
+                f00400[idx + 3] = f00400[idx + 2]
+                f21000[idx + 3] = f21000[idx + 2]
+                f30000[idx + 3] = f30000[idx + 2]
+                f10110[idx + 3] = f10110[idx + 2]
+                f10020[idx + 3] = f10020[idx + 2]
+                f10200[idx + 3] = f10200[idx + 2]
+                f20001[idx + 3] = f20001[idx + 2]
+                f00201[idx + 3] = f00201[idx + 2]
+                f10002[idx + 3] = f10002[idx + 2]
+                idx += 2
+        s[idx + 1] = ele.s
+        idx += 2
+        RDTs_along_ring = {'s': s[:idx], 'h21000': f21000[:idx], 'h30000': f30000[:idx], 'h10110': f10110[:idx],
+                           'h10020': f10020[:idx],
+                           'h10200': f10200[:idx], 'h20001': f20001[:idx], 'h00201': f00201[:idx],
+                           'h10002': f10002[:idx],
+                           'h31000': f31000[:idx], 'h40000': f40000[:idx], 'h20110': f20110[:idx],
+                           'h11200': f11200[:idx],
+                           'h20020': f20020[:idx], 'h20200': f20200[:idx], 'h00310': f00310[:idx],
+                           'h00400': f00400[:idx],
+                           'h22000': f22000[:idx], 'h11110': f11110[:idx], 'h00220': f00220[:idx]
+                           }
+        return RDTs_along_ring
 
     def adts(self, n_periods=None, printout: bool = True) -> dict:
         """adts(self, n_periods=None, printout=True)
@@ -1029,6 +962,177 @@ class CSLattice(object):
                 print(f'    {str(k):7}: {b4l:.2f}')
         return nonlinear_terms
 
+    def another_method_driving_terms(self, printout=True):
+        """compute resonance driving terms. return a dictionary
+        nonlinear_terms = {'h21000': , 'h30000': , 'h10110': , 'h10020': ,
+                           'h10200': , 'Qxx': , 'Qxy': , 'Qyy': ,
+                           'h31000': , 'h40000': , 'h20110': , 'h11200': ,
+                           'h20020': , 'h20200': , 'h00310': , 'h00400': }
+
+        references:
+        1. The Sextupole Scheme for the SLS: An Analytic Approach, SLS Note 09/97, Johan Bengtsson
+        2. Explicit formulas for 2nd-order driving terms due to sextupoles and chromatic effects of quadrupoles, Chun-xi Wang
+        3. Perspectives for future light source lattices incorporating yet uncommon magnets, S. C. Leemann and A. Streun"""
+
+        ele_list = []
+        quad_index = []
+        sext_index = []
+        oct_index = []
+        current_ind = 0
+        for ele in self.elements:
+            if isinstance(ele, Sextupole):
+                ele_list += ele.slice(ele.n_slices)
+                for i in range(ele.n_slices):
+                    sext_index.append(current_ind)
+                    current_ind += 1
+            elif isinstance(ele, Octupole):
+                ele_list += ele.slice(ele.n_slices)
+                for i in range(ele.n_slices):
+                    oct_index.append(current_ind)
+                    current_ind += 1
+            elif ele.k1:
+                ele_list += ele.slice(ele.n_slices)
+                for i in range(ele.n_slices):
+                    quad_index.append(current_ind)
+                    current_ind += 1
+            else:
+                ele_list.append(ele)
+                current_ind += 1
+        del current_ind
+        Qxx = Qxy = Qyy = 0
+        h20001 = h00201 = h10002 = h11001 = h00111 = 0
+        h21000 = h30000 = h10110 = h10020 = h10200 = 0
+        h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
+        h22000 = h11110 = h00220 = 0
+        pi_nux = self.elements[-1].psix / 2
+        pi_nuy = self.elements[-1].psiy / 2
+        for i in quad_index:
+            b2l = ele_list[i].k1 * ele_list[i].length
+            beta_x = (ele_list[i].betax + ele_list[i + 1].betax) / 2
+            eta_x = (ele_list[i].etax + ele_list[i + 1].etax) / 2
+            beta_y = (ele_list[i].betay + ele_list[i + 1].betay) / 2
+            mu_x = (ele_list[i].psix + ele_list[i + 1].psix) / 2
+            mu_y = (ele_list[i].psiy + ele_list[i + 1].psiy) / 2
+            h11001 += b2l * beta_x / 4
+            h00111 += -b2l * beta_y / 4
+            h20001 += b2l * beta_x / 8 * np.exp(complex(0, 2 * mu_x))
+            h00201 += -b2l * beta_y / 8 * np.exp(complex(0, 2 * mu_y))
+            h10002 += b2l * beta_x ** 0.5 * eta_x / 2 * np.exp(complex(0, mu_x))
+        for i in sext_index:
+            b3l_i = ele_list[i].k2 * ele_list[i].length / 2  # k2 = 2 * b3, k1 = b2
+            if b3l_i != 0:
+                beta_xi = (ele_list[i].betax + ele_list[i + 1].betax) / 2
+                eta_xi = (ele_list[i].etax + ele_list[i + 1].etax) / 2
+                beta_yi = (ele_list[i].betay + ele_list[i + 1].betay) / 2
+                mu_ix = (ele_list[i].psix + ele_list[i + 1].psix) / 2
+                mu_iy = (ele_list[i].psiy + ele_list[i + 1].psiy) / 2
+                h11001 += -b3l_i * beta_xi * eta_xi / 2
+                h00111 += b3l_i * beta_yi * eta_xi / 2
+                h20001 += -b3l_i * beta_xi * eta_xi / 4 * np.exp(complex(0, 2 * mu_ix))
+                h00201 += b3l_i * beta_yi * eta_xi / 4 * np.exp(complex(0, 2 * mu_iy))
+                h10002 += -b3l_i * beta_xi ** 0.5 * eta_xi ** 2 / 2 * np.exp(complex(0, mu_ix))
+                h21000 += - b3l_i * beta_xi ** 1.5 * np.exp(complex(0, mu_ix)) / 8
+                h30000 += - b3l_i * beta_xi ** 1.5 * np.exp(complex(0, 3 * mu_ix)) / 24
+                h10110 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(complex(0, mu_ix)) / 4
+                h10020 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(complex(0, mu_ix - 2 * mu_iy)) / 8
+                h10200 += b3l_i * beta_xi ** 0.5 * beta_yi * np.exp(complex(0, mu_ix + 2 * mu_iy)) / 8
+                for j in sext_index:
+                    b3l_j = ele_list[j].k2 * ele_list[j].length / 2
+                    b3l = b3l_j * b3l_i
+                    if b3l != 0:
+                        beta_xj = (ele_list[j].betax + ele_list[j + 1].betax) / 2
+                        beta_yj = (ele_list[j].betay + ele_list[j + 1].betay) / 2
+                        mu_jx = (ele_list[j].psix + ele_list[j + 1].psix) / 2
+                        mu_ijx = abs(mu_ix - mu_jx)
+                        mu_jy = (ele_list[j].psiy + ele_list[j + 1].psiy) / 2
+                        mu_ijy = abs(mu_iy - mu_jy)
+                        beta_xij = beta_xj * beta_xi
+                        mu_ij_x2y = mu_ijx + 2 * mu_ijy
+                        mu_ij_x_2y = mu_ijx - 2 * mu_ijy
+                        Qxx += b3l / (-16 * pi) * pow(beta_xi * beta_xj, 1.5) * (
+                                3 * np.cos(mu_ijx - pi_nux) / np.sin(pi_nux)
+                                + np.cos(3 * mu_ijx - 3 * pi_nux) / np.sin(3 * pi_nux))
+                        Qxy += b3l / (8 * pi) * pow(beta_xij, 0.5) * beta_yj * (
+                                2 * beta_xi * np.cos(mu_ijx - pi_nux) / np.sin(pi_nux)
+                                - beta_yi * np.cos(mu_ij_x2y - pi_nux - 2 * pi_nuy) / np.sin(pi_nux + 2 * pi_nuy)
+                                + beta_yi * np.cos(mu_ij_x_2y - pi_nux + 2 * pi_nuy) / np.sin(pi_nux - 2 * pi_nuy))
+                        Qyy += b3l / (-16 * pi) * pow(beta_xij, 0.5) * beta_yj * beta_yi * (
+                                4 * np.cos(mu_ijx - pi_nux) / np.sin(pi_nux)
+                                + np.cos(mu_ij_x2y - pi_nux - 2 * pi_nuy) / np.sin(pi_nux + 2 * pi_nuy)
+                                + np.cos(mu_ij_x_2y - pi_nux + 2 * pi_nuy) / np.sin(pi_nux - 2 * pi_nuy))
+                        sign = - np.sign(mu_ix - mu_jx)
+                        jj = complex(0, 1)
+                        const = sign * jj * b3l
+                        h22000 += const * beta_xij ** 1.5 * (np.exp(complex(0, 3 * (mu_ix - mu_jx))) + 3 * np.exp(
+                            complex(0, mu_ix - mu_jx))) / 64
+                        h11110 += const * beta_xij ** 0.5 * beta_yi * (beta_xj * (
+                                    np.exp(complex(0, mu_jx - mu_ix)) - np.exp(complex(0, mu_ix - mu_jx))) +
+                                                                       beta_yj * (np.exp(
+                                    complex(0, mu_ix - mu_jx + 2 * mu_iy - 2 * mu_jy)) +
+                                                                                  np.exp(complex(0,
+                                                                                                 -mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy)))) / 16
+                        h00220 += const * beta_xij ** 0.5 * beta_yi * beta_yj * (
+                                    np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy - 2 * mu_jy)) +
+                                    4 * np.exp(complex(0, mu_ix - mu_jx)) -
+                                    np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy))) / 64
+                        h31000 += const * beta_xij ** 1.5 * np.exp(complex(0, 3 * mu_ix - mu_jx)) / 32
+                        h40000 += const * beta_xij ** 1.5 * np.exp(complex(0, 3 * mu_ix + mu_jx)) / 64
+                        h20110 += const * beta_xij ** 0.5 * beta_yi * (
+                                beta_xj * (
+                                    np.exp(complex(0, 3 * mu_jx - mu_ix)) - np.exp(complex(0, mu_ix + mu_jx))) +
+                                2 * beta_yj * np.exp(complex(0, mu_ix + mu_jx + 2 * mu_iy - 2 * mu_jy))) / 32
+                        h11200 += const * beta_xij ** 0.5 * beta_yi * (
+                                beta_xj * (np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy)) - np.exp(
+                            complex(0, mu_ix - mu_jx + 2 * mu_iy))) +
+                                2 * beta_yj * (np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy)) + np.exp(
+                            complex(0, - mu_ix + mu_jx + 2 * mu_iy)))) / 32
+                        h20020 += const * beta_xij ** 0.5 * beta_yi * (
+                                beta_xj * np.exp(complex(0, -mu_ix + 3 * mu_jx - 2 * mu_iy)) -
+                                (beta_xj + 4 * beta_yj) * np.exp(complex(0, mu_ix + mu_jx - 2 * mu_iy))) / 64
+                        h20200 += const * beta_xij ** 0.5 * beta_yi * (
+                                beta_xj * np.exp(complex(0, -mu_ix + 3 * mu_jx + 2 * mu_iy))
+                                - (beta_xj - 4 * beta_yj) * np.exp((complex(0, mu_ix + mu_jx + 2 * mu_iy)))) / 64
+                        h00310 += const * beta_xij ** 0.5 * beta_yi * beta_yj * (
+                                np.exp(complex(0, mu_ix - mu_jx + 2 * mu_iy)) -
+                                np.exp(complex(0, -mu_ix + mu_jx + 2 * mu_iy))) / 32
+                        h00400 += const * beta_xij ** 0.5 * beta_yi * beta_yj * np.exp(
+                            complex(0, mu_ix - mu_jx + 2 * mu_iy + 2 * mu_jy)) / 64
+        for i in oct_index:
+            b4l = ele_list[i].k3 * ele_list[i].length / 6
+            beta_x = (ele_list[i].betax + ele_list[i + 1].betax) / 2
+            beta_y = (ele_list[i].betay + ele_list[i + 1].betay) / 2
+            mu_x = (ele_list[i].psix + ele_list[i + 1].psix) / 2
+            mu_y = (ele_list[i].psiy + ele_list[i + 1].psiy) / 2
+            Qxx += 3 * b4l * beta_x ** 2 / 8 / pi
+            Qxy -= 3 * b4l * beta_x * beta_y / (4 * pi)
+            Qyy += 3 * b4l * beta_y ** 2 / 8 / pi
+            h31000 += -b4l * beta_x ** 2 * np.exp(complex(0, 2 * mu_x)) / 16
+            h40000 += -b4l * beta_x ** 2 * np.exp(complex(0, 4 * mu_x)) / 64
+            h20110 += 3 * b4l * beta_x * beta_y * np.exp(complex(0, 2 * mu_x)) / 16
+            h11200 += 3 * b4l * beta_x * beta_y * np.exp(complex(0, 2 * mu_y)) / 16
+            h20020 += 3 * b4l * beta_x * beta_y * np.exp(complex(0, 2 * mu_x - 2 * mu_y)) / 32
+            h20200 += 3 * b4l * beta_x * beta_y * np.exp(complex(0, 2 * mu_x + 2 * mu_y)) / 32
+            h00310 += -b4l * beta_y ** 2 * np.exp(complex(0, 2 * mu_y)) / 16
+            h00400 += -b4l * beta_y ** 2 * np.exp(complex(0, 4 * mu_y)) / 64
+            h22000 += -3 * b4l * beta_x ** 2 / 32
+            h11110 += 3 * b4l * beta_x * beta_y / 8
+            h00220 += -3 * b4l * beta_y ** 2 / 32
+        nonlinear_terms = {'h21000': abs(h21000), 'h30000': abs(h30000), 'h10110': abs(h10110),
+                           'h10020': abs(h10020),
+                           'h10200': abs(h10200), 'h20001': abs(h20001), 'h00201': abs(h00201),
+                           'h10002': abs(h10002),
+                           'h11001': abs(h11001), 'h00111': abs(h00111), 'Qxx': Qxx, 'Qxy': Qxy, 'Qyy': Qyy,
+                           'h31000': abs(h31000), 'h40000': abs(h40000), 'h20110': abs(h20110),
+                           'h11200': abs(h11200),
+                           'h20020': abs(h20020), 'h20200': abs(h20200), 'h00310': abs(h00310),
+                           'h00400': abs(h00400),
+                           'h22000': abs(h22000), 'h11110': abs(h11110), 'h00220': abs(h00220)}
+        if printout:
+            print('\nnonlinear terms:')
+            for i, j in nonlinear_terms.items():
+                print(f'    {str(i):7}: {j:.2f}')
+        return nonlinear_terms
+
     def higher_order_chromaticity(self, delta=1e-3, matrix_precision=1e-9, resdl_limit=1e-16):
         """compute higher order chromaticity with the tunes of 4d off-momentum closed orbit.
          delta: the momentum deviation.
@@ -1120,6 +1224,11 @@ class CSLattice(object):
     def __add__(self, other):
         assert isinstance(other, CSLattice), 'can only add CSLattice.'
         newlattice = CSLattice(self.elements * self.n_periods + other.elements * other.n_periods)
+        return newlattice
+
+    def __mul__(self, other):
+        assert isinstance(other, int), 'can only multiply int.'
+        newlattice = CSLattice(self.elements * other)
         return newlattice
 
     def __str__(self):

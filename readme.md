@@ -1,7 +1,13 @@
 # SimpleStorageRing
-SimpleStorageRing is a python project to simulate simple storage ring and calculate lattice data.
+SimpleStorageRing is a python project to simulate simple storage ring and calculate lattice data,
+which can calculate 
+* linear optics, 
+* **driving terms** (using the RDT fluctuation data, the number of iterations for calculating the crossing terms is reduced from $N(N+1)/2$ to $N$, and the calculation speed is greatly increased). 
+* **fluctuation of driving terms**
+* higher-order chromaticities (by calculating the tunes of off-momentum closed orbit).
 
-Here is an [example](https://nbviewer.org/github/wei0852/simplestoragering/blob/master/Example.ipynb?flush_cache=true)
+Here is an [**example**](https://nbviewer.org/github/wei0852/simplestoragering/blob/master/Example.ipynb?flush_cache=true)
+of calculating a 7BA lattice.
 
 -------------------------
 ## components

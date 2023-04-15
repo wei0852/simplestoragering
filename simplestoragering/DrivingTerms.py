@@ -48,22 +48,22 @@ class DrivingTerms(object):
         self.R20200 = R20200
         self.R00310 = R00310
         self.R00400 = R00400
-        self.f21000 = f21000[1:]
-        self.f30000 = f30000[1:]
-        self.f10110 = f10110[1:]
-        self.f10020 = f10020[1:]
-        self.f10200 = f10200[1:]
-        self.f20001 = f20001[1:]
-        self.f00201 = f00201[1:]
-        self.f10002 = f10002[1:]
-        self.f31000 = f31000[1:]
-        self.f40000 = f40000[1:]
-        self.f20110 = f20110[1:]
-        self.f11200 = f11200[1:]
-        self.f20020 = f20020[1:]
-        self.f20200 = f20200[1:]
-        self.f00310 = f00310[1:]
-        self.f00400 = f00400[1:]
+        self.f21000 = f21000
+        self.f30000 = f30000
+        self.f10110 = f10110
+        self.f10020 = f10020
+        self.f10200 = f10200
+        self.f20001 = f20001
+        self.f00201 = f00201
+        self.f10002 = f10002
+        self.f31000 = f31000
+        self.f40000 = f40000
+        self.f20110 = f20110
+        self.f11200 = f11200
+        self.f20020 = f20020
+        self.f20200 = f20200
+        self.f00310 = f00310
+        self.f00400 = f00400
         self.terms = {}
         self.set_periods(n_periods)
 
@@ -193,56 +193,56 @@ class DrivingTerms(object):
 
         chro_num = len(self.f20001)
         geo_num = len(self.f21000)
-        f21000 = np.zeros(n_periods * geo_num + 1, dtype='complex_')
-        f30000 = np.zeros(n_periods * geo_num + 1, dtype='complex_')
-        f10110 = np.zeros(n_periods * geo_num + 1, dtype='complex_')
-        f10020 = np.zeros(n_periods * geo_num + 1, dtype='complex_')
-        f10200 = np.zeros(n_periods * geo_num + 1, dtype='complex_')
-        f20001 = np.zeros(n_periods * chro_num + 1, dtype='complex_')
-        f00201 = np.zeros(n_periods * chro_num + 1, dtype='complex_')
-        f10002 = np.zeros(n_periods * chro_num + 1, dtype='complex_')
-        f31000 = np.zeros(n_periods * geo_num + 1, dtype='complex_')
-        f40000 = np.zeros(n_periods * geo_num + 1, dtype='complex_')
-        f20110 = np.zeros(n_periods * geo_num + 1, dtype='complex_')
-        f11200 = np.zeros(n_periods * geo_num + 1, dtype='complex_')
-        f20020 = np.zeros(n_periods * geo_num + 1, dtype='complex_')
-        f20200 = np.zeros(n_periods * geo_num + 1, dtype='complex_')
-        f00310 = np.zeros(n_periods * geo_num + 1, dtype='complex_')
-        f00400 = np.zeros(n_periods * geo_num + 1, dtype='complex_')
-        f21000[1: geo_num + 1] = self.f21000
-        f30000[1: geo_num + 1] = self.f30000
-        f10110[1: geo_num + 1] = self.f10110
-        f10020[1: geo_num + 1] = self.f10020
-        f10200[1: geo_num + 1] = self.f10200
-        f20001[1: chro_num + 1] = self.f20001
-        f00201[1: chro_num + 1] = self.f00201
-        f10002[1: chro_num + 1] = self.f10002
-        f31000[1: geo_num + 1] = self.f31000
-        f40000[1: geo_num + 1] = self.f40000
-        f20110[1: geo_num + 1] = self.f20110
-        f11200[1: geo_num + 1] = self.f11200
-        f20020[1: geo_num + 1] = self.f20020
-        f20200[1: geo_num + 1] = self.f20200
-        f00310[1: geo_num + 1] = self.f00310
-        f00400[1: geo_num + 1] = self.f00400
+        f21000 = np.zeros(n_periods * geo_num, dtype='complex_')
+        f30000 = np.zeros(n_periods * geo_num, dtype='complex_')
+        f10110 = np.zeros(n_periods * geo_num, dtype='complex_')
+        f10020 = np.zeros(n_periods * geo_num, dtype='complex_')
+        f10200 = np.zeros(n_periods * geo_num, dtype='complex_')
+        f20001 = np.zeros(n_periods * chro_num, dtype='complex_')
+        f00201 = np.zeros(n_periods * chro_num, dtype='complex_')
+        f10002 = np.zeros(n_periods * chro_num, dtype='complex_')
+        f31000 = np.zeros(n_periods * geo_num, dtype='complex_')
+        f40000 = np.zeros(n_periods * geo_num, dtype='complex_')
+        f20110 = np.zeros(n_periods * geo_num, dtype='complex_')
+        f11200 = np.zeros(n_periods * geo_num, dtype='complex_')
+        f20020 = np.zeros(n_periods * geo_num, dtype='complex_')
+        f20200 = np.zeros(n_periods * geo_num, dtype='complex_')
+        f00310 = np.zeros(n_periods * geo_num, dtype='complex_')
+        f00400 = np.zeros(n_periods * geo_num, dtype='complex_')
+        f21000[: geo_num] = self.f21000
+        f30000[: geo_num] = self.f30000
+        f10110[: geo_num] = self.f10110
+        f10020[: geo_num] = self.f10020
+        f10200[: geo_num] = self.f10200
+        f20001[: chro_num] = self.f20001
+        f00201[: chro_num] = self.f00201
+        f10002[: chro_num] = self.f10002
+        f31000[: geo_num] = self.f31000
+        f40000[: geo_num] = self.f40000
+        f20110[: geo_num] = self.f20110
+        f11200[: geo_num] = self.f11200
+        f20020[: geo_num] = self.f20020
+        f20200[: geo_num] = self.f20200
+        f00310[: geo_num] = self.f00310
+        f00400[: geo_num] = self.f00400
         for j in range(n_periods - 1):
             i = j + 1
-            f21000[i * geo_num + 1: (i + 1) * geo_num + 1] = self.R21000 + (self.f21000 - self.R21000) * q21000 ** i
-            f30000[i * geo_num + 1: (i + 1) * geo_num + 1] = self.R30000 + (self.f30000 - self.R30000) * q30000 ** i
-            f10110[i * geo_num + 1: (i + 1) * geo_num + 1] = self.R10110 + (self.f10110 - self.R10110) * q10110 ** i
-            f10020[i * geo_num + 1: (i + 1) * geo_num + 1] = self.R10020 + (self.f10020 - self.R10020) * q10020 ** i
-            f10200[i * geo_num + 1: (i + 1) * geo_num + 1] = self.R10200 + (self.f10200 - self.R10200) * q10200 ** i
-            f20001[i * chro_num + 1: (i + 1) * chro_num + 1] = self.R20001 + (self.f20001 - self.R20001) * q20001 ** i
-            f00201[i * chro_num + 1: (i + 1) * chro_num + 1] = self.R00201 + (self.f00201 - self.R00201) * q00201 ** i
-            f10002[i * chro_num + 1: (i + 1) * chro_num + 1] = self.R10002 + (self.f10002 - self.R10002) * q10002 ** i
+            f21000[i * geo_num: (i + 1) * geo_num] = self.R21000 + (self.f21000 - self.R21000) * q21000 ** i
+            f30000[i * geo_num: (i + 1) * geo_num] = self.R30000 + (self.f30000 - self.R30000) * q30000 ** i
+            f10110[i * geo_num: (i + 1) * geo_num] = self.R10110 + (self.f10110 - self.R10110) * q10110 ** i
+            f10020[i * geo_num: (i + 1) * geo_num] = self.R10020 + (self.f10020 - self.R10020) * q10020 ** i
+            f10200[i * geo_num: (i + 1) * geo_num] = self.R10200 + (self.f10200 - self.R10200) * q10200 ** i
+            f20001[i * chro_num: (i + 1) * chro_num] = self.R20001 + (self.f20001 - self.R20001) * q20001 ** i
+            f00201[i * chro_num: (i + 1) * chro_num] = self.R00201 + (self.f00201 - self.R00201) * q00201 ** i
+            f10002[i * chro_num: (i + 1) * chro_num] = self.R10002 + (self.f10002 - self.R10002) * q10002 ** i
             
-            f31000[i * geo_num + 1: (i + 1) * geo_num + 1] = (self.R31000 + (self.f31000 - (self.R30000 * f12000 - R12000 * self.f30000) * jj * 6 -self.R31000) * q31000 ** i
+            f31000[i * geo_num: (i + 1) * geo_num] = (self.R31000 + (self.f31000 - (self.R30000 * f12000 - R12000 * self.f30000) * jj * 6 -self.R31000) * q31000 ** i
                                     +jj * 6 * R12000 * (self.R30000 - self.f30000) * q30000 ** i
                                     +jj * 6 * (f12000 - R12000) * self.R30000 * q12000 ** i)
-            f40000[i * geo_num + 1: (i + 1) * geo_num + 1] = (self.R40000 + (self.f40000 - (self.R30000 * self.f21000 - self.R21000 * self.f30000) * jj * 3 -self.R40000) * q40000 ** i
+            f40000[i * geo_num: (i + 1) * geo_num] = (self.R40000 + (self.f40000 - (self.R30000 * self.f21000 - self.R21000 * self.f30000) * jj * 3 -self.R40000) * q40000 ** i
                                     + jj * 3 * self.R21000 * (self.R30000 - self.f30000) * q30000 ** i
                                     +jj * 3* (self.f21000 - self.R21000) * self.R30000 * q21000 ** i)
-            f20110[i * geo_num + 1: (i + 1) * geo_num + 1] = (self.R20110 + 
+            f20110[i * geo_num: (i + 1) * geo_num] = (self.R20110 +
                                                                 (self.f20110 - 
                                                                 ((self.R30000 * f01110 - R01110 * self.f30000) * 3
                                                                 - self.R21000 * self.f10110 + self.R10110 * self.f21000
@@ -253,7 +253,7 @@ class DrivingTerms(object):
                                     +(self.R10110 - self.f10110) * self.R21000 * q10110 ** i
                                     +self.R10020 * (self.R10200 - self.f10200) * 4 * q10200 ** i
                                     - (self.R10020 - self.f10020) * self.R10200 * 4 * q10020 ** i) * jj)
-            f11200[i * geo_num + 1: (i + 1) * geo_num + 1] = (self.R11200 + 
+            f11200[i * geo_num: (i + 1) * geo_num] = (self.R11200 +
                                                                 (self.f11200 - 
                                                                 (self.R10200 * (f12000 + f01110) - R12000 * self.f10200
                                                                 +self.R21000 * f01200 - R01200 * (self.f21000 - self.f10110)
@@ -264,7 +264,7 @@ class DrivingTerms(object):
                                     -(R01200 - f01200) * (self.R21000 - self.R10110) * 2 * q01200 ** i
                                     -(R01110 - f01110) * self.R10200 * 2 * q01110 ** i
                                     +R01200 * (self.R10110 - self.f10110) * (-2) * q10110 ** i) * jj)
-            f20020[i * geo_num + 1: (i + 1) * geo_num + 1] = (self.R20020 + 
+            f20020[i * geo_num: (i + 1) * geo_num] = (self.R20020 +
                                                                 (self.f20020 - 
                                                                 (-self.R21000 * self.f10020 + self.R10020 * (self.f21000 - self.f10110 * 2)
                                                                 + self.R30000 * f01020 * 3 - R01020 * self.f30000 * 3
@@ -274,7 +274,7 @@ class DrivingTerms(object):
                                     + R01020 * (self.R30000 - self.f30000) * 3 * q30000 ** i
                                     - (R01020 - f01020) * self.R30000 * 3 * q01020 ** i
                                     + self.R10020 * (self.R10110 - self.f10110) * 2 * q10110 ** i) * jj)
-            f20200[i * geo_num + 1: (i + 1) * geo_num + 1] = (self.R20200 +
+            f20200[i * geo_num: (i + 1) * geo_num] = (self.R20200 +
                                                                 (self.f20200 - 
                                                                 (self.R30000 * f01200 * 3 - R01200 * self.f30000 * 3
                                                                 + self.R10200 * (self.f21000 + self.f10110 * 2)
@@ -285,7 +285,7 @@ class DrivingTerms(object):
                                     + (self.R21000 + 2 * self.R10110) * (self.R10200 - self.f10200) * q10200 ** i
                                     - (self.R21000 - self.f21000) * self.R10200 * q21000 ** i
                                     + self.R10200 * (self.R10110 - self.f10110) * (-2) * q10110 ** i) * jj)
-            f00310[i * geo_num + 1: (i + 1) * geo_num + 1] = (self.R00310 +
+            f00310[i * geo_num: (i + 1) * geo_num] = (self.R00310 +
                                                                 (self.f00310 - 
                                                                 (self.R10200 * f01110 - R01110 * self.f10200
                                                                 +self.R10110 * f01200 - R01200 * self.f10110) * jj - self.R00310) * q00310 ** i
@@ -293,7 +293,7 @@ class DrivingTerms(object):
                                     - (R01110 - f01110) * self.R10200 * q01110 ** i
                                     + R01200 * (self.R10110 - self.f10110) * q10110 ** i
                                     - (R01200 - f01200) * self.R10110 * q01200 ** i) * jj)
-            f00400[i * geo_num + 1: (i + 1) * geo_num + 1] = (self.R00400 + 
+            f00400[i * geo_num: (i + 1) * geo_num] = (self.R00400 +
                                                                 (self.f00400 -
                                                                 (self.R10200 * f01200 - R01200 * self.f10200) * jj - self.R00400) * q00400 ** i
                                     + (R01200 * (self.R10200 - self.f10200) * q10200 ** i
