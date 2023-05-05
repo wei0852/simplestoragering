@@ -6,8 +6,14 @@ which can calculate
 * **fluctuation of driving terms**
 * higher-order chromaticities (by calculating the tunes of off-momentum closed orbit).
 
-Here is an [**example**](https://nbviewer.org/github/wei0852/simplestoragering/blob/master/Example.ipynb?flush_cache=true)
-of calculating a 7BA lattice.
+### Here is an [**example**](https://nbviewer.org/github/wei0852/simplestoragering/blob/master/Example.ipynb?flush_cache=false) of calculating a 7BA lattice.
+
+There is a Cython version, which needs to be compiled first.
+```command
+python setup.py build_ext --inplace
+```
+Cython translates the code to C and compile it. And the calculation will be faster.  
+reference: http://docs.cython.org/en/stable/src/quickstart/build.html
 
 -------------------------
 ## components
