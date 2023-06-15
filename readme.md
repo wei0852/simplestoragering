@@ -6,7 +6,7 @@ which can calculate
 * **fluctuation of driving terms**
 * higher-order chromaticities (by calculating the tunes of off-momentum closed orbit).
 
-### Here is an [**example**](https://nbviewer.org/github/wei0852/simplestoragering/blob/master/Example.ipynb?flush_cache=false) of calculating a 7BA lattice.
+### Here is an [**example**](https://github.com/wei0852/simplestoragering/blob/master/Example.ipynb) of calculating a 7BA lattice.
 
 There is a Cython version, which needs to be compiled first.
 ```command
