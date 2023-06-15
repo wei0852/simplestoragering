@@ -305,15 +305,16 @@ class DrivingTerms(object):
 
     def fluctuation_components(self):
         """compute the components of the RDTs fluctuation.
-        
+
         Return:
-            return a dictionary. Each value is a 2-dim np.ndarray, each row is a mode of fluctuation.
-            Use sum(components[:, 0] * components[:, 1] ** k) to get the value for k periods."""
+            return a dictionary. Each value is a tuple of tuples, ((mode1, r1), (mode2, r2), ...).
+        """
 
         jj = complex(0, 1)
+        num_geo = len(self.f30000)
         q21000 = np.exp(complex(0, self.phix))
         q30000 = np.exp(complex(0, self.phix * 3))
-        q10110 = np.exp(complex(0, self.phix))
+        q10110 = np.exp(complex(0, self.phix))  # q21000 is the same as q10110
         q10020 = np.exp(complex(0, self.phix - 2 * self.phiy))
         q10200 = np.exp(complex(0, self.phix + 2 * self.phiy))
         q12000 = q21000.conjugate()
@@ -324,15 +325,23 @@ class DrivingTerms(object):
         q00201 = np.exp(complex(0, 2 * self.phiy))
         q10002 = np.exp(complex(0, self.phix))
 
-        h21000_fluct = np.array([[self.R21000, 1], [-self.R21000, q21000]])
-        h30000_fluct = np.array([[self.R30000, 1], [-self.R30000, q30000]])
-        h10110_fluct = np.array([[self.R10110, 1], [-self.R10110, q10110]])
-        h10020_fluct = np.array([[self.R10020, 1], [-self.R10020, q10020]])
-        h10200_fluct = np.array([[self.R10200, 1], [-self.R10200, q10200]])
-        h20001_fluct = np.array([[self.R20001, 1], [-self.R20001, q20001]])
-        h00201_fluct = np.array([[self.R00201, 1], [-self.R00201, q00201]])
-        h10002_fluct = np.array([[self.R10002, 1], [-self.R10002, q10002]])
+        h21000_fluct = ((1, np.zeros(num_geo) + self.R21000), (q21000, self.f21000 - self.R21000))
+        h30000_fluct = ((1, np.zeros(num_geo) + self.R30000), (q30000, self.f30000 - self.R30000))
+        h10110_fluct = ((1, np.zeros(num_geo) + self.R10110), (q10110, self.f10110 - self.R10110))
+        h10020_fluct = ((1, np.zeros(num_geo) + self.R10020), (q10020, self.f10020 - self.R10020))
+        h10200_fluct = ((1, np.zeros(num_geo) + self.R10200), (q10200, self.f10200 - self.R10200))
+        h20001_fluct = ((1, np.zeros(len(self.f20001)) + self.R20001), (q20001, self.f20001 - self.R20001))
+        h00201_fluct = ((1, np.zeros(len(self.f00201)) + self.R00201), (q00201, self.f00201 - self.R00201))
+        h10002_fluct = ((1, np.zeros(len(self.f10002)) + self.R10002), (q10002, self.f10002 - self.R10002))
 
+        R12000 = self.R21000.conjugate()
+        R01110 = self.R10110.conjugate()
+        R01200 = self.R10020.conjugate()
+        R01020 = self.R10200.conjugate()
+        f12000 = np.conj(self.f21000)
+        f01110 = np.conj(self.f10110)
+        f01200 = np.conj(self.f10020)
+        f01020 = np.conj(self.f10200)
         # 4th-order
         q31000 = np.exp(complex(0, 2 * self.phix))
         q40000 = np.exp(complex(0, 4 * self.phix))
@@ -342,58 +351,67 @@ class DrivingTerms(object):
         q20200 = np.exp(complex(0, 2 * self.phix + 2 * self.phiy))
         q00310 = np.exp(complex(0, 2 * self.phiy))
         q00400 = np.exp(complex(0, 4 * self.phiy))
-        R12000 = self.R21000.conjugate()
-        R01110 = self.R10110.conjugate()
-        R01200 = self.R10020.conjugate()
-        R01020 = self.R10200.conjugate()
-        h31000_fluct = np.array([[self.R31000, 1],
-                                [-self.R31000, q31000],
-                                [jj * 6 * R12000 * self.R30000, q30000],
-                                [-jj * 6 * R12000 * self.R30000, q12000]])
-        h40000_fluct = np.array([[self.R40000, 1],
-                                [-self.R40000, q40000],
-                                [jj * 3 * self.R21000 * self.R30000, q30000],
-                                [-jj * 3* self.R21000 * self.R30000, q21000]])
-        h20110_fluct = np.array([[self.R20110, 1], 
-                                [-self.R20110, q20110],
-                                [jj * R01110 * self.R30000 * 3, q30000],
-                                [-jj * R01110 * self.R30000 * 3, q01110],
-                                [-jj * self.R10110 * self.R21000, q21000],
-                                [jj * self.R10110 * self.R21000, q10110],
-                                [jj * self.R10020 * self.R10200 * 4, q10200],
-                                [- jj * self.R10020 * self.R10200 * 4, q10020]])
-        h11200_fluct = np.array([[self.R11200, 1], 
-                                [-self.R11200, q11200],
-                                [jj * (R12000 + R01110) * self.R10200 * 2, q10200],
-                                [-jj * R12000 * self.R10200 * 2, q12000],
-                                [jj * R01200 * self.R21000 * 2, q21000],
-                                [-jj * R01200 * (self.R21000 - self.R10110) * 2, q01200],
-                                [-jj * R01110 * self.R10200 * 2, q01110],
-                                [jj * R01200 * self.R10110 * (-2), q10110]])
-        h20020_fluct = np.array([[self.R20020, 1], 
-                                [-self.R20020, q20020],
-                                [- jj  * self.R10020 * self.R21000, q21000],
-                                [ jj  * self.R10020 * (self.R21000 - self.R10110 * 2), q10020],
-                                [  jj * R01020 * self.R30000 * 3, q30000],
-                                [ - jj * R01020 * self.R30000 * 3, q01020],
-                                [jj * self.R10020 * self.R10110 * 2, q10110]])
-        h20200_fluct = np.array([[self.R20200, 1], 
-                                [-self.R20200, q20200],
-                                [jj * R01200 * self.R30000 * 3, q30000],
-                                [ - jj * R01200 * self.R30000 * 3, q01200],
-                                [jj * (self.R21000 + 2 * self.R10110) * self.R10200, q10200],
-                                [ - jj * self.R21000 * self.R10200, q21000],
-                                [jj * self.R10200 * self.R10110 * (-2), q10110]])
-        h00310_fluct = np.array([[self.R00310, 1], 
-                                [-self.R00310, q00310],
-                                [jj * R01110 * self.R10200, q10200],
-                                [ - jj * R01110 * self.R10200, q01110],
-                                [jj * R01200 * self.R10110, q10110],
-                                [ - jj * R01200 * self.R10110, q01200]])
-        h00400_fluct = np.array([[self.R00400, 1], 
-                                [-self.R00400, q00400],
-                                [jj * R01200 * self.R10200, q10200],
-                                [-jj * R01200 * self.R10200, q01200]])
+
+        h31000_fluct = ((1, self.R31000 + np.zeros(num_geo)),
+                        (q31000, self.f31000 - (self.R30000 * f12000 - R12000 * self.f30000) * jj * 6 - self.R31000),
+                        (q30000, jj * 6 * R12000 * (self.R30000 - self.f30000)),
+                        (q12000, jj * 6 * (f12000 - R12000) * self.R30000))
+        h40000_fluct = ((1, self.R40000 + np.zeros(num_geo)),
+                        (q40000,
+                         self.f40000 - (self.R30000 * self.f21000 - self.R21000 * self.f30000) * jj * 3 - self.R40000),
+                        (q30000, jj * 3 * self.R21000 * (self.R30000 - self.f30000)),
+                        (q21000, jj * 3 * (self.f21000 - self.R21000) * self.R30000))
+        h20110_fluct = ((1, self.R20110 + np.zeros(num_geo)),
+                        (q20110, self.f20110 - ((self.R30000 * f01110 - R01110 * self.f30000) * 3
+                                                - self.R21000 * self.f10110 + self.R10110 * self.f21000
+                                                + (
+                                                            self.R10200 * self.f10020 - self.R10020 * self.f10200) * 4) * jj - self.R20110),
+                        (q30000, jj * R01110 * (self.R30000 - self.f30000) * 3),
+                        (q01110, -(R01110 - f01110) * self.R30000 * 3 * jj),
+                        (q21000, -self.R10110 * (self.R21000 - self.f21000) * jj + (
+                                    self.R10110 - self.f10110) * self.R21000 * jj),
+                        (q10200, +self.R10020 * (self.R10200 - self.f10200) * 4 * jj),
+                        (q10020, - (self.R10020 - self.f10020) * self.R10200 * 4 * jj))
+        h11200_fluct = ((1, self.R11200 + np.zeros(num_geo)),
+                        (q11200, self.f11200 - (self.R10200 * (f12000 + f01110) - R12000 * self.f10200
+                                                + self.R21000 * f01200 - R01200 * (self.f21000 - self.f10110)
+                                                - R01110 * self.f10200 - self.R10110 * f01200) * jj * 2 - self.R11200),
+                        (q10200, jj * (R12000 + R01110) * (self.R10200 - self.f10200) * 2),
+                        (q12000, -jj * (R12000 - f12000) * self.R10200 * 2 - jj * (R01110 - f01110) * self.R10200 * 2),
+                        (q21000,
+                         jj * R01200 * (self.R21000 - self.f21000) * 2 - jj * 2 * R01200 * (self.R10110 - self.f10110)),
+                        (q01200, -jj * (R01200 - f01200) * (self.R21000 - self.R10110) * 2))
+        h20020_fluct = ((1, self.R20020 + np.zeros(num_geo)),
+                        (q20020,
+                         self.f20020 - (-self.R21000 * self.f10020 + self.R10020 * (self.f21000 - self.f10110 * 2)
+                                        + self.R30000 * f01020 * 3 - R01020 * self.f30000 * 3
+                                        + self.R10110 * self.f10020 * 2) * jj - self.R20020),
+                        (q21000, -jj * self.R10020 * (self.R21000 - self.f21000) + jj * self.R10020 * (
+                                    self.R10110 - self.f10110) * 2),
+                        (q10020, jj * (self.R10020 - self.f10020) * (self.R21000 - self.R10110 * 2)),
+                        (q30000, jj * R01020 * (self.R30000 - self.f30000) * 3),
+                        (q01020, - jj * (R01020 - f01020) * self.R30000 * 3))
+        h20200_fluct = ((1, self.R20200 + np.zeros(num_geo)),
+                        (q20200, self.f20200 - (self.R30000 * f01200 * 3 - R01200 * self.f30000 * 3
+                                                + self.R10200 * (self.f21000 + self.f10110 * 2)
+                                                - self.R21000 * self.f10200
+                                                - self.R10110 * self.f10200 * 2) * jj - self.R20200),
+                        (q30000, jj * R01200 * (self.R30000 - self.f30000) * 3),
+                        (q01200, - jj * (R01200 - f01200) * self.R30000 * 3),
+                        (q10200, jj * (self.R21000 + 2 * self.R10110) * (self.R10200 - self.f10200)),
+                        (q21000, - jj * (self.R21000 - self.f21000) * self.R10200 + jj * self.R10200 * (
+                                    self.R10110 - self.f10110) * (-2)))
+        h00310_fluct = ((1, self.R00310 + np.zeros(len(self.f00310))),
+                        (q00310, self.f00310 - (self.R10200 * f01110 - R01110 * self.f10200
+                                                + self.R10110 * f01200 - R01200 * self.f10110) * jj - self.R00310),
+                        (q10200, jj * R01110 * (self.R10200 - self.f10200)),
+                        (q01110, - jj * (R01110 - f01110) * self.R10200),
+                        (q10110, jj * R01200 * (self.R10110 - self.f10110)),
+                        (q01200, - jj * (R01200 - f01200) * self.R10110))
+        h00400_fluct = ((1, self.R00400 + np.zeros(len(self.f00400))),
+                        (q00400, self.f00400 - (self.R10200 * f01200 - R01200 * self.f10200) * jj - self.R00400),
+                        (q10200, jj * R01200 * (self.R10200 - self.f10200)),
+                        (q01200, - jj * (R01200 - f01200) * self.R10200))
         return {'h21000': h21000_fluct, 'h30000': h30000_fluct, 'h10110': h10110_fluct, 'h10020': h10020_fluct,
                 'h10200': h10200_fluct, 'h20001': h20001_fluct, 'h00201': h00201_fluct, 'h10002': h10002_fluct,
                 'h31000': h31000_fluct, 'h40000': h40000_fluct, 'h20110': h20110_fluct, 'h11200': h11200_fluct,
