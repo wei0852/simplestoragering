@@ -114,26 +114,59 @@ if __name__ == '__main__':
     N = int(len(rdts_fluct['h21000']) / 14)
     N_cell = 100
     multi_cell_fluct = rdts.fluctuation(n_periods=N_cell)  # Here we calculate more cells to show the regularity.
+    fluct_comp = rdts.fluctuation_components()
     fig = plt.figure(figsize=(10.5, 5))
     plt.subplots_adjust(left=0.05, right=0.98, bottom=0.05, top=0.95, wspace=0.3)
 
     for i in [0, 1, 2]:
         plt.subplot(2, 4, i + 1)
         for k in range(N_cell):
-            plt.scatter(np.real(multi_cell_fluct['h21000'][int(k*N+i)]), np.imag(multi_cell_fluct['h21000'][int(k*N+i)]), c='C0', s=5)
-            plt.text(0.99, 0.01, f'h21000\n$k$ N + {i+1}', transform=plt.gca().transAxes, size=15, horizontalalignment="right")
+            plt.scatter(np.real(multi_cell_fluct['h21000'][int(k * N + i)]),
+                        np.imag(multi_cell_fluct['h21000'][int(k * N + i)]), c='C0', s=5)
+        n_cell = 0
+        r0 = complex(0, 0)
+        for ratio, radius in fluct_comp['h21000']:
+            r1 = radius[i] * ratio ** n_cell
+            plt.arrow(r0.real, r0.imag, r1.real, r1.imag, length_includes_head=True, width=abs(r1) / 20)
+            r0 = r0 + r1
+        plt.text(0.99, 0.01, f'h21000\n$k$ N + {i + 1}', transform=plt.gca().transAxes, size=15,
+                 horizontalalignment="right")
         plt.subplot(2, 4, i + 5)
         for k in range(N_cell):
-            plt.scatter(np.real(multi_cell_fluct['h31000'][int(k*N+i)]), np.imag(multi_cell_fluct['h31000'][int(k*N+i)]), c='C0', s=5)
-            plt.text(0.99, 0.01, f'h31000\n$k$ N + {i+1}', transform=plt.gca().transAxes, size=15, horizontalalignment="right")
-    plt.subplot(2, 4, 4)
+            plt.scatter(np.real(multi_cell_fluct['h31000'][int(k * N + i)]),
+                        np.imag(multi_cell_fluct['h31000'][int(k * N + i)]), c='C0', s=5)
+        n_cell = 10
+        r0 = complex(0, 0)
+        for ratio, radius in fluct_comp['h31000']:
+            r1 = radius[i] * ratio ** n_cell
+            plt.arrow(r0.real, r0.imag, r1.real, r1.imag, length_includes_head=True, width=abs(r1) / 20)
+            r0 = r0 + r1
+        plt.text(0.99, 0.01, f'h31000\n$k$ N + {i + 1}', transform=plt.gca().transAxes, size=15,
+                 horizontalalignment="right")
+
+        plt.subplot(2, 4, 4)
     for k in range(N_cell):
-        plt.scatter(np.real(multi_cell_fluct['h21000'][int(k*N - 1)]), np.imag(multi_cell_fluct['h21000'][int(k*N-1)]), c='C0', s=5)
-        plt.text(0.99, 0.01, f'h21000\n$k$ N + N', transform=plt.gca().transAxes, size=15, horizontalalignment="right")
+        plt.scatter(np.real(multi_cell_fluct['h21000'][int(k * N - 1)]),
+                    np.imag(multi_cell_fluct['h21000'][int(k * N - 1)]), c='C0', s=5)
+    n_cell = 10
+    r0 = complex(0, 0)
+    for ratio, radius in fluct_comp['h21000']:
+        r1 = radius[-1] * ratio ** n_cell
+        plt.arrow(r0.real, r0.imag, r1.real, r1.imag, length_includes_head=True, width=abs(r1) / 20)
+        r0 = r0 + r1
+    plt.text(0.99, 0.01, f'h21000\n$k$ N + N', transform=plt.gca().transAxes, size=15, horizontalalignment="right")
+
     plt.subplot(2, 4, 8)
     for k in range(N_cell):
-        plt.scatter(np.real(multi_cell_fluct['h31000'][int(k*N - 1)]), np.imag(multi_cell_fluct['h31000'][int(k*N-1)]), c='C0', s=5)
-        plt.text(0.99, 0.01, f'h31000\n$k$ N + N', transform=plt.gca().transAxes, size=15, horizontalalignment="right")
+        plt.scatter(np.real(multi_cell_fluct['h31000'][int(k * N - 1)]),
+                    np.imag(multi_cell_fluct['h31000'][int(k * N - 1)]), c='C0', s=5)
+    n_cell = 1
+    r0 = complex(0, 0)
+    for ratio, radius in fluct_comp['h31000']:
+        r1 = radius[-1] * ratio ** n_cell
+        plt.arrow(r0.real, r0.imag, r1.real, r1.imag, length_includes_head=True, width=abs(r1) / 20)
+        r0 = r0 + r1
+    plt.text(0.99, 0.01, f'h31000\n$k$ N + N', transform=plt.gca().transAxes, size=15, horizontalalignment="right")
     plt.suptitle('RDT fluctuations')
     plt.show()
 
@@ -158,6 +191,46 @@ if __name__ == '__main__':
     for k in ['h31000', 'h40000', 'h20110', 'h11200', 'h20020', 'h20200', 'h00310', 'h00400']:
         ax3.plot(rdts_plot['s'], np.abs(rdts_plot[k]), label=k)
     ax3.legend()
+    for ax in [ax1, ax2, ax3]:
+        ax.set_xlabel('s [m]')
+        ax.set_xlim(0, ring.length)
+    plt.show()
+
+    # calculate n-period maps with the starting location varying along one period
+    sddt = cell.s_dependent_driving_terms(n_periods=14)
+    plt.figure(figsize=(15, 10))
+    plt.subplots_adjust(left=0.05, right=0.98, bottom=0.05, top=0.95, wspace=0.3)
+    ax1 = plt.subplot(2, 1, 1)
+    ax3 = plt.subplot(2, 1, 2)
+    ax11 = ax1.twinx()
+    ax33 = ax3.twinx()
+    ssr.plot_layout_in_ax(cell.elements, ax11)
+    ssr.plot_layout_in_ax(cell.elements, ax33)
+    for k in ['f21000', 'f30000', 'f10110', 'f10020', 'f10200']:
+        ax1.plot(sddt['s'], np.abs(sddt[k]), label=k)
+    ax1.legend()
+    for k in ['f31000', 'f40000', 'f20110', 'f11200', 'f20020', 'f20200', 'f00310', 'f00400']:
+        ax3.plot(sddt['s'], np.abs(sddt[k]), label=k)
+    ax3.legend()
+    for ax in [ax1, ax3]:
+        ax.set_xlabel('s [m]')
+        ax.set_xlim(0, cell.length / cell.n_periods)
+    plt.show()
+
+    plt.figure(figsize=(9, 14))
+    plt.subplots_adjust(left=0.05, right=0.98, bottom=0.05, top=0.95, wspace=0.3)
+    for i, k in enumerate(['21000', '30000', '10110', '10020', '10200',
+                           '31000', '40000', '20110', '11200', '20020', '20200', '00310', '00400']):
+        plt.subplot(5, 3, i + 1)
+        r_list = np.abs(fluct_comp[f'h{k}'][1][1])
+        for r in r_list:
+            circle = r * np.exp(complex(0, 1) * np.linspace(0, 2 * np.pi, 100))
+            line2, = plt.plot(np.real(circle), np.imag(circle), linestyle=':', c='#bbbbbb',
+                              label='radii = $e^{i\\vec{m}\\cdot \\vec{\mu}}$ term')
+        line1 = plt.scatter(np.real(sddt[f'f{k}']), np.imag(sddt[f'f{k}']), s=5, label='s_dependent_driving_terms')
+        plt.legend(handles=[line1, line2])
+        plt.text(0.99, 0.01, k, transform=plt.gca().transAxes, size=15, horizontalalignment="right")
+    plt.suptitle('s_dependent_driving_terms in the complex plane')
     plt.show()
 
     ring.higher_order_chromaticity()
