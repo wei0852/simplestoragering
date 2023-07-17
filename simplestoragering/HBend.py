@@ -29,25 +29,6 @@ class HBend(Element):
     def matrix(self):
         return _hbend_matrix(self.length, self.h, self.theta_in, self.theta_out, self.k1)
 
-    @property
-    def damping_matrix(self):
-        m66 = 1 - Cr * RefParticle.energy ** 3 * self.length * self.h ** 2 / pi
-        # delta_delta = - Cr * RefParticle.energy ** 3 * self.length * self.h ** 2 / pi / 2
-        matrix = self.matrix
-        matrix[5, 5] = m66
-        # matrix[1, 5] = matrix[1, 5] * (1 + delta_delta / self.closed_orbit[5] / 2)
-        return matrix
-
-    @property
-    def closed_orbit_matrix(self):
-        # m67 = -(self.closed_orbit[5] + 1) ** 2 * Cr * RefParticle.energy ** 3 * self.theta ** 2 / 2 / pi / self.length
-        m67 = -Cr * RefParticle.energy ** 3 * self.theta ** 2 / 2 / pi / self.length
-        matrix7 = np.identity(7)
-        matrix7[0:6, 0:6] = self.matrix  # Bend doesn't use thin len approximation, so
-        matrix7[5, 6] = m67
-        matrix7[1, 6] = self.h * self.length * m67 / 2
-        return matrix7
-
     def symplectic_track(self, particle):
         # [x0, px0, y0, py0, ct0, dp0] = beam.get_particle()
         [x0, px0, y0, py0, ct0, dp0] = particle
@@ -121,77 +102,6 @@ class HBend(Element):
         # beam.set_particle([x2, px3, y2, py3, ct1, dp0])
         # return beam
         return np.array([x2, px3, y2, py3, ct1, dp0])
-
-    def real_track(self, beam):
-        [x0, px0, y0, py0, z0, delta0] = beam
-        # delta1 = delta0 - (delta0 + 1) ** 2 * Cr * RefParticle.energy ** 3 * self.theta ** 2 / 2 / pi / self.length
-        # delta1 = (delta0 - (delta0 * RefParticle.beta + 1) ** 2 * Cr * RefParticle.energy ** 3 * self.theta ** 2 /
-        #           2 / pi / self.length / RefParticle.beta)
-        # use average energy
-        delta01 = (delta0)
-        d1 = np.sqrt(1 + 2 * delta01 / RefParticle.beta + delta01 ** 2)
-        ds = self.length
-        # entrance
-        px1 = px0 + self.h * np.tan(self.theta_in) * x0
-        py1 = py0 - self.h * np.tan(self.theta_in) * y0
-        # drift
-        h = self.h
-        k1 = self.k1
-        a1 = h - self.h / d1
-
-        wx = np.sqrt((h * self.h + k1) / d1)
-        xc = np.cos(wx * ds)
-        xs = np.sin(wx * ds) / wx
-        xs2 = np.sin(2 * wx * ds) / wx
-
-        wy = np.sqrt(k1 / d1)
-        yc = np.cosh(wy * ds)
-        ys = ds
-        ys2 = 2 * ds
-
-        if wy.all():
-            ys = np.sinh(wy * ds) / wy
-            ys2 = np.sinh(2 * wy * ds) / wy
-
-        x2 = x0 * xc + px1 * xs / d1 + a1 * (1 - xc) / wx / wx
-        px2 = -d1 * wx * wx * x0 * xs + px1 * xc + a1 * xs * d1
-
-        y2 = y0 * yc + py1 * ys / d1
-        py2 = d1 * wy * wy * y0 * ys + py1 * yc
-
-        d0 = 1 / RefParticle.beta + delta0
-
-        c0 = (1 / RefParticle.beta - d0 / d1) * ds - d0 * a1 * (h * (ds - xs) + a1 * (2 * ds - xs2) / 8) / wx / wx / d1
-
-        c1 = -d0 * (h * xs - a1 * (2 * ds - xs2) / 4) / d1
-
-        c2 = -d0 * (h * (1 - xc) / wx / wx + a1 * xs * xs / 2) / d1 / d1
-
-        c11 = -d0 * wx * wx * (2 * ds - xs2) / d1 / 8
-        c12 = d0 * wx * wx * xs * xs / d1 / d1 / 2
-        c22 = -d0 * (2 * ds + xs2) / d1 / d1 / d1 / 8
-
-        c33 = -d0 * wy * wy * (2 * ds - ys2) / d1 / 8
-        c34 = -d0 * wy * wy * ys * ys / d1 / d1 / 2
-        c44 = -d0 * (2 * ds + ys2) / d1 / d1 / d1 / 8
-
-        z1 = (z0 + c0 + c1 * x0 + c2 * px1 + c11 * x0 * x0 + c12 * x0 * px1 + c22 * px1 * px1 + c33 * y0 * y0 +
-              c34 * y0 * py1 + c44 * py1 * py1)
-        # damping
-        delta_ct = (self.length / RefParticle.beta - (z1 - z0))
-        current_beta = calculate_beta(delta0)
-        e_loss_div_e0 = ((delta0 * RefParticle.beta + 1) ** 2 * Cr * RefParticle.energy ** 3 * h ** 2 *
-                         RefParticle.beta ** 2 * current_beta ** 2 / 2 / pi) * delta_ct
-        delta1 = (delta0 - e_loss_div_e0 / RefParticle.beta)
-        # e1_div_e0 = (delta1 + 1) / (delta0 + 1)  # approx
-        e1_div_e0 = np.sqrt(((1 + delta1 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2) /
-                            ((1 + delta0 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2))
-        px2 = px2 * e1_div_e0
-        py2 = py2 * e1_div_e0
-        # exit
-        px3 = px2 + self.h * np.tan(self.theta_out) * x2
-        py3 = py2 - self.h * np.tan(self.theta_out) * y2
-        return np.array([x2, px3, y2, py3, z1, delta1])
 
     def __radiation_integrals(self, length, integrals, twiss0, twiss1):
         betax = (twiss0[0] + twiss1[0]) / 2

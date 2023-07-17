@@ -232,7 +232,7 @@ class CSLattice(object):
                 ele_slices += ele.slice(1)
         return ele_slices
 
-    def s_dependent_driving_terms(self, n_periods=None):
+    def s_dependent_driving_terms(self):
         """compute resonance driving terms of n-period map, and the starting position varies along one period.
 
         Return: a dictionary, each value is a np.ndarray.
@@ -249,7 +249,6 @@ class CSLattice(object):
         """
 
         num_ele = len(self.elements)
-        n_periods = self.n_periods if n_periods is None else n_periods
         s = np.zeros(num_ele, dtype='float64')
         f21000 = np.zeros(num_ele, dtype='complex_')
         f30000 = np.zeros(num_ele, dtype='complex_')
@@ -372,102 +371,13 @@ class CSLattice(object):
                     h20200 += rdts[8]
                     h00310 += rdts[9]
                     h00400 += rdts[10]
-            #  multi-period RDTs calculation
-            R21000 = h21000 / (1 - np.exp(complex(0, phix)))
-            R30000 = h30000 / (1 - np.exp(complex(0, phix * 3)))
-            R10110 = h10110 / (1 - np.exp(complex(0, phix)))
-            R10020 = h10020 / (1 - np.exp(complex(0, phix - 2 * phiy)))
-            R10200 = h10200 / (1 - np.exp(complex(0, phix + 2 * phiy)))
-            R12000 = R21000.conjugate()
-            R01110 = R10110.conjugate()
-            R01200 = R10020.conjugate()
-            R01020 = R10200.conjugate()
-            h12000 = h21000.conjugate()
-            h01110 = h10110.conjugate()
-            h01200 = h10020.conjugate()
-            h01020 = h10200.conjugate()
-
-            h31000 = jj * 6 * (h30000 * R12000 - h12000 * R30000) + h31000
-            h40000 = jj * 3 * (h30000 * R21000 - h21000 * R30000) + h40000
-            h20110 = jj * ((h30000 * R01110 - h01110 * R30000) * 3
-                           - (h21000 * R10110 - h10110 * R21000)
-                           + (h10200 * R10020 - h10020 * R10200) * 4) + h20110
-            h11200 = jj * ((h10200 * R12000 - h12000 * R10200) * 2
-                           + (h21000 * R01200 - h01200 * R21000) * 2
-                           + (h10200 * R01110 - h01110 * R10200) * 2
-                           + (h10110 * R01200 - h01200 * R10110) * (-2)) + h11200
-            h20020 = jj * (-(h21000 * R10020 - h10020 * R21000)
-                           + (h30000 * R01020 - h01020 * R30000) * 3
-                           + (h10110 * R10020 - h10020 * R10110) * 2) + h20020
-            h20200 = jj * ((h30000 * R01200 - h01200 * R30000) * 3
-                           + (h10200 * R21000 - h21000 * R10200)
-                           + (h10110 * R10200 - h10200 * R10110) * (-2)) + h20200
-            h00310 = jj * ((h10200 * R01110 - h01110 * R10200)
-                           + (h10110 * R01200 - h01200 * R10110)) + h00310
-            h00400 = jj * (h10200 * R01200 - h01200 * R10200) + h00400
-
-            q21000 = np.exp(complex(0, phix)) ** n_periods
-            q30000 = np.exp(complex(0, phix * 3)) ** n_periods
-            q10110 = np.exp(complex(0, phix)) ** n_periods
-            q10020 = np.exp(complex(0, phix - 2 * phiy)) ** n_periods
-            q10200 = np.exp(complex(0, phix + 2 * phiy)) ** n_periods
-            q12000 = q21000.conjugate()
-            q01110 = q10110.conjugate()
-            q01200 = q10020.conjugate()
-            q01020 = q10200.conjugate()
-
-            # 3rd-order
-            h21000 = R21000 * (1 - q21000)
-            h30000 = R30000 * (1 - q30000)
-            h10110 = R10110 * (1 - q10110)
-            h10020 = R10020 * (1 - q10020)
-            h10200 = R10200 * (1 - q10200)
-            # 4th-order
-            q31000 = np.exp(complex(0, 2 * phix)) ** n_periods
-            q40000 = np.exp(complex(0, 4 * phix)) ** n_periods
-            q20110 = np.exp(complex(0, 2 * phix)) ** n_periods
-            q11200 = np.exp(complex(0, 2 * phiy)) ** n_periods
-            q20020 = np.exp(complex(0, 2 * phix - 2 * phiy)) ** n_periods
-            q20200 = np.exp(complex(0, 2 * phix + 2 * phiy)) ** n_periods
-            q00310 = np.exp(complex(0, 2 * phiy)) ** n_periods
-            q00400 = np.exp(complex(0, 4 * phiy)) ** n_periods
-
-            h31000 = h31000 * (1 - q31000) / (1 - np.exp(complex(0, 2 * phix)))
-            h40000 = h40000 * (1 - q40000) / (1 - np.exp(complex(0, 4 * phix)))
-            h20110 = h20110 * (1 - q20110) / (1 - np.exp(complex(0, 2 * phix)))
-            h11200 = h11200 * (1 - q11200) / (1 - np.exp(complex(0, 2 * phiy)))
-            h20020 = h20020 * (1 - q20020) / (1 - np.exp(complex(0, 2 * phix - 2 * phiy)))
-            h20200 = h20200 * (1 - q20200) / (1 - np.exp(complex(0, 2 * phix + 2 * phiy)))
-            h00310 = h00310 * (1 - q00310) / (1 - np.exp(complex(0, 2 * phiy)))
-            h00400 = h00400 * (1 - q00400) / (1 - np.exp(complex(0, 4 * phiy)))
-
-            h31000 += jj * 6 * (q30000 - q12000) * R12000 * R30000
-            h40000 += jj * 3 * (q30000 - q21000) * R21000 * R30000
-            h20110 += jj * ((q30000 - q01110) * R01110 * R30000 * 3
-                            - (q21000 - q10110) * R10110 * R21000
-                            + (q10200 - q10020) * R10020 * R10200 * 4)
-            h11200 += jj * ((q10200 - q12000) * R12000 * R10200 * 2
-                            + (q21000 - q01200) * R01200 * R21000 * 2
-                            + (q10200 - q01110) * R01110 * R10200 * 2
-                            + (q10110 - q01200) * R01200 * R10110 * (-2))
-            h20020 += jj * (-(q21000 - q10020) * R10020 * R21000
-                            + (q30000 - q01020) * R01020 * R30000 * 3
-                            + (q10110 - q10020) * R10020 * R10110 * 2)
-            h20200 += jj * ((q30000 - q01200) * R01200 * R30000 * 3
-                            + (q10200 - q21000) * R21000 * R10200
-                            + (q10110 - q10200) * R10200 * R10110 * (-2))
-            h00310 += jj * ((q10200 - q01110) * R01110 * R10200
-                            + (q10110 - q01200) * R01200 * R10110)
-            h00400 += jj * (q10200 - q01200) * R01200 * R10200
-
-            # multi-period RDTs calculation finish
             # calculate f_jklm
             h12000 = h21000.conjugate()
             h01110 = h10110.conjugate()
             h01200 = h10020.conjugate()
             h01020 = h10200.conjugate()
-            phix = phix * n_periods
-            phiy = phiy * n_periods
+            phix = phix
+            phiy = phiy
             s[i] = self.elements[i].s
             f21000[i] = h21000 / (1 - np.exp(complex(0, phix)))
             f30000[i] = h30000 / (1 - np.exp(complex(0, phix * 3)))

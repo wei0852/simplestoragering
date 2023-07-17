@@ -45,29 +45,9 @@ class Element(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def damping_matrix(self):
-        """matrix with coupled effects and damping rates to calculate tune and damping rate"""
-        pass
-
-    @property
-    @abstractmethod
     def matrix(self):
         """matrix with coupled effects to calculate tune and bunch distribution"""
         return np.identity(6)
-
-    @property
-    def next_closed_orbit(self):
-        """usually """
-        x07 = np.append(self.closed_orbit, 1)
-        x0 = self.closed_orbit_matrix.dot(x07)
-        x0 = np.delete(x0, [6])
-        return x0
-
-    @property
-    @abstractmethod
-    def closed_orbit_matrix(self):
-        """:return a 7x7 matrix to solve the closed orbit"""
-        pass
 
     @abstractmethod
     def symplectic_track(self, beam):
@@ -158,19 +138,6 @@ class Mark(Element):
         ele_list = [self]
         return ele_list
 
-    @property
-    def damping_matrix(self):
-        return np.identity(6)
-
-    @property
-    def closed_orbit_matrix(self):
-        """mark element don't need this matrix, closed orbit won't change in Mark element"""
-        return np.identity(7)
-
-    @property
-    def next_closed_orbit(self):
-        return self.closed_orbit
-
     def symplectic_track(self, particle: np.ndarray):
         if self.record:
             if self.data is None:
@@ -211,23 +178,7 @@ class LineEnd(Element):
     def slice(self, n_slices: int) -> list:
         return [self]
 
-    @property
-    def damping_matrix(self):
-        return np.identity(6)
-
-    @property
-    def closed_orbit_matrix(self):
-        """mark element don't need this matrix, closed orbit won't change in Mark element"""
-        return np.identity(7)
-
-    @property
-    def next_closed_orbit(self):
-        return self.closed_orbit
-
     def symplectic_track(self, beam):
-        return beam
-
-    def real_track(self, beam):
         return beam
 
     def copy(self):

@@ -35,25 +35,6 @@ class Quadrupole(Element):
     def matrix(self):
         return quad_matrix(self.length, self.k1)
 
-    @property
-    def damping_matrix(self):
-        lambda_q = Cr * RefParticle.energy ** 3 * self.k1 ** 2 * self.length / np.pi
-        matrix = self.matrix
-        matrix[5, 5] = 1 - lambda_q * (self.closed_orbit[0] ** 2 + self.closed_orbit[2] ** 2)
-        matrix[5, 0] = - lambda_q * self.closed_orbit[0]
-        matrix[5, 2] = - lambda_q * self.closed_orbit[2]
-        return matrix
-
-    @property
-    def closed_orbit_matrix(self):
-        m67 = - Cr * RefParticle.energy ** 3 * self.k1 ** 2 * self.length * (self.closed_orbit[0] ** 2 +
-                                                                             self.closed_orbit[2] ** 2) / 2 / np.pi
-        # m67 = m67 * (1 + self.closed_orbit[5]) ** 2
-        matrix7 = np.identity(7)
-        matrix7[0:6, 0:6] = self.matrix
-        matrix7[5, 6] = m67
-        return matrix7
-
     def symplectic_track(self, beam):
         # [x0, px0, y0, py0, ct0, dp0] = beam.get_particle()
         [x0, px0, y0, py0, ct0, dp0] = beam
@@ -99,48 +80,6 @@ class Quadrupole(Element):
         # beam.set_particle([abs(x1), abs(px1), abs(y1), abs(py1), abs(ct1), abs(dp0)])
         # return beam
         return np.real(np.array([x1, px1, y1, py1, ct1, dp0]))
-
-    def real_track(self, beam):
-        n = int(self.length / 0.01)
-        ds = self.length / n
-        [x0, px0, y0, py0, z0, delta0] = beam
-        for i in range(n):
-            # drift
-            # ds = self.length / 2
-            try:
-                d1 = np.sqrt(1 - px0 ** 2 - py0 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
-            except Exception:
-                raise ParticleLost(self.s)
-            x1 = x0 + ds * px0 / d1 / 2
-            y1 = y0 + ds * py0 / d1 / 2
-            z1 = z0 + (ds / 2) * (1 - (1 + RefParticle.beta * delta0) / d1) / RefParticle.beta
-            # kick
-            px1 = px0 - self.k1 * x1 * ds
-            py1 = py0 + self.k1 * y1 * ds
-            # damping
-            delta1 = (delta0 - (1 + delta0 * RefParticle.beta) ** 2 * Cr * RefParticle.energy ** 3 * self.k1 ** 2 *
-                      ds * (x1 ** 2 + y1 ** 2) / 2 / np.pi / RefParticle.beta)
-            # e1_div_e0 = (delta1 + 1) / (delta0 + 1)  # approximation
-            e1_div_e0 = np.sqrt(((1 + delta1 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2) /
-                                ((1 + delta0 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2))
-            px1 = px1 * e1_div_e0
-            py1 = py1 * e1_div_e0
-            # drift
-            try:
-                d2 = np.sqrt(1 - px1 ** 2 - py1 ** 2 + 2 * delta1 / RefParticle.beta + delta1 ** 2)
-            except Exception:
-                raise ParticleLost(self.s)
-            x2 = x1 + (ds / 2) * px1 / d2
-            y2 = y1 + (ds / 2) * py1 / d2
-            z2 = z1 + (ds / 2) * (1 - (1 + RefParticle.beta * delta1) / d2) / RefParticle.beta
-            x0 = x2
-            px0 = px1
-            y0 = y2
-            py0 = py1
-            z0 = z2
-            delta0 = delta1
-        # beam.set_particle([x2, px1, y2, py1, z2, delta1])
-        return np.array([x2, px1, y2, py1, z2, delta1])
 
     def copy(self):
         return Quadrupole(name=self.name, length=self.length, k1=self.k1, n_slices=self.n_slices)

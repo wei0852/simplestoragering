@@ -35,16 +35,6 @@ class Octupole(Element):
     def matrix(self):
         return oct_matrix(self.length, self.k3, self.closed_orbit)
 
-    @property
-    def damping_matrix(self):
-        """I think damping is not in thin len approximation"""
-        raise Exception('Unfinished, Octupole damping matrix.')
-
-    @property
-    def closed_orbit_matrix(self):
-        """it's different from its transform matrix, x is replaced by closed orbit x0"""
-        raise Exception('Unfinished, Octupole closed orbit matrix')
-
     def symplectic_track(self, beam):
         [x0, px0, y0, py0, ct0, dp0] = beam
 
@@ -75,50 +65,6 @@ class Octupole(Element):
             py0 = py1
             ct0 = ct2
         return np.array([x2, px1, y2, py1, ct2, dp0])
-
-    def real_track(self, beam):
-        raise Exception('Unfinished, Octupole real track')
-        # [x0, px0, y0, py0, z0, delta0] = beam
-        #
-        # ds = self.length / self.n_slices
-        # k3 = self.k3
-        # for i in range(self.n_slices):
-        # # drift
-        #     try:
-        #         d1 = np.sqrt(1 - px0 ** 2 - py0 ** 2 + 2 * delta0 / RefParticle.beta + delta0 ** 2)
-        #     except Exception:
-        #         raise ParticleLost(self.s)
-        #     x1 = x0 + ds * px0 / d1 / 2
-        #     y1 = y0 + ds * py0 / d1 / 2
-        #     z1 = z0 + ds * (1 - (1 + RefParticle.beta * delta0) / d1) / RefParticle.beta / 2
-        # # kick
-        #     px1 = px0 - (x1 * x1 - y1 * y1) * k3 * ds / 2
-        #     py1 = py0 + x1 * y1 * k3 * ds
-        # # damping, when beta approx 1
-        # # delta1 = delta0 - (delta0 + 1) ** 2 * (Cr * RefParticle.energy ** 3 * self.k3 ** 2 * self.length *
-        # #                                        (x1 ** 2 + y1 ** 2) ** 2 / 8 / pi)     # beta0 \approx 1
-        #     delta1 = (delta0 - (delta0 * RefParticle.beta + 1) ** 2 * Cr * RefParticle.energy ** 3 * self.k3 ** 2 *
-        #               self.length * (x1 ** 2 + y1 ** 2) ** 2 / 8 / np.pi / RefParticle.beta)
-        # # e1_div_e0 = (delta1 + 1) / (delta0 + 1)  # approximation
-        #     e1_div_e0 = np.sqrt(((1 + delta1 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2) /
-        #                         ((1 + delta0 * RefParticle.beta) ** 2 - 1 / RefParticle.gamma ** 2))
-        #     px1 = px1 * e1_div_e0
-        #     py1 = py1 * e1_div_e0
-        # # drift
-        #     try:
-        #         d2 = np.sqrt(1 - px1 ** 2 - py1 ** 2 + 2 * delta1 / RefParticle.beta + delta1 ** 2)
-        #     except Exception:
-        #         raise ParticleLost(self.s)
-        #     x2 = x1 + ds * px1 / d2 / 2
-        #     y2 = y1 + ds * py1 / d2 / 2
-        #     z2 = z1 + ds * (1 - (1 + RefParticle.beta * delta1) / d2) / RefParticle.beta / 2
-        #     x0 = x2
-        #     px0 = px1
-        #     y0 = y2
-        #     py0 = py1
-        #     z0 = z2
-        # # beam.set_particle()
-        # return np.array([x2, px1, y2, py1, z2, delta1])
 
     def copy(self):
         return Octupole(self.name, self.length, self.k3, self.n_slices)

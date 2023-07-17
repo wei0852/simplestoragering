@@ -36,17 +36,6 @@ class Drift(Element):
     def matrix(self):
         return drift_matrix(self.length)
 
-    @property
-    def damping_matrix(self):
-        return self.matrix
-
-    @property
-    def closed_orbit_matrix(self):
-        matrix = self.matrix
-        matrix7 = np.identity(7)
-        matrix7[0:6, 0:6] = matrix
-        return matrix7
-
     def symplectic_track(self, beam):
         [x0, px0, y0, py0, z0, delta0] = beam
         ds = self.length
@@ -59,9 +48,6 @@ class Drift(Element):
         y1 = y0 + ds * py0 / d1
         z1 = z0 + ds * (1 - (1 + RefParticle.beta * delta0) / d1) / RefParticle.beta
         return np.array([x1, px0, y1, py0, z1, delta0])
-
-    def real_track(self, beam):
-        return self.symplectic_track(beam)
 
     def copy(self):
         return Drift(self.name, self.length)

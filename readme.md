@@ -115,8 +115,3 @@ and some functions to visualize lattice data quickly.
 
 `plot_lattice(ele_list, parameter: str or list[str], with_layout=True)`
 
-## slim method
-A. Chao, “SLIM Formalism — Orbital Motion”， Lecture notes on special topics in accelerator 
-physics
-
-**Unfinished, Errors exist**
