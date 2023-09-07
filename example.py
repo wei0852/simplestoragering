@@ -100,7 +100,7 @@ if __name__ == '__main__':
     for k in rdts.terms:
         print(f'{k}: {abs(rdts[k]):.2f}, {rdts_another_method[k]:.2f}')
 
-    rdts_fluct = rdts.fluctuation(n_periods=14)  # The fluctuation of RDTs in the complex plane.
+    rdts_fluct = rdts.build_up_fluctuation(n_periods=14)  # The fluctuation of RDTs in the complex plane.
     fig = plt.figure(figsize=(10.5, 10))
     plt.subplots_adjust(left=0.05, right=0.98, bottom=0.05, top=0.95, wspace=0.3)
     for i, k in enumerate(['h21000', 'h30000', 'h10110', 'h10020', 'h10200', 'h20001', 'h00201', 'h10002',
@@ -113,7 +113,8 @@ if __name__ == '__main__':
 
     N = int(len(rdts_fluct['h21000']) / 14)
     N_cell = 100
-    multi_cell_fluct = rdts.fluctuation(n_periods=N_cell)  # Here we calculate more cells to show the regularity.
+    multi_cell_fluct = rdts.build_up_fluctuation(
+        n_periods=N_cell)  # Here we calculate more cells to show the regularity.
     fluct_comp = rdts.fluctuation_components()
     fig = plt.figure(figsize=(10.5, 5))
     plt.subplots_adjust(left=0.05, right=0.98, bottom=0.05, top=0.95, wspace=0.3)
@@ -197,7 +198,7 @@ if __name__ == '__main__':
     plt.show()
 
     # calculate n-period maps with the starting location varying along one period
-    sddt = cell.s_dependent_driving_terms(n_periods=14)
+    sddt = cell.s_dependent_driving_terms()
     plt.figure(figsize=(15, 10))
     plt.subplots_adjust(left=0.05, right=0.98, bottom=0.05, top=0.95, wspace=0.3)
     ax1 = plt.subplot(2, 1, 1)

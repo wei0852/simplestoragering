@@ -447,25 +447,25 @@ class CSLattice(object):
         3. Perspectives for future light source lattices incorporating yet uncommon magnets, S. C. Leemann and A. Streun"""
 
         num_ele = len(self.elements)
-        f21000 = np.zeros(num_ele, dtype='complex_')
-        f30000 = np.zeros(num_ele, dtype='complex_')
-        f10110 = np.zeros(num_ele, dtype='complex_')
-        f10020 = np.zeros(num_ele, dtype='complex_')
-        f10200 = np.zeros(num_ele, dtype='complex_')
-        f20001 = np.zeros(num_ele, dtype='complex_')
-        f00201 = np.zeros(num_ele, dtype='complex_')
-        f10002 = np.zeros(num_ele, dtype='complex_')
-        f22000 = np.zeros(num_ele, dtype='complex_')
-        f11110 = np.zeros(num_ele, dtype='complex_')
-        f00220 = np.zeros(num_ele, dtype='complex_')
-        f31000 = np.zeros(num_ele, dtype='complex_')
-        f40000 = np.zeros(num_ele, dtype='complex_')
-        f20110 = np.zeros(num_ele, dtype='complex_')
-        f11200 = np.zeros(num_ele, dtype='complex_')
-        f20020 = np.zeros(num_ele, dtype='complex_')
-        f20200 = np.zeros(num_ele, dtype='complex_')
-        f00310 = np.zeros(num_ele, dtype='complex_')
-        f00400 = np.zeros(num_ele, dtype='complex_')
+        h21000s = np.zeros(num_ele, dtype='complex_')
+        h30000s = np.zeros(num_ele, dtype='complex_')
+        h10110s = np.zeros(num_ele, dtype='complex_')
+        h10020s = np.zeros(num_ele, dtype='complex_')
+        h10200s = np.zeros(num_ele, dtype='complex_')
+        h20001s = np.zeros(num_ele, dtype='complex_')
+        h00201s = np.zeros(num_ele, dtype='complex_')
+        h10002s = np.zeros(num_ele, dtype='complex_')
+        h22000s = np.zeros(num_ele, dtype='complex_')
+        h11110s = np.zeros(num_ele, dtype='complex_')
+        h00220s = np.zeros(num_ele, dtype='complex_')
+        h31000s = np.zeros(num_ele, dtype='complex_')
+        h40000s = np.zeros(num_ele, dtype='complex_')
+        h20110s = np.zeros(num_ele, dtype='complex_')
+        h11200s = np.zeros(num_ele, dtype='complex_')
+        h20020s = np.zeros(num_ele, dtype='complex_')
+        h20200s = np.zeros(num_ele, dtype='complex_')
+        h00310s = np.zeros(num_ele, dtype='complex_')
+        h00400s = np.zeros(num_ele, dtype='complex_')
         h21000 = h30000 = h10110 = h10020 = h10200 = h20001 = h00201 = h10002 = 0
         h22000 = h11110 = h00220 = h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
         geo_3rd_idx = 0
@@ -510,35 +510,35 @@ class CSLattice(object):
                 h00310 += jj * ((h10200 * h01110j - h01110 * rdts[4])
                                 + (h10110 * h01200j - h01200 * rdts[2])) + rdts[17]
                 h00400 += jj * (h10200 * h01200j - h01200 * rdts[4]) + rdts[18]
-                f22000[geo_4th_idx] = h22000
-                f11110[geo_4th_idx] = h11110
-                f00220[geo_4th_idx] = h00220
-                f31000[geo_4th_idx] = h31000
-                f40000[geo_4th_idx] = h40000
-                f20110[geo_4th_idx] = h20110
-                f11200[geo_4th_idx] = h11200
-                f20020[geo_4th_idx] = h20020
-                f20200[geo_4th_idx] = h20200
-                f00310[geo_4th_idx] = h00310
-                f00400[geo_4th_idx] = h00400
+                h22000s[geo_4th_idx] = h22000
+                h11110s[geo_4th_idx] = h11110
+                h00220s[geo_4th_idx] = h00220
+                h31000s[geo_4th_idx] = h31000
+                h40000s[geo_4th_idx] = h40000
+                h20110s[geo_4th_idx] = h20110
+                h11200s[geo_4th_idx] = h11200
+                h20020s[geo_4th_idx] = h20020
+                h20200s[geo_4th_idx] = h20200
+                h00310s[geo_4th_idx] = h00310
+                h00400s[geo_4th_idx] = h00400
                 geo_4th_idx += 1
                 h21000 = h21000 + rdts[0]
                 h30000 = h30000 + rdts[1]
                 h10110 = h10110 + rdts[2]
                 h10020 = h10020 + rdts[3]
                 h10200 = h10200 + rdts[4]
-                f21000[geo_3rd_idx] = h21000
-                f30000[geo_3rd_idx] = h30000
-                f10110[geo_3rd_idx] = h10110
-                f10020[geo_3rd_idx] = h10020
-                f10200[geo_3rd_idx] = h10200
+                h21000s[geo_3rd_idx] = h21000
+                h30000s[geo_3rd_idx] = h30000
+                h10110s[geo_3rd_idx] = h10110
+                h10020s[geo_3rd_idx] = h10020
+                h10200s[geo_3rd_idx] = h10200
                 geo_3rd_idx += 1
                 h20001 += rdts[5]
                 h00201 += rdts[6]
                 h10002 += rdts[7]
-                f20001[chr_3rd_idx] = h20001
-                f00201[chr_3rd_idx] = h00201
-                f10002[chr_3rd_idx] = h10002
+                h20001s[chr_3rd_idx] = h20001
+                h00201s[chr_3rd_idx] = h00201
+                h10002s[chr_3rd_idx] = h10002
                 chr_3rd_idx += 1
             elif isinstance(ele, Octupole):
                 rdts = ele.driving_terms()  # h22000, h11110, h00220, h31000, h40000, h20110, h11200, h20020, h20200, h00310, h00400
@@ -553,32 +553,32 @@ class CSLattice(object):
                 h20200 += rdts[8]
                 h00310 += rdts[9]
                 h00400 += rdts[10]
-                f21000[geo_3rd_idx] = h21000
-                f30000[geo_3rd_idx] = h30000
-                f10110[geo_3rd_idx] = h10110
-                f10020[geo_3rd_idx] = h10020
-                f10200[geo_3rd_idx] = h10200
+                h21000s[geo_3rd_idx] = h21000
+                h30000s[geo_3rd_idx] = h30000
+                h10110s[geo_3rd_idx] = h10110
+                h10020s[geo_3rd_idx] = h10020
+                h10200s[geo_3rd_idx] = h10200
                 geo_3rd_idx += 1
-                f22000[geo_4th_idx] = h22000
-                f11110[geo_4th_idx] = h11110
-                f00220[geo_4th_idx] = h00220
-                f31000[geo_4th_idx] = h31000
-                f40000[geo_4th_idx] = h40000
-                f20110[geo_4th_idx] = h20110
-                f11200[geo_4th_idx] = h11200
-                f20020[geo_4th_idx] = h20020
-                f20200[geo_4th_idx] = h20200
-                f00310[geo_4th_idx] = h00310
-                f00400[geo_4th_idx] = h00400
+                h22000s[geo_4th_idx] = h22000
+                h11110s[geo_4th_idx] = h11110
+                h00220s[geo_4th_idx] = h00220
+                h31000s[geo_4th_idx] = h31000
+                h40000s[geo_4th_idx] = h40000
+                h20110s[geo_4th_idx] = h20110
+                h11200s[geo_4th_idx] = h11200
+                h20020s[geo_4th_idx] = h20020
+                h20200s[geo_4th_idx] = h20200
+                h00310s[geo_4th_idx] = h00310
+                h00400s[geo_4th_idx] = h00400
                 geo_4th_idx += 1
             elif ele.k1:
                 rdts = ele.driving_terms()  # h20001, h00201, h10002
                 h20001 += rdts[0]
                 h00201 += rdts[1]
                 h10002 += rdts[2]
-                f20001[chr_3rd_idx] = h20001
-                f00201[chr_3rd_idx] = h00201
-                f10002[chr_3rd_idx] = h10002
+                h20001s[chr_3rd_idx] = h20001
+                h00201s[chr_3rd_idx] = h00201
+                h10002s[chr_3rd_idx] = h10002
                 chr_3rd_idx += 1
 
         phix = ele.psix
@@ -642,14 +642,14 @@ class CSLattice(object):
                                        R21000, R30000, R10110, R10020, R10200, R20001, R00201, R10002,
                                        h22000, h11110, h00220, R31000, R40000, R20110, R11200, R20020, R20200, R00310,
                                        R00400,
-                                         f21000[:geo_3rd_idx], f30000[:geo_3rd_idx], f10110[:geo_3rd_idx],
-                                         f10020[:geo_3rd_idx],
-                                         f10200[:geo_3rd_idx], f20001[:chr_3rd_idx], f00201[:chr_3rd_idx],
-                                         f10002[:chr_3rd_idx],
-                                         f31000[:geo_4th_idx], f40000[:geo_4th_idx], f20110[:geo_4th_idx],
-                                         f11200[:geo_4th_idx],
-                                       f20020[:geo_4th_idx], f20200[:geo_4th_idx], f00310[:geo_4th_idx],
-                                       f00400[:geo_4th_idx])
+                                       h21000s[:geo_3rd_idx], h30000s[:geo_3rd_idx], h10110s[:geo_3rd_idx],
+                                       h10020s[:geo_3rd_idx],
+                                       h10200s[:geo_3rd_idx], h20001s[:chr_3rd_idx], h00201s[:chr_3rd_idx],
+                                       h10002s[:chr_3rd_idx],
+                                       h31000s[:geo_4th_idx], h40000s[:geo_4th_idx], h20110s[:geo_4th_idx],
+                                       h11200s[:geo_4th_idx],
+                                       h20020s[:geo_4th_idx], h20200s[:geo_4th_idx], h00310s[:geo_4th_idx],
+                                       h00400s[:geo_4th_idx])
         if printout:
             print(nonlinear_terms)
         return nonlinear_terms
