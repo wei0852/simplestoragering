@@ -1195,9 +1195,8 @@ class CSLattice(object):
                 for i in range(7):
                     beam[:4, i] = beam[:4, i] + xco
                     beam[5, i] = beam[5, i] + deviation
-                for nper in range(self.n_periods):
-                    for ele in self.elements:
-                        beam = ele.symplectic_track(beam)
+                for ele in self.elements:
+                    beam = ele.symplectic_track(beam)
                 for i in range(4):
                     matrix[:, i] = (beam[:4, i] - beam[:4, 6]) / precision
                 d = beam[:4, 6] - xco
@@ -1219,14 +1218,14 @@ class CSLattice(object):
         except Exception as e:
             print(e)
             raise Exception('can not find off-momentum closed orbit, try smaller delta.')
-        nux0 = self.nux - int(self.nux)
-        nuy0 = self.nuy - int(self.nuy)
-        xi2x = (nux1 + nux_1 - 2 * nux0) / 2 / delta ** 2
-        xi2y = (nuy1 + nuy_1 - 2 * nuy0) / 2 / delta ** 2
-        xi3x = (nux2 - 2 * nux1 + 2 * nux_1 - nux_2) / delta ** 3 / 12
-        xi3y = (nuy2 - 2 * nuy1 + 2 * nuy_1 - nuy_2) / delta ** 3 / 12
-        xi4x = (nux2 - 4 * nux1 + 6 * nux0 - 4 * nux_1 + nux_2) / delta ** 4 / 24
-        xi4y = (nuy2 - 4 * nuy1 + 6 * nuy0 - 4 * nuy_1 + nuy_2) / delta ** 4 / 24
+        nux0 = self.nux / self.n_periods - int(self.nux / self.n_periods)
+        nuy0 = self.nuy / self.n_periods - int(self.nuy / self.n_periods)
+        xi2x = self.n_periods * (nux1 + nux_1 - 2 * nux0) / 2 / delta ** 2
+        xi2y = self.n_periods * (nuy1 + nuy_1 - 2 * nuy0) / 2 / delta ** 2
+        xi3x = self.n_periods * (nux2 - 2 * nux1 + 2 * nux_1 - nux_2) / delta ** 3 / 12
+        xi3y = self.n_periods * (nuy2 - 2 * nuy1 + 2 * nuy_1 - nuy_2) / delta ** 3 / 12
+        xi4x = self.n_periods * (nux2 - 4 * nux1 + 6 * nux0 - 4 * nux_1 + nux_2) / delta ** 4 / 24
+        xi4y = self.n_periods * (nuy2 - 4 * nuy1 + 6 * nuy0 - 4 * nuy_1 + nuy_2) / delta ** 4 / 24
         print(f'xi2x: {xi2x:.2f}, xi2y: {xi2y:.2f}, xi3x: {xi3x:.2f}, xi3y: {xi3y:.2f}, xi4x: {xi4x:.2f}, xi4y: {xi4y:.2f}')
         return {'xi2x': xi2x, 'xi2y': xi2y, 'xi3x': xi3x, 'xi3y': xi3y, 'xi4x': xi4x, 'xi4y': xi4y}
 

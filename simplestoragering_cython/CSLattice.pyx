@@ -1109,15 +1109,14 @@ class CSLattice(object):
                 particle2[5] = deviation
                 particle3[5] = deviation
                 particle4[5] = deviation
-                for nper in range(self.n_periods):
-                    for ele in self.elements:
-                        flag0 = symplectic_track_ele(ele, particle0)
-                        flag1 = symplectic_track_ele(ele, particle1)
-                        flag2 = symplectic_track_ele(ele, particle2)
-                        flag3 = symplectic_track_ele(ele, particle3)
-                        flag4 = symplectic_track_ele(ele, particle4)
-                        if (flag0 + flag1 + flag2 + flag3 + flag4) != 0:
-                            raise Exception(f'particle lost at {ele.s}')
+                for ele in self.elements:
+                    flag0 = symplectic_track_ele(ele, particle0)
+                    flag1 = symplectic_track_ele(ele, particle1)
+                    flag2 = symplectic_track_ele(ele, particle2)
+                    flag3 = symplectic_track_ele(ele, particle3)
+                    flag4 = symplectic_track_ele(ele, particle4)
+                    if (flag0 + flag1 + flag2 + flag3 + flag4) != 0:
+                        raise Exception(f'particle lost at {ele.s}')
                 for i in range(4):
                     mv[i, 0] = (particle1[i] - particle0[i]) / precision
                     mv[i, 1] = (particle2[i] - particle0[i]) / precision
@@ -1142,14 +1141,14 @@ class CSLattice(object):
             nux_2, nuy_2 = closed_orbit_tune(-2 * delta)
         except Exception as e:
             raise Exception('can not find off-momentum closed orbit, try smaller delta.')
-        nux0 = self.nux - int(self.nux)
-        nuy0 = self.nuy - int(self.nuy)
-        xi2x = (nux1 + nux_1 - 2 * nux0) / 2 / delta ** 2
-        xi2y = (nuy1 + nuy_1 - 2 * nuy0) / 2 / delta ** 2
-        xi3x = (nux2 - 2 * nux1 + 2 * nux_1 - nux_2) / delta ** 3 / 12
-        xi3y = (nuy2 - 2 * nuy1 + 2 * nuy_1 - nuy_2) / delta ** 3 / 12
-        xi4x = (nux2 - 4 * nux1 + 6 * nux0 - 4 * nux_1 + nux_2) / delta ** 4 / 24
-        xi4y = (nuy2 - 4 * nuy1 + 6 * nuy0 - 4 * nuy_1 + nuy_2) / delta ** 4 / 24
+        nux0 = self.nux / self.n_periods - int(self.nux / self.n_periods)
+        nuy0 = self.nuy / self.n_periods - int(self.nuy / self.n_periods)
+        xi2x = self.n_periods * (nux1 + nux_1 - 2 * nux0) / 2 / delta ** 2
+        xi2y = self.n_periods * (nuy1 + nuy_1 - 2 * nuy0) / 2 / delta ** 2
+        xi3x = self.n_periods * (nux2 - 2 * nux1 + 2 * nux_1 - nux_2) / delta ** 3 / 12
+        xi3y = self.n_periods * (nuy2 - 2 * nuy1 + 2 * nuy_1 - nuy_2) / delta ** 3 / 12
+        xi4x = self.n_periods * (nux2 - 4 * nux1 + 6 * nux0 - 4 * nux_1 + nux_2) / delta ** 4 / 24
+        xi4y = self.n_periods * (nuy2 - 4 * nuy1 + 6 * nuy0 - 4 * nuy_1 + nuy_2) / delta ** 4 / 24
         if printout:
             print(f'xi2x: {xi2x:.2f}, xi2y: {xi2y:.2f}, xi3x: {xi3x:.2f}, xi3y: {xi3y:.2f}, xi4x: {xi4x:.2f}, xi4y: {xi4y:.2f}')
         return {'xi2x': xi2x, 'xi2y': xi2y, 'xi3x': xi3x, 'xi3y': xi3y, 'xi4x': xi4x, 'xi4y': xi4y}
