@@ -1059,7 +1059,7 @@ class CSLattice(object):
             print(driving_terms)
         return driving_terms
 
-    def higher_order_chromaticity(self, printout=True, order=3, delta=1e-3, matrix_precision=1e-9, resdl_limit=1e-16):
+    def higher_order_chromaticity(self, printout=True, delta=1e-2, matrix_precision=1e-9, resdl_limit=1e-12):
         """compute higher order chromaticity with the tunes of 4d off-momentum closed orbit.
             
             try to reset the value of delta, precision and resdl_limit if the result is wrong.
@@ -1127,7 +1127,7 @@ class CSLattice(object):
                     d[i] = particle0[i] - xco[i]
                 dco = np.linalg.inv(np.identity(4) - matrix).dot(d)
                 xco = xco + dco
-                resdl = dco.dot(dco.T)
+                resdl = sum(dco ** 2) ** 0.5
                 iter_times += 1
             cos_mu = (mv[0, 0] + mv[1, 1]) / 2
             assert fabs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
@@ -1138,25 +1138,21 @@ class CSLattice(object):
         try:
             nux1, nuy1 = closed_orbit_tune(delta)
             nux_1, nuy_1 = closed_orbit_tune(-delta)
-            if order == 3:
-                nux3, nuy3 = closed_orbit_tune(3 * delta)
-                nux_3, nuy_3 = closed_orbit_tune(-3 * delta)
+            nux2, nuy2 = closed_orbit_tune(2 * delta)
+            nux_2, nuy_2 = closed_orbit_tune(-2 * delta)
         except Exception as e:
-            if printout:
-                print(e)
-                print('!!!!!!!\ncan not find off-momentum closed orbit, try smaller delta.\n    !!!! you may need to change matrix_precision, too.')
-            return {'xi2x': 1e9, 'xi2y': 1e9, 'xi3x': 1e9, 'xi3y': 1e9}
-        xi2x = (nux1 + nux_1 - 2 * (self.nux - int(self.nux))) / 2 / delta ** 2
-        xi2y = (nuy1 + nuy_1 - 2 * (self.nuy - int(self.nuy))) / 2 / delta ** 2
-        if order == 3:
-            xi3x = (nux3 - nux_3 + 3 * nux_1 - 3 * nux1) / (delta * 2) ** 3 / 6
-            xi3y = (nuy3 - nuy_3 + 3 * nuy_1 - 3 * nuy1) / (delta * 2) ** 3 / 6
-        else:
-            xi3x = 0
-            xi3y = 0
+            raise Exception('can not find off-momentum closed orbit, try smaller delta.')
+        nux0 = self.nux - int(self.nux)
+        nuy0 = self.nuy - int(self.nuy)
+        xi2x = (nux1 + nux_1 - 2 * nux0) / 2 / delta ** 2
+        xi2y = (nuy1 + nuy_1 - 2 * nuy0) / 2 / delta ** 2
+        xi3x = (nux2 - 2 * nux1 + 2 * nux_1 - nux_2) / delta ** 3 / 12
+        xi3y = (nuy2 - 2 * nuy1 + 2 * nuy_1 - nuy_2) / delta ** 3 / 12
+        xi4x = (nux2 - 4 * nux1 + 6 * nux0 - 4 * nux_1 + nux_2) / delta ** 4 / 24
+        xi4y = (nuy2 - 4 * nuy1 + 6 * nuy0 - 4 * nuy_1 + nuy_2) / delta ** 4 / 24
         if printout:
-            print(f'xi2x: {xi2x:.2f}, xi2y: {xi2y:.2f}, xi3x: {xi3x:.2f}, xi3y: {xi3y:.2f}')
-        return {'xi2x': xi2x, 'xi2y': xi2y, 'xi3x': xi3x, 'xi3y': xi3y}
+            print(f'xi2x: {xi2x:.2f}, xi2y: {xi2y:.2f}, xi3x: {xi3x:.2f}, xi3y: {xi3y:.2f}, xi4x: {xi4x:.2f}, xi4y: {xi4y:.2f}')
+        return {'xi2x': xi2x, 'xi2y': xi2y, 'xi3x': xi3x, 'xi3y': xi3y, 'xi4x': xi4x, 'xi4y': xi4y}
 
     def output_matrix(self, file_name: str = u'matrix.txt'):
         """output uncoupled matrix for each element and contained matrix"""
