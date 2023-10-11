@@ -42,7 +42,6 @@ class XYGrid:
         self.yrange = np.linspace(0, ymax, ny + 1) if ylist is None else ylist
         self.delta = delta
         self.data = None
-        self.area = (xmax / nx) * (ymax / ny)
 
     def search(self, lattice: CSLattice, n_turns=100, with_rf=False):
         """"""
@@ -63,7 +62,6 @@ class XYGrid:
                     self.data[i, 3] = int(p.location / lattice.length)
                     self.data[i, 4] = p.location % (lattice.length / lattice.n_periods)
                     i += 1
-        self.area = area_count * self.area
 
     def save_data(self):
         pass
@@ -85,7 +83,6 @@ class NLine:
         split_fraction=0.5,
         delta=0, momentum deviation.
         printout=True,
-        power: 1 or 2, default=1, linear.
 
     Attributes:
         aperture, np.ndarray, (n_lines, 2) shape.
@@ -108,8 +105,7 @@ class NLine:
                  n_splits: int = 0,
                  split_fraction=0.5,
                  delta=0,
-                 printout=True,
-                 power=1) -> None:
+                 printout=True) -> None:
         assert n_lines >= 3, 'n_lines at least 5.'
         self.aperture = np.zeros((n_lines, 2))
         self.area = 0
@@ -121,7 +117,6 @@ class NLine:
         self.ymax = ymax
         self.delta = delta
         self.printout = printout
-        self.power = power
 
     def search(self, lattice: CSLattice, n_turns=100, with_rf=False):
         if with_rf:
@@ -129,35 +124,36 @@ class NLine:
         for i, theta in enumerate(np.linspace(-np.pi / 2, np.pi / 2, self.n_lines)):
             if self.printout:
                 print(f'start line {i+1}...')
-            self.aperture[i, :] = self._search_line(theta, n_turns, lattice)
+            xy0 = np.zeros(2)
+            xymax = np.array([self.xmax * np.sin(theta), self.ymax * np.cos(theta)])
+            self.aperture[i, :] = self._search_line(xy0, xymax, self.nx, self.n_splits, n_turns, lattice)
 
         area = 0
         for i in range(self.aperture.shape[0] - 1):
             area += abs(self.aperture[i, 0] * self.aperture[i + 1, 1] - self.aperture[i, 1] * self.aperture[i+1, 0])
         self.area = area / 2
 
-    def _search_line(self, theta, n_turns, lattice):
-        xy0 = np.zeros(2)
-        xymax = np.array([self.xmax * np.sin(theta), self.ymax * np.cos(theta)])
-        sign = np.sign(xymax)
+    def _search_line(self, xy0, xymax, nx, n_splits, n_turns, lattice):
         is_lost = False
-        n_steps = self.nx
-        for split in range(self.n_splits + 1):
-            xy = np.linspace(xy0, xymax ** self.power, n_steps) ** (1 / self.power) * sign
-            for i, xymax in enumerate(xy):
-                try:
-                    symplectic_track([xymax[0], 0, xymax[1], 0, 0, self.delta], lattice, n_turns, record=False)
-                except ParticleLost as p:
-                    xy0 = xy[i-1, :] ** self.power
-                    n_steps = int(1 / self.split_fraction) + 1
-                    is_lost = True
-                    break
-        if self.printout:
-            if is_lost:
+        xy = np.linspace(xy0, xymax, nx + 1)
+        for i, xymax in enumerate(xy):
+            try:
+                symplectic_track([xy[i+1, 0], 0, xy[i+1, 1], 0, 0, self.delta], lattice, n_turns, record=False)
+            except ParticleLost as p:
+                xy0 = xy[i, :]
+                nx = int(1 / self.split_fraction)
+                xymax = xy[i+1, :]
+                is_lost = True
+                if n_splits > 0:
+                    return self._search_line(xy0, xymax, nx, n_splits - 1, n_turns, lattice)
+        if is_lost:
+            if self.printout:
                 print(f'    Particle lost at ({xymax[0]*1e3:.1f}, {xymax[1]*1e3:.1f}) mm.')
-            else:
+            return xy0
+        else:
+            if self.printout:
                 print('    Particle survived.')
-        return xy[i-1, :]
+            return xymax
 
 
 class DynamicAperture(object):
