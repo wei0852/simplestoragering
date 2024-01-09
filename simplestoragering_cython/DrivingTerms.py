@@ -152,7 +152,7 @@ class DrivingTerms(object):
                       'h20020': h20020, 'h20200': h20200, 'h00310': h00310, 'h00400': h00400}
         return self
 
-    def build_up_fluctuation(self, n_periods=None):
+    def buildup_fluctuation(self, n_periods=None):
         """compute the RDTs fluctuation along n_periods periods.
 
         Return:
@@ -435,6 +435,89 @@ class DrivingTerms(object):
                 'h10200': h10200_fluct, 'h20001': h20001_fluct, 'h00201': h00201_fluct, 'h10002': h10002_fluct,
                 'h31000': h31000_fluct, 'h40000': h40000_fluct, 'h20110': h20110_fluct, 'h11200': h11200_fluct,
                 'h20020': h20020_fluct, 'h20200': h20200_fluct, 'h00310': h00310_fluct, 'h00400': h00400_fluct}
+
+    def natural_fluctuation(self):
+        """Compute the absolute values of the natural RDT fluctuation.
+
+        Return: A dictionary.
+        {'f21000', 'f30000', 'f10110', 'f10020',
+                'f10200', 'f20001', 'f00201', 'f10002',
+                'f31000', 'f40000', 'f20110', 'f11200',
+                'f20020', 'f20200', 'f00310', 'f00400'}
+        """
+
+        # calculate natural RDT fluctuation.
+        # Here fxxxxx is f_xxxxx(0) in (Franchi,2014),
+        # but fxxxxxs is not equal to f_xxxxx(s) their absolute values are equal.
+
+        jj = complex(0, 1)
+
+        # 4th-order
+        f12000 = self.f21000.conjugate()
+        f01110 = self.f10110.conjugate()
+        f01200 = self.f10020.conjugate()
+        f01020 = self.f10200.conjugate()
+        h12000s = np.conj(self.h21000s)
+        h01110s = np.conj(self.h10110s)
+        h01200s = np.conj(self.h10020s)
+        h01020s = np.conj(self.h10200s)
+
+        chro_num = len(self.h20001s)
+        geo_num = len(self.h21000s)
+        f21000s = np.zeros(geo_num, dtype='complex_')
+        f30000s = np.zeros(geo_num, dtype='complex_')
+        f10110s = np.zeros(geo_num, dtype='complex_')
+        f10020s = np.zeros(geo_num, dtype='complex_')
+        f10200s = np.zeros(geo_num, dtype='complex_')
+        f20001s = np.zeros(chro_num, dtype='complex_')
+        f00201s = np.zeros(chro_num, dtype='complex_')
+        f10002s = np.zeros(chro_num, dtype='complex_')
+        f31000s = np.zeros(geo_num, dtype='complex_')
+        f40000s = np.zeros(geo_num, dtype='complex_')
+        f20110s = np.zeros(geo_num, dtype='complex_')
+        f11200s = np.zeros(geo_num, dtype='complex_')
+        f20020s = np.zeros(geo_num, dtype='complex_')
+        f20200s = np.zeros(geo_num, dtype='complex_')
+        f00310s = np.zeros(geo_num, dtype='complex_')
+        f00400s = np.zeros(geo_num, dtype='complex_')
+        f21000s = self.h21000s - self.f21000
+        f30000s = self.h30000s - self.f30000
+        f10110s = self.h10110s - self.f10110
+        f10020s = self.h10020s - self.f10020
+        f10200s = self.h10200s - self.f10200
+        f20001s = self.h20001s - self.f20001
+        f00201s = self.h00201s - self.f00201
+        f10002s = self.h10002s - self.f10002
+        # f1 = self.f30000 * h12000s
+        # f2 = f12000 * self.h30000s
+        # f31000s = (self.h31000s - (f1 - f2) * jj * 6 -self.f31000)
+        f31000s = (self.h31000s - (self.f30000 * h12000s - f12000 * self.h30000s) * jj * 6 - self.f31000)
+
+        f40000s = (self.h40000s - (self.f30000 * self.h21000s - self.f21000 * self.h30000s) * jj * 3 - self.f40000)
+        f20110s = (self.h20110s - ((self.f30000 * h01110s - f01110 * self.h30000s) * 3
+                                   - self.f21000 * self.h10110s + self.f10110 * self.h21000s
+                                   + (self.f10200 * self.h10020s - self.f10020 * self.h10200s) * 4) * jj - self.f20110)
+        f11200s = (self.h11200s - (self.f10200 * (h12000s + h01110s) - f12000 * self.h10200s
+                                   + self.f21000 * h01200s - f01200 * (self.h21000s - self.h10110s)
+                                   - f01110 * self.h10200s - self.f10110 * h01200s) * jj * 2 - self.f11200)
+        f20020s = (self.h20020s - (-self.f21000 * self.h10020s + self.f10020 * (self.h21000s - self.h10110s * 2)
+                                   + self.f30000 * h01020s * 3 - f01020 * self.h30000s * 3
+                                   + self.f10110 * self.h10020s * 2) * jj - self.f20020)
+        f20200s = (self.h20200s - (self.f30000 * h01200s * 3 - f01200 * self.h30000s * 3
+                                   + self.f10200 * (self.h21000s + self.h10110s * 2)
+                                   - self.f21000 * self.h10200s
+                                   - self.f10110 * self.h10200s * 2) * jj - self.f20200)
+        f00310s = (self.h00310s - (self.f10200 * h01110s - f01110 * self.h10200s
+                                   + self.f10110 * h01200s - f01200 * self.h10110s) * jj - self.f00310)
+        f00400s = (self.h00400s - (self.f10200 * h01200s - f01200 * self.h10200s) * jj - self.f00400)
+        return {'f21000': np.abs(f21000s), 'f30000': np.abs(f30000s), 'f10110': np.abs(f10110s),
+                'f10020': np.abs(f10020s),
+                'f10200': np.abs(f10200s), 'f20001': np.abs(f20001s), 'f00201': np.abs(f00201s),
+                'f10002': np.abs(f10002s),
+                'f31000': np.abs(f31000s), 'f40000': np.abs(f40000s), 'f20110': np.abs(f20110s),
+                'f11200': np.abs(f11200s),
+                'f20020': np.abs(f20020s), 'f20200': np.abs(f20200s), 'f00310': np.abs(f00310s),
+                'f00400': np.abs(f00400s)}
 
     def __getitem__(self, item):
         return self.terms[item]

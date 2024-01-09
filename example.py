@@ -32,7 +32,7 @@ def generate_ring():
     RB = ssr.HBend('RB', length=0.160000, theta=-0.282674 * d2r, k1=6.229233, theta_in=-0.141337 * d2r,
                    theta_out=-0.141337 * d2r)
 
-    sext_slices = 1  # the number of slices affects the results of driving terms and higher-order chromaticities
+    sext_slices = 2  # the number of slices affects the results of driving terms and higher-order chromaticities
     SF1 = ssr.Sextupole('SF1', length=0.100000, k2=2 * 98.385000, n_slices=sext_slices)
     SD1 = ssr.Sextupole('SD1', length=0.100000, k2=- 2 * 105.838000, n_slices=sext_slices)
     SD2 = ssr.Sextupole('SD2', length=0.150000, k2=-2 * 209.734000, n_slices=sext_slices)
@@ -59,12 +59,12 @@ if __name__ == '__main__':
 
     ring.linear_optics()
     t1 = time.time()
-    ring.driving_terms(printout=False)
+    ring.driving_terms(verbose=False)
     t2 = time.time()
     print(f'time = {t2 - t1:.3f} seconds.    Calculate using RDT fluctuations data.')
     # This method using the ELEGANT formula.
     t1 = time.time()
-    rdts_another_method = ring.another_method_driving_terms(printout=False)
+    # rdts_another_method = ring.another_method_driving_terms(verbose=False)
     t2 = time.time()
     print(f'time = {t2 - t1:.3f} seconds.    Another method calculates one-turn RDTs.')
 
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     # further reducing computation time.
     # The formula for calculating multi-period RDTs is referenced from [inside_OPA.pdf](https://ados.web.psi.ch/opa).
     t1 = time.time()
-    rdts = cell.driving_terms(printout=False)
+    rdts = cell.driving_terms(verbose=False)
     rdts.set_periods(n_periods=14)
     t2 = time.time()
     print(f'time = {t2 - t1:.3f} seconds.    Calculate using RDT fluctuations data with one cell.')
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     # which uses the formula in [CERN8805] and [SLS09/97].
     # But this is slower especially when the number of sextupoles or slices of sextupoles is large.
     t1 = time.time()
-    adts = ring.adts(n_periods=1, printout=False)
+    adts = ring.adts(n_periods=1, verbose=False)
     t2 = time.time()
     print(f'time = {t2 - t1:.3f} seconds.    Calculate ADTSs with [CERN8805] and [SLS09/97] formula.')
     print('                ', end='')
@@ -97,10 +97,10 @@ if __name__ == '__main__':
     print('but the former requires much less computation time.\n', end=indent)
     print('Different methods can be selected for different stages of nonlinear optimization.')
 
-    for k in rdts.terms:
-        print(f'{k}: {abs(rdts[k]):.2f}, {rdts_another_method[k]:.2f}')
+    # for k in rdts.terms:
+    #     print(f'{k}: {abs(rdts[k]):.2f}, {rdts_another_method[k]:.2f}')
 
-    rdts_fluct = rdts.build_up_fluctuation(n_periods=14)  # The fluctuation of RDTs in the complex plane.
+    rdts_fluct = rdts.buildup_fluctuation(n_periods=14)  # The fluctuation of RDTs in the complex plane.
     fig = plt.figure(figsize=(10.5, 10))
     plt.subplots_adjust(left=0.05, right=0.98, bottom=0.05, top=0.95, wspace=0.3)
     for i, k in enumerate(['h21000', 'h30000', 'h10110', 'h10020', 'h10200', 'h20001', 'h00201', 'h10002',
@@ -113,7 +113,7 @@ if __name__ == '__main__':
 
     N = int(len(rdts_fluct['h21000']) / 14)
     N_cell = 100
-    multi_cell_fluct = rdts.build_up_fluctuation(
+    multi_cell_fluct = rdts.buildup_fluctuation(
         n_periods=N_cell)  # Here we calculate more cells to show the regularity.
     fluct_comp = rdts.fluctuation_components()
     fig = plt.figure(figsize=(10.5, 5))
@@ -235,6 +235,22 @@ if __name__ == '__main__':
     plt.show()
 
     ring.higher_order_chromaticity()
+    nux = np.zeros(101)
+    nuy = np.zeros(101)
+    for i, dp in enumerate(np.linspace(-0.05, 0.05, 101)):
+        off_orbit = ssr.track_4d_closed_orbit(ring, dp, verbose=False)
+        nux[i] = off_orbit['nux']
+        nuy[i] = off_orbit['nuy']
+    fig, ax = plt.subplots(1)
+    ax.plot(np.linspace(-0.05, 0.05, 101), nux, label='nux')
+    ax.plot(np.linspace(-0.05, 0.05, 101), nuy, label='nuy')
+    plt.legend()
+    plt.ylim(0, 0.5)
+    plt.xlim(-0.05, 0.05)
+    plt.grid()
+    plt.xlabel('delta')
+    plt.ylabel('Fractional tunes')
+    plt.show()
 
     fig, ax = plt.subplots(1)
     ax.scatter(ring.nux, ring.nuy)

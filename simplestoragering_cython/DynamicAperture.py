@@ -82,7 +82,7 @@ class NLine:
         n_splits: int = 0,
         split_fraction=0.5,
         delta=0, momentum deviation.
-        printout=True,
+        verbose=True,
 
     Attributes:
         aperture, np.ndarray, (n_lines, 2) shape.
@@ -94,7 +94,7 @@ class NLine:
         xmax
         ymax
         delta
-        printout
+        verbose
         power
     """
     def __init__(self,
@@ -105,7 +105,7 @@ class NLine:
                  n_splits: int = 0,
                  split_fraction=0.5,
                  delta=0,
-                 printout=True) -> None:
+                 verbose=True) -> None:
         assert n_lines >= 3, 'n_lines at least 5.'
         self.aperture = np.zeros((n_lines, 2))
         self.area = 0
@@ -116,13 +116,13 @@ class NLine:
         self.xmax = xmax
         self.ymax = ymax
         self.delta = delta
-        self.printout = printout
+        self.verbose = verbose
 
     def search(self, lattice: CSLattice, n_turns=100, with_rf=False):
         if with_rf:
             raise Exception('Unfinished. 4D tracking only.')
         for i, theta in enumerate(np.linspace(-np.pi / 2, np.pi / 2, self.n_lines)):
-            if self.printout:
+            if self.verbose:
                 print(f'start line {i+1}...')
             xy0 = np.zeros(2)
             xymax = np.array([self.xmax * np.sin(theta), self.ymax * np.cos(theta)])
@@ -147,11 +147,11 @@ class NLine:
                 if n_splits > 0:
                     return self._search_line(xy0, xymax, nx, n_splits - 1, n_turns, lattice)
         if is_lost:
-            if self.printout:
+            if self.verbose:
                 print(f'    Particle lost at ({xymax[0]*1e3:.1f}, {xymax[1]*1e3:.1f}) mm.')
             return xy0
         else:
-            if self.printout:
+            if self.verbose:
                 print('    Particle survived.')
             return xymax
 

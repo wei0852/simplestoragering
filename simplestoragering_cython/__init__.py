@@ -16,7 +16,7 @@ Functions:
     symplectic_track(particle, lattice, n_turns: int, record = True)
     output_opa_file(lattice: CSLattice, file_name=None)
     output_elegant_file(lattice: CSLattice, filename=None, new_version=True)
-    chromaticity_correction(lattice: CSLattice, sextupole_name_list: list, target: list=None, initial_k2=None, update_sext=True, printout=True)
+    chromaticity_correction(lattice: CSLattice, sextupole_name_list: list, target: list=None, initial_k2=None, update_sext=True, verbose=True)
     
 and some functions to visualize lattice data quickly.
     plot_layout_in_ax(ele_list: list, ax: Axes, ratio=0.03)
@@ -39,5 +39,5 @@ from .plotlib import plot_lattice, plot_layout_in_ax, plot_with_background, get_
 from .functions import output_opa_file, output_elegant_file, chromaticity_correction
 from .line_matrix import line_matrix
 from .track import symplectic_track, track_4d_closed_orbit
-from .exceptions import ParticleLost
+from .exceptions import ParticleLost, Unstable
 from .DynamicAperture import XYGrid, NLine

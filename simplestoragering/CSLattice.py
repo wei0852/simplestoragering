@@ -9,6 +9,7 @@ from .Quadrupole import Quadrupole
 from .Sextupole import Sextupole
 from .Octupole import Octupole
 from .DrivingTerms import DrivingTerms
+from .exceptions import Unstable
 
 
 class CSLattice(object):
@@ -98,11 +99,12 @@ class CSLattice(object):
         self.__solve_along()
         self.U0 = Cr * RefParticle.energy ** 4 * self.I2 / (2 * pi)
         if not line_mode:
-            np.seterr(all='raise')
             self.f_c = c * RefParticle.beta / self.length
             self.Jx = 1 - self.I4 / self.I2
             self.Jy = 1
             self.Js = 2 + self.I4 / self.I2
+            if self.Js <= 0:
+                raise Unstable('invalid longitudinal damping partition number.')
             self.sigma_e = RefParticle.gamma * np.sqrt(Cq * self.I3 / (self.Js * self.I2))
             self.emittance = Cq * RefParticle.gamma * RefParticle.gamma * self.I5 / (self.Jx * self.I2)
             self.tau0 = 2 * RefParticle.energy / self.U0 / self.f_c
@@ -127,7 +129,8 @@ class CSLattice(object):
             matrix = ele.matrix.dot(matrix)
         # x direction
         cos_mu = (matrix[0, 0] + matrix[1, 1]) / 2
-        assert abs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
+        if abs(cos_mu) >= 1:
+            raise Unstable('can not find the periodic solution.')
         mu = np.arccos(cos_mu) * np.sign(matrix[0, 1])
         beta = matrix[0, 1] / np.sin(mu)
         alpha = (matrix[0, 0] - matrix[1, 1]) / (2 * np.sin(mu))
@@ -135,7 +138,8 @@ class CSLattice(object):
         self.twiss_x0 = np.array([beta, alpha, gamma])
         # y direction
         cos_mu = (matrix[2, 2] + matrix[3, 3]) / 2
-        assert abs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
+        if abs(cos_mu) >= 1:
+            raise Unstable('can not find the periodic solution.')
         mu = np.arccos(cos_mu) * np.sign(matrix[2, 3])
         beta = matrix[2, 3] / np.sin(mu)
         alpha = (matrix[2, 2] - matrix[3, 3]) / (2 * np.sin(mu))
@@ -435,7 +439,7 @@ class CSLattice(object):
                 'f31000': f31000, 'f40000': f40000, 'f20110': f20110, 'f11200': f11200, 'f20020': f20020,
                 'f20200': f20200, 'f00310': f00310, 'f00400': f00400}
 
-    def driving_terms(self, n_periods=None, printout: bool = True) -> DrivingTerms:
+    def driving_terms(self, n_periods=None, verbose: bool = True) -> DrivingTerms:
         """Calculate the 3rd- and 4th-order RDTs and their fluctuations.
 
         Return:
@@ -650,7 +654,7 @@ class CSLattice(object):
                                        h11200s[:geo_4th_idx],
                                        h20020s[:geo_4th_idx], h20200s[:geo_4th_idx], h00310s[:geo_4th_idx],
                                        h00400s[:geo_4th_idx])
-        if printout:
+        if verbose:
             print(nonlinear_terms)
         return nonlinear_terms
 
@@ -901,8 +905,8 @@ class CSLattice(object):
                            }
         return RDTs_along_ring
 
-    def adts(self, n_periods=None, printout: bool = True) -> dict:
-        """adts(self, n_periods=None, printout=True)
+    def adts(self, n_periods=None, verbose: bool = True) -> dict:
+        """adts(self, n_periods=None, verbose=True)
         compute ADTS terms.
         Return:
             {'dQxx': , 'dQxy': , 'dQyy':}
@@ -935,7 +939,7 @@ class CSLattice(object):
         if np.sin(pi_nux) == 0 or np.sin(3 * pi_nux) == 0 or np.sin(pi_nux + 2 * pi_nuy) == 0 or np.sin(
                 pi_nux - 2 * pi_nuy) == 0:
             nonlinear_terms = {'Qxx': 1e60, 'Qxy': 1e60, 'Qyy': 1e60}
-            if printout:
+            if verbose:
                 print('\n on resonance line.')
             return nonlinear_terms
         sext_num = len(sext_index)
@@ -989,13 +993,13 @@ class CSLattice(object):
             Qyy += 3 * b4l * beta_yi ** 2 / 8 / pi
 
         nonlinear_terms = {'dQxx': Qxx * n_periods, 'dQxy': Qxy * n_periods, 'dQyy': Qyy * n_periods}
-        if printout:
+        if verbose:
             print(f'ADTS terms, {n_periods} periods:')
             for k, b4l in nonlinear_terms.items():
                 print(f'    {str(k):7}: {b4l:.2f}')
         return nonlinear_terms
 
-    def another_method_driving_terms(self, printout=True):
+    def another_method_driving_terms(self, verbose=True):
         """compute resonance driving terms. return a dictionary
         nonlinear_terms = {'h21000': , 'h30000': , 'h10110': , 'h10020': ,
                            'h10200': , 'Qxx': , 'Qxy': , 'Qyy': ,
@@ -1160,13 +1164,13 @@ class CSLattice(object):
                            'h20020': abs(h20020), 'h20200': abs(h20200), 'h00310': abs(h00310),
                            'h00400': abs(h00400),
                            'h22000': abs(h22000), 'h11110': abs(h11110), 'h00220': abs(h00220)}
-        if printout:
+        if verbose:
             print('\nnonlinear terms:')
             for i, j in nonlinear_terms.items():
                 print(f'    {str(i):7}: {j:.2f}')
         return nonlinear_terms
 
-    def higher_order_chromaticity(self, delta=1e-2, matrix_precision=1e-9, resdl_limit=1e-12):
+    def higher_order_chromaticity(self, verbose=True, delta=1e-3, matrix_precision=1e-9, resdl_limit=1e-12):
         """compute higher order chromaticity with the tunes of 4d off-momentum closed orbit.
          delta: the momentum deviation.
          matrix_precision: the small deviation to calculate transfer matrix by tracking.
@@ -1207,7 +1211,9 @@ class CSLattice(object):
             cos_mu = (matrix[0, 0] + matrix[1, 1]) / 2
             assert abs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
             nux = np.arccos(cos_mu) * np.sign(matrix[0, 1]) / 2 / pi
-            nuy = np.arccos((matrix[2, 2] + matrix[3, 3]) / 2) * np.sign(matrix[2, 3]) / 2 / pi
+            cos_mu = (matrix[2, 2] + matrix[3, 3]) / 2
+            assert abs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
+            nuy = np.arccos(cos_mu) * np.sign(matrix[2, 3]) / 2 / pi
             return nux - np.floor(nux), nuy - np.floor(nuy)
 
         try:
@@ -1216,8 +1222,7 @@ class CSLattice(object):
             nux2, nuy2 = closed_orbit_tune(2 * delta)
             nux_2, nuy_2 = closed_orbit_tune(-2 * delta)
         except Exception as e:
-            print(e)
-            raise Exception('can not find off-momentum closed orbit, try smaller delta.')
+            raise Unstable('can not find off-momentum closed orbit, try smaller delta.')
         nux0 = self.nux / self.n_periods - int(self.nux / self.n_periods)
         nuy0 = self.nuy / self.n_periods - int(self.nuy / self.n_periods)
         xi2x = self.n_periods * (nux1 + nux_1 - 2 * nux0) / 2 / delta ** 2
@@ -1226,7 +1231,8 @@ class CSLattice(object):
         xi3y = self.n_periods * (nuy2 - 2 * nuy1 + 2 * nuy_1 - nuy_2) / delta ** 3 / 12
         xi4x = self.n_periods * (nux2 - 4 * nux1 + 6 * nux0 - 4 * nux_1 + nux_2) / delta ** 4 / 24
         xi4y = self.n_periods * (nuy2 - 4 * nuy1 + 6 * nuy0 - 4 * nuy_1 + nuy_2) / delta ** 4 / 24
-        print(f'xi2x: {xi2x:.2f}, xi2y: {xi2y:.2f}, xi3x: {xi3x:.2f}, xi3y: {xi3y:.2f}, xi4x: {xi4x:.2f}, xi4y: {xi4y:.2f}')
+        if verbose:
+            print(f'xi2x: {xi2x:.2f}, xi2y: {xi2y:.2f}, xi3x: {xi3x:.2f}, xi3y: {xi3y:.2f}, xi4x: {xi4x:.2f}, xi4y: {xi4y:.2f}')
         return {'xi2x': xi2x, 'xi2y': xi2y, 'xi3x': xi3x, 'xi3y': xi3y, 'xi4x': xi4x, 'xi4y': xi4y}
 
     def output_matrix(self, file_name: str = 'matrix.txt'):
@@ -1262,7 +1268,7 @@ class CSLattice(object):
 
     def __mul__(self, other):
         assert isinstance(other, int), 'can only multiply int.'
-        newlattice = CSLattice(self.elements * other)
+        newlattice = CSLattice(self.elements[:-1] * other)
         return newlattice
 
     def __str__(self):

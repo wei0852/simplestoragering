@@ -69,7 +69,6 @@ def output_elegant_file(lattice: CSLattice, filename=None, new_version=True):
     """output .lte file for ELEGANT (https://ops.aps.anl.gov/manuals/elegant_latest/elegant.html)
     the suffix '.lte' will be added to the end of the file name.
     If new_version (after ELEGANT 2021.1), use N_SLICES parameter, else use N_KICKS.
-    https://ops.aps.anl.gov/manuals/elegant_latest/elegantsu244.html
     """
 
     filename = 'output_lte.lte' if filename is None else filename + '.lte'

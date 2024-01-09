@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
-from .exceptions import ParticleLost
+from .exceptions import ParticleLost, Unstable
 from .c_functions cimport symplectic_track_ele
 from .CSLattice import CSLattice
 from .globalvars cimport refgamma, refbeta, refenergy, pi
@@ -44,16 +44,16 @@ cpdef symplectic_track(particle, lattice, int n_turns, record = True):
                     raise ParticleLost(ele.s + lattice.length * i + lattice.length * j / lattice.n_periods)
     return np.array(p)
 
-cpdef track_4d_closed_orbit(lattice: CSLattice, delta, resdl_limit=1e-16, matrix_precision=1e-9):
+cpdef track_4d_closed_orbit(lattice: CSLattice, delta, matrix_precision=1e-9, resdl_limit=1e-12, verbose=True):
     """4D track to compute closed orbit with energy deviation.
     Args:
         delta: the momentum deviation.
         matrix_precision: the small deviation to calculate transfer matrix by tracking.
         resdl_limit: the limit to judge if the orbit is closed.
-    
+
     Return:
-        {'closed_orbit': (4, ) np.ndarray, 
-         'nux': float, decimal part 
+        {'closed_orbit': (4, ) np.ndarray,
+         'nux': float, decimal part
          'nuy': float, decimal part}
 
     reference: SAMM: Simple Accelerator Modelling in Matlab, A. Wolski, 2013
@@ -63,8 +63,9 @@ cpdef track_4d_closed_orbit(lattice: CSLattice, delta, resdl_limit=1e-16, matrix
     cdef double precision
     cdef np.ndarray[dtype=np.float64_t, ndim=2] matrix = np.zeros([4, 4])
     cdef double[:, :] mv = matrix
-    
-    print('\n-------------------\ntracking 4D closed orbit:\n')
+
+    if verbose:
+        print('\n-------------------\ntracking 4D closed orbit:\n')
     xco = np.array([0.0, 0.0, 0.0, 0.0])
     resdl = 1
     iter_times = 1
@@ -106,14 +107,21 @@ cpdef track_4d_closed_orbit(lattice: CSLattice, delta, resdl_limit=1e-16, matrix
             d[i] = particle0[i] - xco[i]
         dco = np.linalg.inv(np.identity(4) - matrix).dot(d)
         xco = xco + dco
-        resdl = dco.dot(dco.T)
-        print(f'iterated {iter_times} times, current result is \n    {particle0}\n')
+        resdl = sum(dco ** 2) ** 0.5
+        if verbose:
+            print(f'iterated {iter_times} times, current result is \n    {particle0}\n')
         iter_times += 1
-    print(f'verify:\n    closed orbit at s=0 is \n    {xco}\n')
+    if verbose:
+        print(f'verify:\n    closed orbit at s=0 is \n    {xco}\n')
     cos_mu = (mv[0, 0] + mv[1, 1]) / 2
-    assert fabs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
+    if fabs(cos_mu) >= 1:
+        raise Unstable('can not find period solution')
     nux = acos(cos_mu) * np.sign(mv[0, 1]) / 2 / pi
-    nuy = acos((mv[2, 2] + mv[3, 3]) / 2) * np.sign(mv[2, 3]) / 2 / pi
-    print(f'tune is {nux - np.floor(nux):.6f}, {nuy - np.floor(nuy):.6f}')
+    cos_mu = (mv[2, 2] + mv[3, 3]) / 2
+    if fabs(cos_mu) >= 1:
+        raise Unstable('can not find period solution')
+    nuy = acos(cos_mu) * np.sign(mv[2, 3]) / 2 / pi
+    if verbose:
+        print(f'tune is {nux - np.floor(nux):.6f}, {nuy - np.floor(nuy):.6f}')
     return_data = {'closed_orbit': xco[:4], 'nux': nux - np.floor(nux), 'nuy': nuy - np.floor(nuy)}
     return return_data

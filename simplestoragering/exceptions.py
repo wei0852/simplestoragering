@@ -11,3 +11,13 @@ class ParticleLost(Exception):
 
     def __init__(self, *args):
         self.name = args[0]
+
+
+class Unstable(Exception):
+    """unstable periodic solution"""
+
+    def __init__(self, message, *args) -> None:
+        self.message = message
+
+    def __str__(self) -> str:
+        return f'Unstable, {self.message}'

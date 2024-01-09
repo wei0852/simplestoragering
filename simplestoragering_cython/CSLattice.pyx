@@ -14,7 +14,7 @@ from .Quadrupole cimport Quadrupole
 from .Sextupole cimport Sextupole
 from .Octupole cimport Octupole
 from .DrivingTerms import DrivingTerms
-import warnings
+from .exceptions import Unstable
 
 
 cdef extern from "<math.h>":
@@ -60,7 +60,7 @@ class CSLattice(object):
         tau_s, tau_x, tau_y: longitudinal / horizontal / vertical damping time
         alpha: Momentum compaction
         etap: phase slip factor
-    
+
     Methods:
         set_initial_twiss(betax, alphax, betay, alphay, etax, etaxp, etay, etayp)
         linear_optics(periodicity=True, line_mode=False)
@@ -158,6 +158,8 @@ class CSLattice(object):
             self.Jx = 1 - self.I4 / self.I2
             self.Jy = 1
             self.Js = 2 + self.I4 / self.I2
+            if self.Js <= 0:
+                raise Unstable('invalid longitudinal damping partition number')
             self.sigma_e = refgamma * np.sqrt(Cq * self.I3 / (self.Js * self.I2))
             self.emittance = Cq * refgamma * refgamma * self.I5 / (self.Jx * self.I2)
             self.tau0 = 2 * refenergy / self.U0 / self.f_c
@@ -175,7 +177,8 @@ class CSLattice(object):
         matrix = line_matrix(self.elements)
         # x direction
         cos_mu = (matrix[0, 0] + matrix[1, 1]) / 2
-        assert fabs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
+        if fabs(cos_mu) >= 1:
+            raise Unstable('can not find period solution')
         mu = acos(cos_mu) * np.sign(matrix[0, 1])
         beta = matrix[0, 1] / sin(mu)
         alpha = (matrix[0, 0] - matrix[1, 1]) / (2 * sin(mu))
@@ -183,7 +186,8 @@ class CSLattice(object):
         self.twiss_x0 = np.array([beta, alpha, gamma])
         # y direction
         cos_mu = (matrix[2, 2] + matrix[3, 3]) / 2
-        assert fabs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
+        if fabs(cos_mu) >= 1:
+            raise Unstable('can not find period solution')
         mu = acos(cos_mu) * np.sign(matrix[2, 3])
         beta = matrix[2, 3] / sin(mu)
         alpha = (matrix[2, 2] - matrix[3, 3]) / (2 * sin(mu))
@@ -268,17 +272,17 @@ class CSLattice(object):
             else:
                 ele_slices += ele.slice(1)
         return ele_slices
-    
+
     @cython.cdivision(True)
-    def adts(self, n_periods=None, printout=True):
+    def adts(self, n_periods=None, verbose=True):
         """adts(self, printout=True)
-        compute ADTS terms. 
+        compute ADTS terms.
         Return:
             {'dQxx': , 'dQxy': , 'dQyy':}
 
         references:
         1. The Sextupole Scheme for the SLS: An Analytic Approach, SLS Note 09/97, Johan Bengtsson"""
-        
+
         cdef double b3l_i, b4l, beta_xi, mu_ix, mu_iy, beta_yi
         cdef double b3l, beta_xj, beta_xij, beta_yj, mu_jx, mu_ijx, mu_jy, mu_ijy, Qxx, Qxy, Qyy, pi_nux, pi_nuy
         cdef int current_ind, sext_num, i, j
@@ -307,7 +311,7 @@ class CSLattice(object):
         pi_nuy = ele_list[current_ind-1].psiy / 2
         if sin(pi_nux) == 0 or sin(3 * pi_nux) == 0 or sin(pi_nux + 2 * pi_nuy) == 0 or sin(pi_nux - 2 * pi_nuy) == 0:
             nonlinear_terms = {'Qxx': 1e60, 'Qxy': 1e60, 'Qyy': 1e60}
-            if printout:
+            if verbose:
                 print('\n on resonance line.')
             return nonlinear_terms
         sext_num = len(sext_index)
@@ -328,7 +332,7 @@ class CSLattice(object):
                 Qyy += b3l_i ** 2 / (-16 * pi) * beta_xi * beta_yi * beta_yi * (
                         4 * cos(pi_nux) / sin(pi_nux)
                         + cos(pi_nux + 2 * pi_nuy) / sin(pi_nux + 2 * pi_nuy)
-                        + cos(pi_nux - 2 * pi_nuy) / sin(pi_nux - 2 * pi_nuy))                
+                        + cos(pi_nux - 2 * pi_nuy) / sin(pi_nux - 2 * pi_nuy))
                 for j in range(i):
                     b3l = ele_list[sext_index[j]].k2 * ele_list[sext_index[j]].length * b3l_i / 2
                     if b3l != 0:
@@ -360,7 +364,7 @@ class CSLattice(object):
 
         n_periods = self.n_periods if n_periods is None else n_periods
         nonlinear_terms = {'dQxx': Qxx * n_periods, 'dQxy': Qxy * n_periods, 'dQyy': Qyy * n_periods}
-        if printout:
+        if verbose:
             print(f'ADTS terms, {n_periods} periods:')
             for k, b4l in nonlinear_terms.items():
                 print(f'    {str(k):7}: {b4l:.2f}')
@@ -374,7 +378,7 @@ class CSLattice(object):
 
         Return: a dictionary, each value is a np.ndarray.
                 {'s':, 'f21000': , 'f30000': , 'f10110': , 'f10020': ,
-                 'f10200': , 
+                 'f10200': ,
                  'f31000': , 'f40000': , 'f20110': , 'f11200': ,
                  'f20020': , 'f20200': , 'f00310': , 'f00400': }
 
@@ -384,7 +388,7 @@ class CSLattice(object):
         3. Perspectives for future light source lattices incorporating yet uncommon magnets, S. C. Leemann and A. Streun
         4. First simultaneous measurement of sextupolar and octupolar resonance driving terms in a circular accelerator from turn-by-turn beam position monitor data, Franchi, A., et al. (2014)
         """
-        
+
         cdef int num_ele, i, j
         cdef complex h21000, h30000, h10110, h10020, h10200, jj
         cdef complex h12000, h01110, h01200, h01010, h12000j, h01110j, h01200j, h01010j, f01200, f01110, f12000
@@ -420,13 +424,13 @@ class CSLattice(object):
             psix0 = psix[i]
             psiy0 = psiy[i]
             phix = psix[num_ele - 1]
-            phiy = psiy[num_ele - 1]            
+            phiy = psiy[num_ele - 1]
             h21000 = h30000 = h10110 = h10020 = h10200 = 0
             h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
             for j, ele in enumerate(self.elements[i:]):
                 ele.psix = psix[j + i] - psix0
                 ele.psiy = psiy[j + i] - psiy0
-                if isinstance(ele, Sextupole):     #   0        1      2       3       4       5       6       7  
+                if isinstance(ele, Sextupole):     #   0        1      2       3       4       5       6       7
                     rdts = ele.driving_terms()   # h21000, h30000, h10110, h10020, h10200, h20001, h00201, h10002
                     h12000j = rdts[0].conjugate()
                     h01110j = rdts[2].conjugate()
@@ -435,10 +439,10 @@ class CSLattice(object):
                     h12000 = h21000.conjugate()
                     h01110 = h10110.conjugate()
                     h01200 = h10020.conjugate()
-                    h01020 = h10200.conjugate()         
+                    h01020 = h10200.conjugate()
                     h31000 += jj * 6 * (h30000 * h12000j - h12000 * rdts[1]) + rdts[11]
                     h40000 += jj * 3 * (h30000 * rdts[0] - h21000 * rdts[1]) + rdts[12]
-                    h20110 += jj * ((h30000 * h01110j - h01110 * rdts[1]) * 3 
+                    h20110 += jj * ((h30000 * h01110j - h01110 * rdts[1]) * 3
                                    -(h21000 * rdts[2] - h10110 * rdts[0])
                                     +(h10200 * rdts[3] - h10020 * rdts[4]) * 4) + rdts[13]
                     h11200 += jj * ((h10200 * h12000j - h12000 * rdts[4]) * 2
@@ -472,7 +476,7 @@ class CSLattice(object):
             for j, ele in enumerate(self.elements[:i]):
                 ele.psix = psix[j] - psix0 + phix
                 ele.psiy = psiy[j] - psiy0 + phiy
-                if isinstance(ele, Sextupole):     #   0        1      2       3       4       5       6       7  
+                if isinstance(ele, Sextupole):     #   0        1      2       3       4       5       6       7
                     rdts = ele.driving_terms()   # h21000, h30000, h10110, h10020, h10200, h20001, h00201, h10002
                     h12000j = rdts[0].conjugate()
                     h01110j = rdts[2].conjugate()
@@ -481,10 +485,10 @@ class CSLattice(object):
                     h12000 = h21000.conjugate()
                     h01110 = h10110.conjugate()
                     h01200 = h10020.conjugate()
-                    h01020 = h10200.conjugate()         
+                    h01020 = h10200.conjugate()
                     h31000 += jj * 6 * (h30000 * h12000j - h12000 * rdts[1]) + rdts[11]
                     h40000 += jj * 3 * (h30000 * rdts[0] - h21000 * rdts[1]) + rdts[12]
-                    h20110 += jj * ((h30000 * h01110j - h01110 * rdts[1]) * 3 
+                    h20110 += jj * ((h30000 * h01110j - h01110 * rdts[1]) * 3
                                    -(h21000 * rdts[2] - h10110 * rdts[0])
                                     +(h10200 * rdts[3] - h10020 * rdts[4]) * 4) + rdts[13]
                     h11200 += jj * ((h10200 * h12000j - h12000 * rdts[4]) * 2
@@ -534,7 +538,7 @@ class CSLattice(object):
             f31000[i] = h31000 / (1 - cos(2 * phix) - jj * sin(2 * phix))
             h40000 += jj * 3 * (h30000 * f21000[i] - h21000 * f30000[i])
             f40000[i] = h40000 / (1 - cos(4 * phix) - jj * sin(4 * phix))
-            h20110 += jj * ((h30000 * f01110 - h01110 * f30000[i]) * 3 
+            h20110 += jj * ((h30000 * f01110 - h01110 * f30000[i]) * 3
                             -(h21000 * f10110[i] - h10110 * f21000[i])
                             +(h10200 * f10020[i] - h10020 * f10200[i]) * 4)
             f20110[i] = h20110 / (1 - cos(2 * phix) - jj * sin(2 * phix))
@@ -583,10 +587,10 @@ class CSLattice(object):
     def driving_terms_plot_data(self):
         """Similar to DrivingTerms.fluctuation(). But the arrays in the result of driving_terms_plot_data() have the
         same length in order to plot figure, and the length is double in order to plot steps.
-        
+
         Return:
-            {'s': , 'h21000': , 'h30000': , 'h10110': , 'h10020': , 'h10200': , 
-             'h20001': , 'h00201': , 'h10002': , 
+            {'s': , 'h21000': , 'h30000': , 'h10110': , 'h10020': , 'h10200': ,
+             'h20001': , 'h00201': , 'h10002': ,
              'h31000': , 'h40000': , 'h20110': , 'h11200': ,
              'h20020': , 'h20200': , 'h00310': , 'h00400':} each value is a np.ndarray.
 
@@ -628,7 +632,7 @@ class CSLattice(object):
         idx = 0
         jj = complex(0, 1)
         for ele in self.elements:  # TODO: quad-sext
-            if isinstance(ele, Sextupole):     #   0        1      2       3       4       5       6       7  
+            if isinstance(ele, Sextupole):     #   0        1      2       3       4       5       6       7
                 rdts = ele.driving_terms()   # h21000, h30000, h10110, h10020, h10200, h20001, h00201, h10002
                 h12000j = rdts[0].conjugate()
                 h01110j = rdts[2].conjugate()
@@ -637,7 +641,7 @@ class CSLattice(object):
                 h12000 = h21000.conjugate()
                 h01110 = h10110.conjugate()
                 h01200 = h10020.conjugate()
-                h01020 = h10200.conjugate()         
+                h01020 = h10200.conjugate()
                 h22000 += jj * ((h21000 * h12000j - h12000 * rdts[0]) * 3
                                 +(h30000 * rdts[1].conjugate() - h30000.conjugate() * rdts[1]) * 9) + rdts[8]
                 h11110 += jj * ((h21000 * h01110j - h01110 * rdts[0]) * 2
@@ -649,7 +653,7 @@ class CSLattice(object):
                                 +(h10110 * h01110j - h01110 * rdts[2])) + rdts[10]
                 h31000 += jj * 6 * (h30000 * h12000j - h12000 * rdts[1]) + rdts[11]
                 h40000 += jj * 3 * (h30000 * rdts[0] - h21000 * rdts[1]) + rdts[12]
-                h20110 += jj * ((h30000 * h01110j - h01110 * rdts[1]) * 3 
+                h20110 += jj * ((h30000 * h01110j - h01110 * rdts[1]) * 3
                                -(h21000 * rdts[2] - h10110 * rdts[0])
                                 +(h10200 * rdts[3] - h10020 * rdts[4]) * 4) + rdts[13]
                 h11200 += jj * ((h10200 * h12000j - h12000 * rdts[4]) * 2
@@ -665,7 +669,7 @@ class CSLattice(object):
                 h00310 += jj * ((h10200 * h01110j - h01110 * rdts[4])
                                 +(h10110 * h01200j - h01200 * rdts[2])) + rdts[17]
                 h00400 += jj * (h10200 * h01200j - h01200 * rdts[4]) + rdts[18]
-                
+
                 h21000 = h21000 + rdts[0]
                 h30000 = h30000 + rdts[1]
                 h10110 = h10110 + rdts[2]
@@ -833,9 +837,9 @@ class CSLattice(object):
     @cython.wraparound(False)
     @cython.boundscheck(False)
     @cython.cdivision(True)
-    def driving_terms(self, n_periods=None, printout=True):
+    def driving_terms(self, n_periods=None, verbose=True):
         """Compute driving terms and the build-up fluctuations.
-        
+
         Return:
             {'h21000': np.ndarray, 'h30000': np.ndarray, 'h10110': np.ndarray, 'h10020': np.ndarray,
              'h10200': np.ndarray, 'h20001': np.ndarray, 'h00201': np.ndarray, 'h10002': np.ndarray,
@@ -848,41 +852,40 @@ class CSLattice(object):
         1. The Sextupole Scheme for the SLS: An Analytic Approach, SLS Note 09/97, Johan Bengtsson
         2. Explicit formulas for 2nd-order driving terms due to sextupoles and chromatic effects of quadrupoles, Chun-xi Wang
         3. Perspectives for future light source lattices incorporating yet uncommon magnets, S. C. Leemann and A. Streun"""
-        
-        cdef int geo_3rd_idx, geo_4th_idx, chr_3rd_idx, num_ele
+
+        cdef int geo_idx, chr_idx, num_ele
         cdef complex h21000, h30000, h10110, h10020, h10200, h20001, h00201, h10002, jj
         cdef complex h12000, h01110, h01200, h01010, h12000j, h01110j, h01200j, h01010j
         cdef complex h31000, h40000, h20110, h11200, h20020, h20200, h00310, h00400, h22000, h11110, h00220
-        cdef np.ndarray[dtype=np.complex128_t] f22000, f11110, f00220, f21000, f30000, f10110, f10020, f10200, f20001, f00201, f10002, f11001, f00111, f31000, f40000, f20110, f11200, f20020, f20200, f00310, f00400
+        cdef np.ndarray[dtype=np.complex128_t] h22000s, h11110s, h00220s, h21000s, h30000s, h10110s, h10020s, h10200s, h20001s, h00201s, h10002s, h11001s, h00111s, h31000s, h40000s, h20110s, h11200s, h20020s, h20200s, h00310s, h00400s
 
         num_ele = len(self.elements)
-        f21000 = np.zeros(num_ele, dtype='complex_')
-        f30000 = np.zeros(num_ele, dtype='complex_')
-        f10110 = np.zeros(num_ele, dtype='complex_')
-        f10020 = np.zeros(num_ele, dtype='complex_')
-        f10200 = np.zeros(num_ele, dtype='complex_')
-        f20001 = np.zeros(num_ele, dtype='complex_')
-        f00201 = np.zeros(num_ele, dtype='complex_')
-        f10002 = np.zeros(num_ele, dtype='complex_')
-        f22000 = np.zeros(num_ele, dtype='complex_')
-        f11110 = np.zeros(num_ele, dtype='complex_')
-        f00220 = np.zeros(num_ele, dtype='complex_')
-        f31000 = np.zeros(num_ele, dtype='complex_')
-        f40000 = np.zeros(num_ele, dtype='complex_')
-        f20110 = np.zeros(num_ele, dtype='complex_')
-        f11200 = np.zeros(num_ele, dtype='complex_')
-        f20020 = np.zeros(num_ele, dtype='complex_')
-        f20200 = np.zeros(num_ele, dtype='complex_')
-        f00310 = np.zeros(num_ele, dtype='complex_')
-        f00400 = np.zeros(num_ele, dtype='complex_')
+        h21000s = np.zeros(num_ele, dtype='complex_')
+        h30000s = np.zeros(num_ele, dtype='complex_')
+        h10110s = np.zeros(num_ele, dtype='complex_')
+        h10020s = np.zeros(num_ele, dtype='complex_')
+        h10200s = np.zeros(num_ele, dtype='complex_')
+        h20001s = np.zeros(num_ele, dtype='complex_')
+        h00201s = np.zeros(num_ele, dtype='complex_')
+        h10002s = np.zeros(num_ele, dtype='complex_')
+        h22000s = np.zeros(num_ele, dtype='complex_')
+        h11110s = np.zeros(num_ele, dtype='complex_')
+        h00220s = np.zeros(num_ele, dtype='complex_')
+        h31000s = np.zeros(num_ele, dtype='complex_')
+        h40000s = np.zeros(num_ele, dtype='complex_')
+        h20110s = np.zeros(num_ele, dtype='complex_')
+        h11200s = np.zeros(num_ele, dtype='complex_')
+        h20020s = np.zeros(num_ele, dtype='complex_')
+        h20200s = np.zeros(num_ele, dtype='complex_')
+        h00310s = np.zeros(num_ele, dtype='complex_')
+        h00400s = np.zeros(num_ele, dtype='complex_')
         h21000 = h30000 = h10110 = h10020 = h10200 = h20001 = h00201 = h10002 = 0
         h22000 = h11110 = h00220 = h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
-        geo_3rd_idx = 0
-        geo_4th_idx = 0
-        chr_3rd_idx = 0
+        geo_idx = 0  # k_i != 0, i >= 2
+        chr_idx = 0  # k_i != 0, i >= 1
         jj = complex(0, 1)
         for ele in self.elements:  # TODO: quad-sext
-            if isinstance(ele, Sextupole):     #   0        1      2       3       4       5       6       7  
+            if isinstance(ele, Sextupole):     #   0        1      2       3       4       5       6       7
                 rdts = ele.driving_terms()   # h21000, h30000, h10110, h10020, h10200, h20001, h00201, h10002
                 h12000j = rdts[0].conjugate()
                 h01110j = rdts[2].conjugate()
@@ -891,7 +894,7 @@ class CSLattice(object):
                 h12000 = h21000.conjugate()
                 h01110 = h10110.conjugate()
                 h01200 = h10020.conjugate()
-                h01020 = h10200.conjugate()         
+                h01020 = h10200.conjugate()
                 h22000 += jj * ((h21000 * h12000j - h12000 * rdts[0]) * 3
                                 +(h30000 * rdts[1].conjugate() - h30000.conjugate() * rdts[1]) * 9) + rdts[8]
                 h11110 += jj * ((h21000 * h01110j - h01110 * rdts[0]) * 2
@@ -903,7 +906,7 @@ class CSLattice(object):
                                 +(h10110 * h01110j - h01110 * rdts[2])) + rdts[10]
                 h31000 += jj * 6 * (h30000 * h12000j - h12000 * rdts[1]) + rdts[11]
                 h40000 += jj * 3 * (h30000 * rdts[0] - h21000 * rdts[1]) + rdts[12]
-                h20110 += jj * ((h30000 * h01110j - h01110 * rdts[1]) * 3 
+                h20110 += jj * ((h30000 * h01110j - h01110 * rdts[1]) * 3
                                -(h21000 * rdts[2] - h10110 * rdts[0])
                                 +(h10200 * rdts[3] - h10020 * rdts[4]) * 4) + rdts[13]
                 h11200 += jj * ((h10200 * h12000j - h12000 * rdts[4]) * 2
@@ -919,36 +922,35 @@ class CSLattice(object):
                 h00310 += jj * ((h10200 * h01110j - h01110 * rdts[4])
                                 +(h10110 * h01200j - h01200 * rdts[2])) + rdts[17]
                 h00400 += jj * (h10200 * h01200j - h01200 * rdts[4]) + rdts[18]
-                f22000[geo_4th_idx] = h22000
-                f11110[geo_4th_idx] = h11110
-                f00220[geo_4th_idx] = h00220
-                f31000[geo_4th_idx] = h31000
-                f40000[geo_4th_idx] = h40000
-                f20110[geo_4th_idx] = h20110
-                f11200[geo_4th_idx] = h11200
-                f20020[geo_4th_idx] = h20020
-                f20200[geo_4th_idx] = h20200
-                f00310[geo_4th_idx] = h00310
-                f00400[geo_4th_idx] = h00400
-                geo_4th_idx += 1            
+                h22000s[geo_idx] = h22000
+                h11110s[geo_idx] = h11110
+                h00220s[geo_idx] = h00220
+                h31000s[geo_idx] = h31000
+                h40000s[geo_idx] = h40000
+                h20110s[geo_idx] = h20110
+                h11200s[geo_idx] = h11200
+                h20020s[geo_idx] = h20020
+                h20200s[geo_idx] = h20200
+                h00310s[geo_idx] = h00310
+                h00400s[geo_idx] = h00400
                 h21000 = h21000 + rdts[0]
                 h30000 = h30000 + rdts[1]
                 h10110 = h10110 + rdts[2]
                 h10020 = h10020 + rdts[3]
                 h10200 = h10200 + rdts[4]
-                f21000[geo_3rd_idx] = h21000
-                f30000[geo_3rd_idx] = h30000
-                f10110[geo_3rd_idx] = h10110
-                f10020[geo_3rd_idx] = h10020
-                f10200[geo_3rd_idx] = h10200
-                geo_3rd_idx += 1
+                h21000s[geo_idx] = h21000
+                h30000s[geo_idx] = h30000
+                h10110s[geo_idx] = h10110
+                h10020s[geo_idx] = h10020
+                h10200s[geo_idx] = h10200
+                geo_idx += 1
                 h20001 += rdts[5]
                 h00201 += rdts[6]
                 h10002 += rdts[7]
-                f20001[chr_3rd_idx] = h20001
-                f00201[chr_3rd_idx] = h00201
-                f10002[chr_3rd_idx] = h10002
-                chr_3rd_idx += 1
+                h20001s[chr_idx] = h20001
+                h00201s[chr_idx] = h00201
+                h10002s[chr_idx] = h10002
+                chr_idx += 1
             elif isinstance(ele, Octupole):
                 rdts = ele.driving_terms()  # h22000, h11110, h00220, h31000, h40000, h20110, h11200, h20020, h20200, h00310, h00400
                 h22000 += rdts[0]
@@ -962,106 +964,105 @@ class CSLattice(object):
                 h20200 += rdts[8]
                 h00310 += rdts[9]
                 h00400 += rdts[10]
-                f21000[geo_3rd_idx] = h21000
-                f30000[geo_3rd_idx] = h30000
-                f10110[geo_3rd_idx] = h10110
-                f10020[geo_3rd_idx] = h10020
-                f10200[geo_3rd_idx] = h10200
-                geo_3rd_idx += 1
-                f22000[geo_4th_idx] = h22000
-                f11110[geo_4th_idx] = h11110
-                f00220[geo_4th_idx] = h00220
-                f31000[geo_4th_idx] = h31000
-                f40000[geo_4th_idx] = h40000
-                f20110[geo_4th_idx] = h20110
-                f11200[geo_4th_idx] = h11200
-                f20020[geo_4th_idx] = h20020
-                f20200[geo_4th_idx] = h20200
-                f00310[geo_4th_idx] = h00310
-                f00400[geo_4th_idx] = h00400
-                geo_4th_idx += 1 
+                h21000s[geo_idx] = h21000
+                h30000s[geo_idx] = h30000
+                h10110s[geo_idx] = h10110
+                h10020s[geo_idx] = h10020
+                h10200s[geo_idx] = h10200
+                h22000s[geo_idx] = h22000
+                h11110s[geo_idx] = h11110
+                h00220s[geo_idx] = h00220
+                h31000s[geo_idx] = h31000
+                h40000s[geo_idx] = h40000
+                h20110s[geo_idx] = h20110
+                h11200s[geo_idx] = h11200
+                h20020s[geo_idx] = h20020
+                h20200s[geo_idx] = h20200
+                h00310s[geo_idx] = h00310
+                h00400s[geo_idx] = h00400
+                geo_idx += 1
             elif ele.k1:
                 rdts = ele.driving_terms()  # h20001, h00201, h10002
                 h20001 += rdts[0]
                 h00201 += rdts[1]
                 h10002 += rdts[2]
-                f20001[chr_3rd_idx] = h20001
-                f00201[chr_3rd_idx] = h00201
-                f10002[chr_3rd_idx] = h10002
-                chr_3rd_idx += 1
-        
+                h20001s[chr_idx] = h20001
+                h00201s[chr_idx] = h00201
+                h10002s[chr_idx] = h10002
+                chr_idx += 1
+
         phix = ele.psix
         phiy = ele.psiy
-        R21000 = h21000 / (1 - cos(phix) - sin(phix) * jj)
-        R30000 = h30000 / (1 - cos(phix * 3) - sin(phix * 3) * jj)
-        R10110 = h10110 / (1 - cos(phix) - sin(phix) * jj)
-        R10020 = h10020 / (1 - cos(phix - 2 * phiy) - sin(phix - 2 * phiy) * jj)
-        R10200 = h10200 / (1 - cos(phix + 2 * phiy) - sin(phix + 2 * phiy) * jj)
-        R20001 = h20001 / (1 - cos(2 * phix) - jj * sin(2 * phix))
-        R00201 = h00201 / (1 - cos(2 * phiy) - jj * sin(2 * phiy))
-        R10002 = h10002 / (1 - cos(phix) - jj * sin(phix))
-        R12000 = R21000.conjugate()
-        R01110 = R10110.conjugate()
-        R01200 = R10020.conjugate()
-        R01020 = R10200.conjugate()
+        f21000 = h21000 / (1 - cos(phix) - sin(phix) * jj)
+        f30000 = h30000 / (1 - cos(phix * 3) - sin(phix * 3) * jj)
+        f10110 = h10110 / (1 - cos(phix) - sin(phix) * jj)
+        f10020 = h10020 / (1 - cos(phix - 2 * phiy) - sin(phix - 2 * phiy) * jj)
+        f10200 = h10200 / (1 - cos(phix + 2 * phiy) - sin(phix + 2 * phiy) * jj)
+        f20001 = h20001 / (1 - cos(2 * phix) - jj * sin(2 * phix))
+        f00201 = h00201 / (1 - cos(2 * phiy) - jj * sin(2 * phiy))
+        f10002 = h10002 / (1 - cos(phix) - jj * sin(phix))
+        f12000 = f21000.conjugate()
+        f01110 = f10110.conjugate()
+        f01200 = f10020.conjugate()
+        f01020 = f10200.conjugate()
         h12000 = h21000.conjugate()
         h01110 = h10110.conjugate()
         h01200 = h10020.conjugate()
         h01020 = h10200.conjugate()
 
-        h22000 = jj * ((h21000 * R12000 - h12000 * R21000) * 3
-                        +(h30000 * R30000.conjugate() - h30000.conjugate() * R30000) * 9) + h22000
-        h11110 = jj * ((h21000 * R01110 - h01110 * R21000) * 2
-                        -(h12000 * R10110 - h10110 * R12000) * 2
-                        -(h10020 * R01200 - h01200 * R10020) * 4
-                        +(h10200 * R01020 - h01020 * R10200) * 4) + h11110
-        h00220 = jj * ((h10020 * R01200 - h01200 * R10020)
-                        +(h10200 * R01020 - h01020 * R10200)
-                        +(h10110 * R01110 - h01110 * R10110)) + h00220
-        h31000 = jj * 6 * (h30000 * R12000 - h12000 * R30000) + h31000
-        h40000 = jj * 3 * (h30000 * R21000 - h21000 * R30000) + h40000
-        h20110 = jj * ((h30000 * R01110 - h01110 * R30000) * 3 
-                       -(h21000 * R10110 - h10110 * R21000)
-                        +(h10200 * R10020 - h10020 * R10200) * 4) + h20110
-        h11200 = jj * ((h10200 * R12000 - h12000 * R10200) * 2
-                        +(h21000 * R01200 - h01200 * R21000) * 2
-                        +(h10200 * R01110 - h01110 * R10200) * 2
-                        +(h10110 * R01200 - h01200 * R10110) * (-2)) + h11200
-        h20020 = jj * (-(h21000 * R10020 - h10020 * R21000)
-                        +(h30000 * R01020 - h01020 * R30000) * 3
-                        +(h10110 * R10020 - h10020 * R10110) * 2) + h20020
-        h20200 = jj * ((h30000 * R01200 - h01200 * R30000) * 3
-                        +(h10200 * R21000 - h21000 * R10200)
-                        +(h10110 * R10200 - h10200 * R10110) * (-2)) + h20200
-        h00310 = jj * ((h10200 * R01110 - h01110 * R10200)
-                        +(h10110 * R01200 - h01200 * R10110)) + h00310
-        h00400 = jj * (h10200 * R01200 - h01200 * R10200) + h00400
+        h22000 = jj * ((h21000 * f12000 - h12000 * f21000) * 3
+                        +(h30000 * f30000.conjugate() - h30000.conjugate() * f30000) * 9) + h22000
+        h11110 = jj * ((h21000 * f01110 - h01110 * f21000) * 2
+                        -(h12000 * f10110 - h10110 * f12000) * 2
+                        -(h10020 * f01200 - h01200 * f10020) * 4
+                        +(h10200 * f01020 - h01020 * f10200) * 4) + h11110
+        h00220 = jj * ((h10020 * f01200 - h01200 * f10020)
+                        +(h10200 * f01020 - h01020 * f10200)
+                        +(h10110 * f01110 - h01110 * f10110)) + h00220
+        h31000 = jj * 6 * (h30000 * f12000 - h12000 * f30000) + h31000
+        h40000 = jj * 3 * (h30000 * f21000 - h21000 * f30000) + h40000
+        h20110 = jj * ((h30000 * f01110 - h01110 * f30000) * 3
+                       -(h21000 * f10110 - h10110 * f21000)
+                        +(h10200 * f10020 - h10020 * f10200) * 4) + h20110
+        h11200 = jj * ((h10200 * f12000 - h12000 * f10200) * 2
+                        +(h21000 * f01200 - h01200 * f21000) * 2
+                        +(h10200 * f01110 - h01110 * f10200) * 2
+                        +(h10110 * f01200 - h01200 * f10110) * (-2)) + h11200
+        h20020 = jj * (-(h21000 * f10020 - h10020 * f21000)
+                        +(h30000 * f01020 - h01020 * f30000) * 3
+                        +(h10110 * f10020 - h10020 * f10110) * 2) + h20020
+        h20200 = jj * ((h30000 * f01200 - h01200 * f30000) * 3
+                        +(h10200 * f21000 - h21000 * f10200)
+                        +(h10110 * f10200 - h10200 * f10110) * (-2)) + h20200
+        h00310 = jj * ((h10200 * f01110 - h01110 * f10200)
+                        +(h10110 * f01200 - h01200 * f10110)) + h00310
+        h00400 = jj * (h10200 * f01200 - h01200 * f10200) + h00400
 
-        R31000 = h31000 / (1 - cos(2 * phix) - jj * sin(2 * phix))
-        R40000 = h40000 / (1 - cos(4 * phix) - jj * sin(4 * phix))
-        R20110 = h20110 / (1 - cos(2 * phix) - jj * sin(2 * phix))
-        R11200 = h11200 / (1 - cos(2 * phiy) - jj * sin(2 * phiy))
-        R20020 = h20020 / (1 - cos(2 * phix - 2 * phiy) - jj * sin(2 * phix - 2 * phiy))
-        R20200 = h20200 / (1 - cos(2 * phix + 2 * phiy) - jj * sin(2 * phix + 2 * phiy))
-        R00310 = h00310 / (1 - cos(2 * phiy) - jj * sin(2 * phiy))
-        R00400 = h00400 / (1 - cos(4 * phiy) - jj * sin(4 * phiy))
+        f31000 = h31000 / (1 - cos(2 * phix) - jj * sin(2 * phix))
+        f40000 = h40000 / (1 - cos(4 * phix) - jj * sin(4 * phix))
+        f20110 = h20110 / (1 - cos(2 * phix) - jj * sin(2 * phix))
+        f11200 = h11200 / (1 - cos(2 * phiy) - jj * sin(2 * phiy))
+        f20020 = h20020 / (1 - cos(2 * phix - 2 * phiy) - jj * sin(2 * phix - 2 * phiy))
+        f20200 = h20200 / (1 - cos(2 * phix + 2 * phiy) - jj * sin(2 * phix + 2 * phiy))
+        f00310 = h00310 / (1 - cos(2 * phiy) - jj * sin(2 * phiy))
+        f00400 = h00400 / (1 - cos(4 * phiy) - jj * sin(4 * phiy))
 
         n_periods = self.n_periods if n_periods is None else n_periods
         driving_terms = DrivingTerms(n_periods, phix, phiy,
-                R21000, R30000, R10110, R10020, R10200, R20001, R00201, R10002,
-                h22000, h11110, h00220, R31000, R40000, R20110, R11200, R20020, R20200, R00310, R00400, 
-                f21000[:geo_3rd_idx], f30000[:geo_3rd_idx], f10110[:geo_3rd_idx], f10020[:geo_3rd_idx],
-                f10200[:geo_3rd_idx], f20001[:chr_3rd_idx], f00201[:chr_3rd_idx], f10002[:chr_3rd_idx],
-                # f22000[:geo_4th_idx], f11110[:geo_4th_idx], f00220[:geo_4th_idx],
-                f31000[:geo_4th_idx], f40000[:geo_4th_idx], f20110[:geo_4th_idx], f11200[:geo_4th_idx],
-                f20020[:geo_4th_idx], f20200[:geo_4th_idx], f00310[:geo_4th_idx], f00400[:geo_4th_idx])
-        if printout:
+                f21000, f30000, f10110, f10020, f10200, f20001, f00201, f10002,
+                h22000, h11110, h00220, f31000, f40000, f20110, f11200, f20020, f20200, f00310, f00400,
+                h21000s[:geo_idx], h30000s[:geo_idx], h10110s[:geo_idx], h10020s[:geo_idx],
+                h10200s[:geo_idx], h20001s[:chr_idx], h00201s[:chr_idx], h10002s[:chr_idx],
+                # h22000s[:geo_idx], h11110s[:geo_idx], h00220s[:geo_idx],
+                h31000s[:geo_idx], h40000s[:geo_idx], h20110s[:geo_idx], h11200s[:geo_idx],
+                h20020s[:geo_idx], h20200s[:geo_idx], h00310s[:geo_idx], h00400s[:geo_idx])
+        if verbose:
             print(driving_terms)
         return driving_terms
 
-    def higher_order_chromaticity(self, printout=True, delta=1e-2, matrix_precision=1e-9, resdl_limit=1e-12):
+    def higher_order_chromaticity(self, verbose=True, delta=1e-2, matrix_precision=1e-9, resdl_limit=1e-12):
         """compute higher order chromaticity with the tunes of 4d off-momentum closed orbit.
-            
+
             try to reset the value of delta, precision and resdl_limit if the result is wrong.
         you can call track_4d_closed_orbit() function to see the magnitude of the closed orbit, and the matrix_precision
         should be much smaller than it.
@@ -1131,9 +1132,11 @@ class CSLattice(object):
             cos_mu = (mv[0, 0] + mv[1, 1]) / 2
             assert fabs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
             nux = acos(cos_mu) * np.sign(mv[0, 1]) / 2 / pi
-            nuy = acos((mv[2, 2] + mv[3, 3]) / 2) * np.sign(mv[2, 3]) / 2 / pi
+            cos_mu = (mv[2, 2] + mv[3, 3]) / 2
+            assert fabs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
+            nuy = acos(cos_mu) * np.sign(mv[2, 3]) / 2 / pi
             return nux - np.floor(nux), nuy - np.floor(nuy)
-        
+
         try:
             nux1, nuy1 = closed_orbit_tune(delta)
             nux_1, nuy_1 = closed_orbit_tune(-delta)
@@ -1149,7 +1152,7 @@ class CSLattice(object):
         xi3y = self.n_periods * (nuy2 - 2 * nuy1 + 2 * nuy_1 - nuy_2) / delta ** 3 / 12
         xi4x = self.n_periods * (nux2 - 4 * nux1 + 6 * nux0 - 4 * nux_1 + nux_2) / delta ** 4 / 24
         xi4y = self.n_periods * (nuy2 - 4 * nuy1 + 6 * nuy0 - 4 * nuy_1 + nuy_2) / delta ** 4 / 24
-        if printout:
+        if verbose:
             print(f'xi2x: {xi2x:.2f}, xi2y: {xi2y:.2f}, xi3x: {xi3x:.2f}, xi3y: {xi3y:.2f}, xi4x: {xi4x:.2f}, xi4y: {xi4y:.2f}')
         return {'xi2x': xi2x, 'xi2y': xi2y, 'xi3x': xi3x, 'xi3y': xi3y, 'xi4x': xi4x, 'xi4y': xi4y}
 

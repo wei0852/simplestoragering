@@ -4,10 +4,11 @@ import numpy as np
 import time
 from .CSLattice import CSLattice
 from .globalvars import pi, RefParticle
+from .exceptions import Unstable
 
 
 def compute_transfer_matrix_by_tracking(element_list: list, particle, with_e_loss=False, precision=1e-9):
-    """calculate the transfer matrix by tracking, the tracking data is copied from SAMM (Andrzej Wolski).
+    """calculate the transfer matrix by tracking, the tracking code reference from SAMM (Andrzej Wolski).
 
     element_list: list of elements.
     particle: list with a length of 6"""
@@ -31,7 +32,7 @@ def compute_transfer_matrix_by_tracking(element_list: list, particle, with_e_los
     return matrix
 
 
-def track_4d_closed_orbit(element_list, delta):
+def track_4d_closed_orbit(lattice, delta, verbose=True):
     """4D track to compute closed orbit with energy deviation.
 
     delta: momentum deviation.
@@ -39,7 +40,8 @@ def track_4d_closed_orbit(element_list, delta):
     reference: SAMM: Simple Accelerator Modelling in Matlab, A. Wolski, 2013
    """
 
-    print('\n-------------------\ntracking 4D closed orbit:\n')
+    if verbose:
+        print('\n-------------------\ntracking 4D closed orbit:\n')
     xco = np.array([0, 0, 0, 0])
     matrix = np.zeros([4, 4])
     resdl = 1
@@ -50,34 +52,43 @@ def track_4d_closed_orbit(element_list, delta):
         for i in range(7):
             beam[:4, i] = beam[:4, i] + xco
             beam[5, i] = beam[5, i] + delta
-        for ele in element_list:
-            ele.closed_orbit = beam[:, 6]
-            beam = ele.symplectic_track(beam)
+        for nper in range(lattice.n_periods):
+            for ele in lattice.elements:
+                ele.closed_orbit = beam[:, 6]
+                beam = ele.symplectic_track(beam)
         for i in range(4):
             matrix[:, i] = (beam[:4, i] - beam[:4, 6]) / precision
         d = beam[:4, 6] - xco
         dco = np.linalg.inv(np.identity(4) - matrix).dot(d)
         xco = xco + dco
         resdl = dco.dot(dco.T)
-        print(f'iterated {j} times, current result is \n    {beam[:4, 6]}\n')
+        if verbose:
+            print(f'iterated {j} times, current result is \n    {beam[:4, 6]}\n')
         j += 1
-    print(f'closed orbit at s=0 is \n    {xco}\n')
-    # verify closed orbit.
-    beam = np.eye(6, 7) * precision
-    for i in range(7):
-        beam[:4, i] = beam[:4, i] + xco
-        beam[5, i] = beam[5, i] + delta
-    for el in element_list:
-        el.closed_orbit = beam[:, 6]
-        beam = el.symplectic_track(beam)
-    print(f'\nclosed orbit at end is \n    {beam[:4, 6]}\n')
+    if verbose:
+        print(f'closed orbit at s=0 is \n    {xco}\n')
+        # verify closed orbit.
+        beam = np.eye(6, 7) * precision
+        for i in range(7):
+            beam[:4, i] = beam[:4, i] + xco
+            beam[5, i] = beam[5, i] + delta
+        for nper in range(lattice.n_periods):
+            for el in lattice.elements:
+                el.closed_orbit = beam[:, 6]
+                beam = el.symplectic_track(beam)
+        print(f'\nclosed orbit at end is \n    {beam[:4, 6]}\n')
     for i in range(4):
         matrix[:, i] = (beam[:4, i] - beam[:4, 6]) / precision
     cos_mu = (matrix[0, 0] + matrix[1, 1]) / 2
-    assert abs(cos_mu) < 1, "can not find period solution, UNSTABLE!!!"
+    if abs(cos_mu) >= 1:
+        raise Unstable('can not find the periodic solution.')
     nux = np.arccos(cos_mu) * np.sign(matrix[0, 1]) / 2 / pi
-    nuy = np.arccos((matrix[2, 2] + matrix[3, 3]) / 2) * np.sign(matrix[2, 3]) / 2 / pi
-    print(f'tune is {nux - np.floor(nux):.6f}, {nuy - np.floor(nuy):.6f}')
+    cos_mu = (matrix[2, 2] + matrix[3, 3]) / 2
+    if abs(cos_mu) >= 1:
+        raise Unstable('can not find the periodic solution.')
+    nuy = np.arccos(cos_mu) * np.sign(matrix[2, 3]) / 2 / pi
+    if verbose:
+        print(f'tunes are {nux - np.floor(nux):.6f}, {nuy - np.floor(nuy):.6f}')
     return_data = {'closed_orbit': xco[:4], 'nux': nux - np.floor(nux), 'nuy': nuy - np.floor(nuy)}
     return return_data
 

@@ -33,7 +33,8 @@ class Octupole(Element):
 
     @property
     def matrix(self):
-        return oct_matrix(self.length, self.k3, self.closed_orbit)
+        # return oct_matrix(self.length, self.k3, self.closed_orbit)
+        return drift_matrix(self.length)
 
     def symplectic_track(self, beam):
         [x0, px0, y0, py0, ct0, dp0] = beam

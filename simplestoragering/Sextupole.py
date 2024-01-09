@@ -33,7 +33,8 @@ class Sextupole(Element):
 
     @property
     def matrix(self):
-        return sext_matrix(self.length, self.k2, self.closed_orbit)
+        # return sext_matrix(self.length, self.k2, self.closed_orbit)
+        return drift_matrix(self.length)
 
     def symplectic_track(self, beam):
         # [x0, px0, y0, py0, ct0, dp0] = beam.get_particle()
@@ -79,7 +80,8 @@ class Sextupole(Element):
         length = 0.01
         orbit = self.closed_orbit
         while current_s < self.length - length:
-            matrix = sext_matrix(length, self.k2, orbit)
+            # matrix = sext_matrix(length, self.k2, orbit)
+            matrix = drift_matrix(length)
             twiss1 = next_twiss(matrix, twiss0)
             orbit = matrix.dot(orbit)
             betax = (twiss0[0] + twiss1[0]) / 2
@@ -91,7 +93,8 @@ class Sextupole(Element):
             for i in range(len(twiss0)):
                 twiss0[i] = twiss1[i]
         length = self.length - current_s
-        matrix = sext_matrix(length, self.k2, orbit)
+        # matrix = sext_matrix(length, self.k2, orbit)
+        matrix = drift_matrix(length)
         twiss1 = next_twiss(matrix, twiss0)
         betax = (twiss0[0] + twiss1[0]) / 2
         betay = (twiss0[3] + twiss1[3]) / 2
