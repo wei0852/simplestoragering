@@ -32,7 +32,7 @@ class CSLattice(object):
     length: float
     n_periods: int
     elements: list[Element]
-    mark: dict[list[Mark]]
+    mark: dict[str, list[Mark]]
     angle: float
     abs_angle: float
 

@@ -9,7 +9,6 @@ from .Sextupole import Sextupole
 from .Quadrupole import Quadrupole
 from .HBend import HBend
 from .Octupole import Octupole
-from .exceptions import UnfinishedWork
 from .components import Element
 from .CSLattice import CSLattice
 from .DrivingTerms import compute_driving_terms
@@ -17,133 +16,36 @@ import numpy as np
 
 
 def get_col(ele_list, parameter: str) -> np.ndarray:
-    """get parameter in each element of ele_list, return a np.ndarray"""
-    def __get_closed_orbit_delta():
-        __col = []
-        for ele in ele_list:
-            __col.append(ele.closed_orbit[5])
-        return __col
+    """Get parameter in each element of ele_list, return a numpy array."""
 
-    def __get_closed_orbit_z():
-        __col = []
-        for ele in ele_list:
-            __col.append(ele.closed_orbit[4])
-        return __col
+    # Mapping of parameter names to their corresponding attributes or computations
+    param_map = {
+        's': lambda ele: ele.s,
+        'closed_orbit_delta': lambda ele: ele.closed_orbit[5],
+        'closed_orbit_x': lambda ele: ele.closed_orbit[0],
+        'closed_orbit_y': lambda ele: ele.closed_orbit[2],
+        'closed_orbit_px': lambda ele: ele.closed_orbit[1],
+        'closed_orbit_py': lambda ele: ele.closed_orbit[3],
+        'closed_orbit_z': lambda ele: ele.closed_orbit[4],
+        'betax': lambda ele: ele.betax,
+        'betay': lambda ele: ele.betay,
+        'alphax': lambda ele: ele.alphax,
+        'alphay': lambda ele: ele.alphay,
+        'etax': lambda ele: ele.etax,
+        'etaxp': lambda ele: ele.etaxp,
+        'psix': lambda ele: ele.psix,
+        'psiy': lambda ele: ele.psiy,
+        '100etax': lambda ele: 100 * ele.etax,
+        'length': lambda ele: ele.length,
+    }
 
-    def __get_closed_orbit_x():
-        __col = []
-        for ele in ele_list:
-            __col.append(ele.closed_orbit[0])
-        return __col
+    # Check if the parameter is valid
+    if parameter not in param_map:
+        raise ValueError(f"Cannot get {parameter} data. Parameter not recognized.")
 
-    def __get_closed_orbit_y():
-        __col = []
-        for ele in ele_list:
-            __col.append(ele.closed_orbit[2])
-        return __col
+    # Use the mapping to extract the data
+    col_data = [param_map[parameter](ele) for ele in ele_list]
 
-    def __get_closed_orbit_px():
-        __col = []
-        for ele in ele_list:
-            __col.append(ele.closed_orbit[1])
-        return __col
-
-    def __get_closed_orbit_py():
-        __col = []
-        for ele in ele_list:
-            __col.append(ele.closed_orbit[3])
-        return __col
-
-    def __get_s():
-        __col = []
-        for ele in ele_list:
-            __col.append(ele.s)
-        return __col
-
-    def __get_betax():
-        __col = []
-        for ele in ele_list:
-            __col.append(ele.betax)
-        return __col
-
-    def __get_betay():
-        __col = []
-        for ele in ele_list:
-            __col.append(ele.betay)
-        return __col
-
-    def __get_alphax():
-        __col = []
-        for ele in ele_list:
-            __col.append(ele.alphax)
-        return __col
-
-    def __get_alphay():
-        __col = []
-        for ele in ele_list:
-            __col.append(ele.alphay)
-        return __col
-
-    def __get_etax():
-        __col = []
-        for ele in ele_list:
-            __col.append(ele.etax)
-        return __col
-
-    def __get_etaxp():
-        __col = []
-        for ele in ele_list:
-            __col.append(ele.etaxp)
-        return __col
-
-    def __get_psix():
-        __col = []
-        for ele in ele_list:
-            __col.append(ele.psix)
-        return __col
-
-    def __get_psiy():
-        __col = []
-        for ele in ele_list:
-            __col.append(ele.psiy)
-        return __col
-
-    # assert isinstance(lattice, CSLattice) or isinstance(lattice, SlimRing)
-    if parameter == 's':
-        col_data = __get_s()
-    elif parameter == 'closed_orbit_delta':
-        col_data = __get_closed_orbit_delta()
-    elif parameter == 'closed_orbit_x':
-        col_data = __get_closed_orbit_x()
-    elif parameter == 'closed_orbit_y':
-        col_data = __get_closed_orbit_y()
-    elif parameter == 'closed_orbit_px':
-        col_data = __get_closed_orbit_px()
-    elif parameter == 'closed_orbit_py':
-        col_data = __get_closed_orbit_py()
-    elif parameter == 'closed_orbit_z':
-        col_data = __get_closed_orbit_z()
-    elif parameter == 'betax':
-        col_data = __get_betax()
-    elif parameter == 'betay':
-        col_data = __get_betay()
-    elif parameter == 'alphax':
-        col_data = __get_alphax()
-    elif parameter == 'alphay':
-        col_data = __get_alphay()
-    elif parameter == 'etax':
-        col_data = __get_etax()
-    elif parameter == '100etax':
-        col_data = __get_etax()
-        col_data = [100 * i for i in col_data]
-    elif parameter == 'etaxp':
-        col_data = __get_etaxp()
-    elif parameter == 'psix':
-        col_data = __get_psix()
-    elif parameter == 'psiy':
-        col_data = __get_psiy()
-    else:
-        raise UnfinishedWork(f'cannot get {parameter} data')
     return np.array(col_data)
 
 
