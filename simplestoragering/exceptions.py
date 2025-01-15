@@ -9,9 +9,12 @@ class UnfinishedWork(Exception):
 class ParticleLost(Exception):
     """particle lost during tracking"""
 
-    def __init__(self, *args):
-        self.name = args[0]
+    def __init__(self, location, *args):
+        self.location = location
 
+    def __str__(self):
+        return f'particle lost at s = {self.location} m.'
+    
 
 class Unstable(Exception):
     """unstable periodic solution"""

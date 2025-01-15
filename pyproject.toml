@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools >= 61.0", "wheel", "Cython", "numpy>=1.18,<2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "simplestoragering"
+version = "0.0.2"
+authors = [
+  { name="Bingfeng WEI", email="wbf2016@mail.ustc.edu.cn" },
+]
+description = "simple storage ring for single particle dynamics simulation."
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+  "numpy>=1.18,<2",
+  "matplotlib>3.4.0",
+  "PyNAFF",
+]
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Cython",
+    "Programming Language :: Python :: 3",
+]
+
+[project.urls]
+Homepage = "https://github.com/wei0852/simplestoragering"
+Repository = "https://github.com/wei0852/simplestoragering.git"
+Issues = "https://github.com/wei0852/simplestoragering/issues"
