@@ -11,6 +11,7 @@ cimport cython
 
 cdef class HBend(Element):
     cdef public double theta_in, theta_out, gap, fint_in, fint_out
+    cdef public int edge_method
 
     cdef int symplectic_track(self, double[6] particle)
 

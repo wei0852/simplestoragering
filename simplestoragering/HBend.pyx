@@ -22,10 +22,17 @@ cdef class HBend(Element):
     """HBend(name: str = None, length: float = 0, theta: float = 0, theta_in: float = 0, theta_out: float = 0, k1: float = 0, gap: double = 0, fint_in: float = 0.5, fint_out: float = 0.5, n_slices: int = 10, Ax: float = 10, Ay: float = 10)
     
     horizontal Bend.
+
+    edge_method:
+    /*     method 0 no fringe field
+     *     method 1 legacy version Brown First Order
+     *     method 2 SOLEIL close to second order of Brown
+     *     method 3 THOMX
+     */
     """
 
     def __init__(self, name: str = None, length: float = 0, theta: float = 0, theta_in: float = 0, theta_out: float = 0,
-                 k1: float = 0, gap: float = 0, fint_in: float = 0.5, fint_out: float = 0.5, n_slices: int = 10, k2: float = 0, k3: float = 0, Ax: float = 10, Ay: float = 10):
+                 k1: float = 0, gap: float = 0, fint_in: float = 0.5, fint_out: float = 0.5, n_slices: int = 10, k2: float = 0, k3: float = 0, edge_method: int = 2, Ax: float = 10, Ay: float = 10):
         self.name = name
         self.length = length
         self.h = theta / self.length
@@ -38,6 +45,7 @@ cdef class HBend(Element):
         self.fint_in = fint_in
         self.fint_out = fint_out
         self.n_slices = n_slices
+        self.edge_method = edge_method
         self.Ax = Ax
         self.Ay = Ay
 
@@ -207,7 +215,7 @@ cdef class HBend(Element):
         r[5] = -particle[4]
         r[4] = particle[5]
         BndMPoleSymplectic4Pass(<double *> &r, self.length, self.h, A, B, max_order, self.n_slices,
-                                    self.theta_in, self.theta_out, 2, 2, self.fint_in, self.fint_out, self.gap)
+                                    self.theta_in, self.theta_out, self.edge_method, self.edge_method, self.fint_in, self.fint_out, self.gap)
         particle[0] = r[0]
         particle[1] = r[1]
         particle[2] = r[2]
@@ -237,7 +245,7 @@ cdef class HBend(Element):
         integrals[6] += (self.k1 * length * betay) / 4 / pi
 
     cpdef copy(self):
-        return HBend(self.name, self.length, self.theta, self.theta_in, self.theta_out, self.k1, self.gap, self.fint_in, self.fint_out, self.n_slices, self.k2, self.k3, self.Ax, self.Ay)
+        return HBend(self.name, self.length, self.theta, self.theta_in, self.theta_out, self.k1, self.gap, self.fint_in, self.fint_out, self.n_slices, self.k2, self.k3, self.edge_method, self.Ax, self.Ay)
     
     @cython.cdivision(True)
     cpdef linear_optics(self):
@@ -295,13 +303,13 @@ cdef class HBend(Element):
         ele_list = []
         closed_orbit = self.closed_orbit
         if n_slices == 1:
-            ele = HBend(self.name, self.length, self.theta, self.theta_in, self.theta_out, self.k1, self.gap, self.fint_in, self.fint_out, self.n_slices, self.k2, self.k3, self.Ax, self.Ay)
+            ele = HBend(self.name, self.length, self.theta, self.theta_in, self.theta_out, self.k1, self.gap, self.fint_in, self.fint_out, self.n_slices, self.k2, self.k3, self.edge_method, self.Ax, self.Ay)
             ele.s = current_s
             assin_twiss(ele, twiss0)
             return [ele]
         length = self.length / n_slices
         sub_slices = max(int(self.n_slices / n_slices), 1)
-        ele = HBend(self.name, self.length, self.theta, self.theta_in, self.theta_out, self.k1, self.gap, self.fint_in, self.fint_out, self.n_slices, self.k2, self.k3, self.Ax, self.Ay)
+        ele = HBend(self.name, self.length, self.theta, self.theta_in, self.theta_out, self.k1, self.gap, self.fint_in, self.fint_out, self.n_slices, self.k2, self.k3, self.edge_method, self.Ax, self.Ay)
         ele.length = length
         ele.n_slices = sub_slices
         ele.theta_out = 0.0
@@ -317,7 +325,7 @@ cdef class HBend(Element):
         ele_list.append(ele)
         current_s = current_s + ele.length
         for i in range(n_slices - 2):
-            ele = HBend(self.name, self.length, self.theta, self.theta_in, self.theta_out, self.k1, self.gap, self.fint_in, self.fint_out, self.n_slices, self.k2, self.k3, self.Ax, self.Ay)
+            ele = HBend(self.name, self.length, self.theta, self.theta_in, self.theta_out, self.k1, self.gap, self.fint_in, self.fint_out, self.n_slices, self.k2, self.k3, self.edge_method, self.Ax, self.Ay)
             ele.length = length
             ele.n_slices = sub_slices
             ele.theta_in = 0.0
@@ -335,7 +343,7 @@ cdef class HBend(Element):
             ele_list.append(ele)
             current_s = current_s + ele.length
         length = self.length + self.s - current_s
-        ele = HBend(self.name, self.length, self.theta, self.theta_in, self.theta_out, self.k1, self.gap, self.fint_in, self.fint_out, self.n_slices, self.k2, self.k3, self.Ax, self.Ay)
+        ele = HBend(self.name, self.length, self.theta, self.theta_in, self.theta_out, self.k1, self.gap, self.fint_in, self.fint_out, self.n_slices, self.k2, self.k3, self.edge_method, self.Ax, self.Ay)
         ele.length = length
         ele.n_slices = sub_slices
         ele.theta_in = 0.0
