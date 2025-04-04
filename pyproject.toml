@@ -29,3 +29,8 @@ classifiers = [
 Homepage = "https://github.com/wei0852/simplestoragering"
 Repository = "https://github.com/wei0852/simplestoragering.git"
 Issues = "https://github.com/wei0852/simplestoragering/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
