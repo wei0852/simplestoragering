@@ -229,20 +229,90 @@ cdef class HBend(Element):
         return 0
 
     cdef __radiation_integrals(self,double length,double[7] integrals,double[12] twiss0,double[12] twiss1):
-        betax = (twiss0[0] + twiss1[0]) / 2
-        alphax = (twiss0[1] + twiss1[1]) / 2
-        gammax = (twiss0[2] + twiss1[2]) / 2
-        betay = (twiss0[3] + twiss1[3]) / 2
-        etax = (twiss0[6] + twiss1[6]) / 2
-        etaxp = (twiss0[7] + twiss1[7]) / 2
-        integrals[0] += length * etax * self.h
-        integrals[1] += length * self.h ** 2
-        integrals[2] += length * abs(self.h) ** 3
-        integrals[3] += length * (self.h ** 2 + 2 * self.k1) * etax * self.h
-        curl_H = gammax * etax ** 2 + 2 * alphax * etax * etaxp + betax * etaxp ** 2
-        integrals[4] += length * curl_H * abs(self.h) ** 3
-        integrals[5] += (- (self.k1 + self.h ** 2) * length * betax) / 4 / pi
-        integrals[6] += (self.k1 * length * betay) / 4 / pi
+        # 0: entrance
+        # 1: after entrance angle  (beta0 == beta1)
+        # 2: before exit angle  (beta2 == beta3)
+        # 3: exit
+
+        betax0 = twiss0[0]
+        betaz0 = twiss0[3]
+        alphax0 = twiss0[1]
+        alphaz0 = twiss0[4]
+        eta0 = twiss0[6]
+        etap0 = twiss0[7]
+
+        ll = self.length
+        rho = 1/self.h
+        rho2 = rho * rho
+        K = self.k1
+        kx2 = K + 1.0 / rho2
+        kz2 = -K
+        eps1 = tan(self.theta_in) / rho
+        eps2 = tan(self.theta_out) / rho
+    
+        alphax1 = alphax0 - betax0 * eps1
+        alphaz1 = alphaz0 + betaz0 * eps1
+        gammax1 = (1.0 + alphax1 * alphax1) / betax0
+        gammaz1 = (1.0 + alphaz1 * alphaz1) / betaz0
+        etap1 = etap0 + eta0 * eps1
+
+        eta3 = twiss1[6]
+        betax3 = twiss1[0]
+        betaz3 = twiss1[3]
+        etap2 = twiss1[7] - eta3 * eps2
+        alphax2 = twiss1[1] + betax3 * eps2
+        alphaz2 = twiss1[4] - betaz3 * eps2
+    
+        h0 = gammax1 * eta0 * eta0 + 2.0 * alphax1 * eta0 * etap1 + betax0 * etap1 * etap1
+    
+        if kx2 != 0.0:
+            if kx2 > 0.0:  # Focusing
+                kl = ll * sqrt(kx2)
+                ss = sin(kl) / kl
+                cc = cos(kl)
+            else:  # Defocusing
+                kl = ll * sqrt(-kx2)
+                ss = sinh(kl) / kl
+                cc = cosh(kl)
+            betax_ave = ((gammax1 + betax0 * kx2) + (alphax2 - alphax1) / ll) / 2 / kx2
+            eta_ave = (ll / rho - (etap2 - etap1)) / kx2 / ll
+            bb = 2.0 * (alphax1 * eta0 + betax0 * etap1) * rho
+            aa = -2.0 * (alphax1 * etap1 + gammax1 * eta0) * rho
+            h_ave = h0 + (aa * (1.0 - ss) + bb * (1.0 - cc) / ll 
+                         + gammax1 * (3.0 - 4.0 * ss + ss * cc) / 2.0 / kx2 
+                         - alphax1 * (1.0 - cc) ** 2 / kx2 / ll 
+                         + betax0 * (1.0 - ss * cc) / 2.0) / kx2 / rho2
+        else:
+            betax_ave = betax0 - alphax1 * ll + gammax1 * ll**2 / 3
+
+            eta_ave = 0.5 * (eta0 + eta3) - ll * ll / 12.0 / rho
+            hp0 = 2.0 * (alphax1 * eta0 + betax0 * etap1) / rho
+            h2p0 = 2.0 * (-alphax1 * etap1 + betax0 / rho - gammax1 * eta0) / rho
+            h_ave = (h0 + hp0 * ll / 2.0 + h2p0 * ll * ll / 6.0 
+                     - alphax1 * ll ** 3/4.0 / rho2 
+                     + gammax1 * ll ** 4/20.0 / rho2)
+        if kz2 != 0:
+            betaz_ave = ((gammaz1 + betaz0 * kz2) + (alphaz2 - alphaz1) / ll) / 2 / kz2
+        else:
+            betaz_ave = betaz0 - alphaz1 * ll + gammaz1 * ll**2 / 3
+
+        integrals[0] += eta_ave * ll / rho
+        integrals[1] += ll / rho2
+        integrals[2] += ll / abs(rho) / rho2
+        integrals[3] += eta_ave * ll * (2.0 * K + 1.0 / rho2) / rho - (eta0 * eps1 + eta3 * eps2) / rho
+        integrals[4] += h_ave * ll / abs(rho) / rho2
+        integrals[5] += (-betax_ave * ll * kx2) / 4 / pi
+        integrals[6] += (-betaz_ave * ll * kz2) / 4 / pi
+
+        sin_edge = sin(self.theta_in)
+        cos_edge = cos(self.theta_in)
+        integrals[5] += (self.h * tan(self.theta_in) * betax0) / 4 / pi
+        integrals[6] += (- self.h * tan(self.theta_in - self.h * self.gap * self.fint_in * (1 + sin_edge * sin_edge) / cos_edge) * betaz0) / 4 / pi
+
+        sin_edge = sin(self.theta_out)
+        cos_edge = cos(self.theta_out)
+        integrals[5] += (self.h * eps2 * rho * betax3) / 4 / pi
+        integrals[6] += (- self.h * tan(self.theta_out - self.h * self.gap * self.fint_out * (1 + sin_edge * sin_edge) / cos_edge) * betaz3) / 4 / pi
 
     cpdef copy(self):
         return HBend(self.name, self.length, self.theta, self.theta_in, self.theta_out, self.k1, self.gap, self.fint_in, self.fint_out, self.n_slices, self.k2, self.k3, self.edge_method, self.Ax, self.Ay)
@@ -253,41 +323,9 @@ cdef class HBend(Element):
         cdef double[6][6] matrix
         cdef double[7] integrals=[0, 0, 0, 0, 0, 0, 0]
         cdef double[12] twiss1
-        cdef double current_s, length
-        current_s = 0
-        length = 0.01
-        # inlet
-        sin_edge = sin(self.theta_in)
-        cos_edge = cos(self.theta_in)
-        integrals[3] += - self.h ** 2 * self.etax * tan(self.theta_in)
-        # integrals[5] += (self.h * tan(self.theta_in) * self.betax - 2 * self.k1 * tan(self.theta_in) * self.etax * self.betax) / 4 / pi
-        # integrals[6] += (- self.h * tan(self.theta_in - self.h * self.gap * self.fint * (1 + sin_edge * sin_edge) / cos_edge) * self.betay + 2 * self.k1 * tan(self.theta_in) * self.etax * self.betay) / 4 / pi
-        integrals[5] += (self.h * tan(self.theta_in) * self.betax) / 4 / pi
-        integrals[6] += (- self.h * tan(self.theta_in - self.h * self.gap * self.fint_in * (1 + sin_edge * sin_edge) / cos_edge) * self.betay) / 4 / pi        
-        hbend_matrix(matrix, length, self.h, self.theta_in, 0, self.k1, self.gap, self.fint_in, 0.0)
+        hbend_matrix(matrix, self.length, self.h, self.theta_in, self.theta_out, self.k1, self.gap, self.fint_in, self.fint_out)
         next_twiss(matrix, twiss0, twiss1)
-        self.__radiation_integrals(length, integrals, twiss0, twiss1)
-        current_s = current_s + length
-        for i in range(12):
-            twiss0[i] = twiss1[i]
-        while current_s < self.length - length:
-            hbend_matrix(matrix, length, self.h, 0, 0, self.k1, self.gap, 0, 0)
-            next_twiss(matrix, twiss0, twiss1)
-            self.__radiation_integrals(length, integrals, twiss0, twiss1)
-            current_s = current_s + length
-            for j in range(12):
-                twiss0[j] = twiss1[j]
-        length = self.length - current_s
-        hbend_matrix(matrix, length, self.h, 0, self.theta_out, self.k1, self.gap, 0, self.fint_out)
-        next_twiss(matrix, twiss0, twiss1)
-        self.__radiation_integrals(length, integrals, twiss0, twiss1)
-        sin_edge = sin(self.theta_out)
-        cos_edge = cos(self.theta_out)
-        integrals[3] += - self.h ** 2 * twiss1[6] * tan(self.theta_out)
-        # integrals[5] += (self.h * tan(self.theta_out) * twiss1[0] - 2 * self.k1 * tan(self.theta_out) * twiss1[6] * twiss1[0]) / 4 / pi
-        # integrals[6] += (- self.h * tan(self.theta_out - self.h * self.gap * self.fint * (1 + sin_edge * sin_edge) / cos_edge) * twiss1[3] + 2 * self.k1 * tan(self.theta_out) * twiss1[6] * twiss1[3]) / 4 / pi
-        integrals[5] += (self.h * tan(self.theta_out) * twiss1[0]) / 4 / pi
-        integrals[6] += (- self.h * tan(self.theta_out - self.h * self.gap * self.fint_out * (1 + sin_edge * sin_edge) / cos_edge) * twiss1[3]) / 4 / pi
+        self.__radiation_integrals(self.length, integrals, twiss0, twiss1)
         return np.array(integrals), np.array(twiss1)
 
     def slice(self, n_slices: int) -> list:

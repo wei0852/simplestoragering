@@ -29,7 +29,7 @@ cpdef set_ref_gamma(double gamma):
     set_ref_gamma(gamma: float)"""
     global refbeta, refenergy, refgamma, rigidity
     refgamma = gamma
-    refenergy = me_MeV * (gamma + 1)
+    refenergy = me_MeV * gamma
     refbeta = sqrt(1 - 1 / pow(gamma, 2))
     rigidity = gamma * me_MeV * refbeta * 1e6 / c
 
@@ -39,7 +39,7 @@ cpdef set_ref_energy(double energy_MeV):
     set_ref_energy(energy_MeV: float)"""
     global refbeta, refenergy, refgamma, rigidity
     refenergy = energy_MeV
-    refgamma = energy_MeV / me_MeV + 1
+    refgamma = energy_MeV / me_MeV
     refbeta = sqrt(1 - 1 / pow(refgamma, 2))
     rigidity = refgamma * me_MeV * refbeta * 1e6 / c
 

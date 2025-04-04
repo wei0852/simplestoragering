@@ -223,26 +223,34 @@ cdef class Quadrupole(Element):
         cdef double[7] integrals = [0, 0, 0, 0, 0, 0, 0]
         cdef double[12] twiss1
         cdef double[6][6] matrix
-        cdef double current_s, length
-        current_s = 0
-        length = 0.01
-        while current_s < self.length - length:
-            quad_matrix(matrix, length, self.k1)
-            next_twiss(matrix, twiss0, twiss1)
-            betax = (twiss0[0] + twiss1[0]) / 2
-            betay = (twiss0[3] + twiss1[3]) / 2
-            integrals[5] += - self.k1 * length * betax / 4 / pi
-            integrals[6] += self.k1 * length * betay / 4 / pi
-            current_s = current_s + length
-            for i in range(12):
-                twiss0[i] = twiss1[i]
-        length = self.length - current_s
-        quad_matrix(matrix, length, self.k1)
+
+        quad_matrix(matrix, self.length, self.k1)
         next_twiss(matrix, twiss0, twiss1)
-        betax = (twiss0[0] + twiss1[0]) / 2
-        betay = (twiss0[3] + twiss1[3]) / 2
-        integrals[5] += - self.k1 * length * betax / 4 / pi
-        integrals[6] += self.k1 * length * betay / 4 / pi
+        betax0 = twiss0[0]
+        betaz0 = twiss0[3]
+        alphax0 = twiss0[1]
+        gammax0 = twiss0[2]
+        alphaz0 = twiss0[4]
+        gammaz0 = twiss0[5]
+
+        ll = self.length
+
+        K = self.k1
+        kx2 = K
+        kz2 = -K
+
+        alphax1 = twiss1[1]
+        alphaz1 = twiss1[4]
+
+        if K != 0.0:
+            betax_ave = ((gammax0 + betax0 * kx2) + (alphax1 - alphax0) / ll) / 2 / kx2
+            betaz_ave = ((gammaz0 + betaz0 * kz2) + (alphaz1 - alphaz0) / ll) / 2 / kz2
+        else:
+            betax_ave = betax0 - alphax0 * ll + gammax0 * ll**2 / 3
+            betaz_ave = betaz0 - alphaz0 * ll + gammaz0 * ll**2 / 3
+
+        integrals[5] += (-betax_ave * ll * kx2) / 4 / pi
+        integrals[6] += (-betaz_ave * ll * kz2) / 4 / pi        
         return integrals, twiss1
 
     cpdef driving_terms(self, delta):

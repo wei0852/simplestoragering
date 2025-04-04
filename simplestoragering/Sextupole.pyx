@@ -127,28 +127,28 @@ cdef class Sextupole(Element):
         cdef double[7] integrals = [0, 0, 0, 0, 0, 0, 0]
         cdef double[12] twiss1
         cdef double[6][6] matrix
-        cdef double current_s, length
-        current_s = 0
-        length = 0.01
-        while current_s < self.length - length:
-            drift_matrix(matrix, length)
-            next_twiss(matrix, twiss0, twiss1)
-            betax = (twiss0[0] + twiss1[0]) / 2
-            betay = (twiss0[3] + twiss1[3]) / 2
-            etax = (twiss0[6] + twiss1[6]) / 2
-            integrals[5] += etax * self.k2 * length * betax / 4 / pi
-            integrals[6] += - etax * self.k2 * length * betay / 4 / pi
-            current_s = current_s + length
-            for i in range(12):
-                twiss0[i] = twiss1[i]
-        length = self.length - current_s
-        drift_matrix(matrix, length)
+
+        drift_matrix(matrix, self.length)
         next_twiss(matrix, twiss0, twiss1)
-        betax = (twiss0[0] + twiss1[0]) / 2
-        betay = (twiss0[3] + twiss1[3]) / 2
-        etax = (twiss0[6] + twiss1[6]) / 2
-        integrals[5] += etax * self.k2 * length * betax / 4 / pi
-        integrals[6] += - etax * self.k2 * length * betay / 4 / pi
+
+        betax0 = twiss0[0]
+        alphax0 = twiss0[1]
+        gammax0 = twiss0[2]
+
+        betay0 = twiss0[3]
+        alphay0 = twiss0[4]
+        gammay0 = twiss0[5]
+
+        eta0 = twiss0[6]
+        etap0 = twiss0[7]
+
+        ll = self.length
+
+        ave_etax_betax = eta0 * (betax0 - alphax0 * ll + gammax0 * ll**2 / 3) + etap0 * (betax0 * ll / 2 - alphax0 * ll**2 * 2 / 3 + gammax0 * ll**3 / 4)
+        ave_etax_betay = eta0 * (betay0 - alphay0 * ll + gammay0 * ll**2 / 3) + etap0 * (betay0 * ll / 2 - alphay0 * ll**2 * 2 / 3 + gammay0 * ll**3 / 4)
+
+        integrals[5] += ave_etax_betax * self.k2 * ll / 4 / pi
+        integrals[6] += - ave_etax_betay * self.k2 * ll / 4 / pi        
         return np.array(integrals), np.array(twiss1)
 
     cpdef driving_terms(self, delta):
