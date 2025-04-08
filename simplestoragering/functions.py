@@ -88,28 +88,28 @@ def output_elegant_file(lattice: CSLattice, filename=None, new_version=True):
                     drift_list.append(f'{ele.name:6}: EDRIFT, l = {ele.length:.6f}\n')
                 elif ele.type == 'Quadrupole':
                     if new_version:
-                        quad_list.append(f'{ele.name:6}: KQUAD, l = {ele.length:.6f}, k1 = {ele.k1:.6f}, N_SLICES = {int(ele.length / 0.02)}\n')
+                        quad_list.append(f'{ele.name:6}: KQUAD, l = {ele.length:.6f}, k1 = {ele.k1:.6f}, N_SLICES = {ele.n_slices}\n')
                     else:
-                        quad_list.append(f'{ele.name:6}: KQUAD, l = {ele.length:.6f}, k1 = {ele.k1:.6f}, N_KICKS = {int(ele.length / 0.02) * 4}\n')
+                        quad_list.append(f'{ele.name:6}: KQUAD, l = {ele.length:.6f}, k1 = {ele.k1:.6f}, N_KICKS = {ele.n_slices * 4}\n')
                 elif ele.type == 'HBend':
                     if new_version:
                         bend_list.append(f'{ele.name:6}: csbend, l = {ele.length:.6f}, angle = {ele.theta:.6f}, k1 '
                                      f'= {ele.k1:.6f}, e1 = {ele.theta_in:.6f}, e2 = '
-                                     f'{ele.theta_out:.6f}, HGAP={ele.gap / 2}, FINT1={ele.fint_in}, FINT2={ele.fint_out}, N_SLICES = {max(2, int(ele.length / 0.05))}\n')
+                                     f'{ele.theta_out:.6f}, HGAP={ele.gap / 2}, FINT1={ele.fint_in}, FINT2={ele.fint_out}, N_SLICES = {ele.n_slices}\n')
                     else:
                         bend_list.append(f'{ele.name:6}: csbend, l = {ele.length:.6f}, angle = {ele.theta:.6f}, k1 '
                                      f'= {ele.k1:.6f}, e1 = {ele.theta_in:.6f}, e2 = '
-                                     f'{ele.theta_out:.6f}, HGAP={ele.gap / 2}, FINT1={ele.fint_in}, FINT2={ele.fint_out}, N_KICKS = {max(2, int(ele.length / 0.05))}\n')
+                                     f'{ele.theta_out:.6f}, HGAP={ele.gap / 2}, FINT1={ele.fint_in}, FINT2={ele.fint_out}, N_KICKS = {ele.n_slices}\n')
                 elif ele.type == 'Sextupole':
                     if new_version:
-                        sext_list.append(f'{ele.name:6}: KSEXT, l = {ele.length:.6f}, k2 = {ele.k2:.6f}, N_SLICES = {max(1, int(ele.length / 0.01))}\n')
+                        sext_list.append(f'{ele.name:6}: KSEXT, l = {ele.length:.6f}, k2 = {ele.k2:.6f}, N_SLICES = {ele.n_slices}\n')
                     else:
-                        sext_list.append(f'{ele.name:6}: KSEXT, l = {ele.length:.6f}, k2 = {ele.k2:.6f}, N_KICKS = {max(1, int(ele.length / 0.01)) * 4}\n')
+                        sext_list.append(f'{ele.name:6}: KSEXT, l = {ele.length:.6f}, k2 = {ele.k2:.6f}, N_KICKS = {ele.n_slices * 4}\n')
                 elif ele.type == 'Octupole':
                     if new_version:
-                        oct_list.append(f'{ele.name:6}: KOCT, l = {ele.length:.6f}, k3 = {ele.k3:.6f}, N_SLICES = {max(1, int(ele.length / 0.01))}\n')
+                        oct_list.append(f'{ele.name:6}: KOCT, l = {ele.length:.6f}, k3 = {ele.k3:.6f}, N_SLICES = {ele.n_slices}\n')
                     else:
-                        oct_list.append(f'{ele.name:6}: KOCT, l = {ele.length:.6f}, k3 = {ele.k3:.6f}, N_KICKS = {max(1, int(ele.length / 0.01)) * 4}\n')
+                        oct_list.append(f'{ele.name:6}: KOCT, l = {ele.length:.6f}, k3 = {ele.k3:.6f}, N_KICKS = {ele.n_slices * 4}\n')
             if ele.type == 'Drift' or ele.type == 'Quadrupole' or ele.type == 'HBend' or ele.type == 'Sextupole' or ele.type == 'Octupole':
                 ele_list.append(ele.name)
         for ele in drift_list:
@@ -127,34 +127,40 @@ def output_elegant_file(lattice: CSLattice, filename=None, new_version=True):
             file.write(ele)
         file.write('\n\n{------ table of segments --------------------------}\n\n')
         if lattice.n_periods == 1:
-            file.write(f'ring : line=({ele_list[0]}')
+            file.write(f'ring0 : line=({ele_list[0]}')
             for i in range(len(ele_list) - 1):
                 file.write(f', {ele_list[i + 1]}')
         else:
             file.write(f'cell : line=({ele_list[0]}')
             for i in range(len(ele_list) - 1):
                 file.write(f', {ele_list[i + 1]}')
-            file.write(f')\nring : line=({lattice.n_periods}*cell')
+            file.write(f')\nring0 : line=({lattice.n_periods}*cell')
         file.write(')\n')
+        file.write('MAL: MALIGN,ON_PASS=1,FORCE_MODIFY_MATRIX=0\n')
+        file.write('ring: line=(MAL, ring0)')
 
 
-def chromaticity_correction(lattice: CSLattice, sextupole_name_list: list, target: list=None, initial_k2=None, update_sext=True) -> np.ndarray:
+def chromaticity_correction(lattice: CSLattice, sextupole_name_list: list, target: list=None, initial_k2=None, update_sext=True, use_tracked_ksi=True) -> np.ndarray:
     """correct chromaticity. target = [xi_x, xi_y], initial_k2 should have the same length as sextupole_name_list.
     
-    Note that the chromaticities are calculated by tracking (i.e., CSLattice.track_chromaticity()).
-    They may differ from CSLattice.xi_x and CSLattice.xi_y, which are calculated with linear model."""
+    update_sext (bool, optional): Whether to update the sextupole strengths in the lattice. Defaults to True.
+    use_tracked_ksi (bool, optional): Whether to calculate chromaticities by tracking.
+        If True, chromaticities will be calculated using the CSLattice.track_chromaticity() method.
+        If False, the chromaticities are CSLattice.xi_x and CSLattice.xi_y, and this method is faster. Defaults to True.
+        """
 
     target = [1 / lattice.n_periods, 1 / lattice.n_periods] if target is None else [i  / lattice.n_periods for i in target]
     num_sext = len(sextupole_name_list)
     current_xi_x = lattice.xi_x / lattice.n_periods
     current_xi_y = lattice.xi_y / lattice.n_periods
-    try:
-        track_xi = lattice.track_chromaticity(delta=1e-5, order=2, verbose=False)
-        xi_corr = [current_xi_x - track_xi['xi1x'] / lattice.n_periods, current_xi_y - track_xi['xi1y'] / lattice.n_periods]
-    except Unstable:
-        xi_corr = [0, 0]
-    target[0] += xi_corr[0]
-    target[1] += xi_corr[1]
+    if use_tracked_ksi:
+        try:
+            track_xi = lattice.track_chromaticity(delta=1e-5, order=2, verbose=False)
+            xi_corr = [current_xi_x - track_xi['xi1x'] / lattice.n_periods, current_xi_y - track_xi['xi1y'] / lattice.n_periods]
+        except Unstable:
+            xi_corr = [0, 0]
+        target[0] += xi_corr[0]
+        target[1] += xi_corr[1]
     # initialize the weight
     weight_x = {n: 0.0 for n in sextupole_name_list}
     weight_y = {n: 0.0 for n in sextupole_name_list}
@@ -188,7 +194,7 @@ def chromaticity_correction(lattice: CSLattice, sextupole_name_list: list, targe
             if ele.name in sextupole_name_list:
                 ele.k2 = initial_k2[sextupole_name_list.index(ele.name)]
     # TODO: Control the upper limit of Sextupoles
-    return initial_k2
+    return np.array(initial_k2)
 
 def adjust_tunes(lattice: CSLattice, quadrupole_name_list: list, target: list, iterations=5, initialize=True) -> np.ndarray:
     """adjust tunes of lattice.
