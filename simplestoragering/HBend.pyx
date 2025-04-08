@@ -79,7 +79,7 @@ cdef class HBend(Element):
         if d1_square <= 0:
             return -1
         d1 = sqrt(d1_square)
-        if k0 == 0 and k1 == 0:
+        if k0 == 0 and k1 == 0:  # drift
             particle[0] = x0 + ds * particle[1] / d1
             particle[2] = y0 + ds * particle[3] / d1
             particle[4] = ct0 + ds * (1 - (1 + refbeta * particle[5]) / d1) / refbeta
@@ -89,7 +89,10 @@ cdef class HBend(Element):
         sin_edge = sin(self.theta_in)
         cos_edge = cos(self.theta_in)
         r10 = k0 * tan(self.theta_in)
-        r32 = -k0 * tan(self.theta_in - self.h * self.gap * self.fint_in * (1 + sin_edge * sin_edge) / cos_edge / (1 + particle[5])) /  (1 + particle[5])
+        if self.edge_method == 1:
+            r32 = -k0 * tan(self.theta_in - self.h * self.gap * self.fint_in * (1 + sin_edge * sin_edge) / cos_edge / (1 + particle[5]))
+        elif self.edge_method == 2:
+            r32 = -k0 * tan(self.theta_in - self.h * self.gap * self.fint_in * (1 + sin_edge * sin_edge) / cos_edge / (1 + particle[5])) /  (1 + particle[5])
 
         px1 = px0 + r10 * x0
         py1 = py0 + r32 * y0
@@ -154,7 +157,10 @@ cdef class HBend(Element):
         sin_edge = sin(self.theta_out)
         cos_edge = cos(self.theta_out)
         r10 = k0 * tan(self.theta_out)
-        r32 = -k0 * tan(self.theta_out - self.h * self.gap * self.fint_out * (1 + sin_edge * sin_edge) / cos_edge / (1 + particle[5])) /  (1 + particle[5])
+        if self.edge_method == 1:
+            r32 = -k0 * tan(self.theta_out - self.h * self.gap * self.fint_out * (1 + sin_edge * sin_edge) / cos_edge / (1 + particle[5]))
+        elif self.edge_method == 2:
+            r32 = -k0 * tan(self.theta_out - self.h * self.gap * self.fint_out * (1 + sin_edge * sin_edge) / cos_edge / (1 + particle[5])) /  (1 + particle[5])
 
         particle[1] = px2 + r10 * particle[0]
         particle[3] = py2 + r32 * particle[2]
