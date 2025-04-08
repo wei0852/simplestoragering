@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+import matplotlib.pyplot as plt
 from .track import symplectic_track
 from .CSLattice import CSLattice
 from .exceptions import ParticleLost, Unstable
@@ -173,6 +174,124 @@ class NLine:
         header += f'{self.n_lines} lines, search range: ({self.xmax}, {self.ymax}), n_points: {self.nx}, number of split: {self.n_splits}, split fraction: {self.split_fraction}\n'
         header += f'x y area={self.area}'
         np.savetxt(filename, self.aperture, fmt='%10.6f', comments='#', header=header)
+
+
+class XDeltaLines:
+    """line search mode to track off-momentum horizontal dynamic aperture.
+
+    For each delta value, track along two lines (positive and negative directions) with increasing amplitude starting at the off-momentum closed-orbit.
+    The vertical amplitude is y=1e-6.
+    """
+    def __init__(self,
+                 delta_list: np.ndarray,
+                 xmax: float = 0.01,
+                 n_points: int = 10,
+                 n_splits: int = 0,
+                 split_fraction=0.5) -> None:
+        """
+        Args:
+            delta_list (np.ndarray): An array of delta values for which the dynamic aperture will be calculated.
+            xmax (float, optional): The maximum search range for the horizontal coordinate. Defaults to 0.01.
+            n_points (int, optional): The number of points in the search range. Defaults to 10.
+            n_splits (int, optional): The number of times to split the search range when a particle is lost. Defaults to 0.
+            split_fraction (float, optional): The fraction used to split the search range. Defaults to 0.5.
+        """
+
+        self.aperture = np.zeros((delta_list.shape[0], 4))
+        self.delta_list = delta_list
+        self.n_splits = n_splits
+        self.n_points = n_points
+        self.split_fraction = split_fraction
+        self.r_max = xmax
+        self.verbose = None
+
+    def search(self, lattice: CSLattice, n_turns=100, verbose=True):
+        """
+        Search for the off-momentum horizontal dynamic aperture for each delta value.
+
+        Args:
+            lattice (CSLattice): The lattice object for which the dynamic aperture is calculated.
+            n_turns (int, optional): The number of turns to track the particle. Defaults to 100.
+            verbose (bool, optional): Whether to print detailed information during the search. Defaults to True.
+        """
+        self.verbose = verbose
+        for i, delta in enumerate(self.delta_list):
+            self.aperture[i, 0] = delta
+            try:
+                lattice.off_momentum_optics(delta=delta)
+                betax = lattice.elements[0].betax
+                alphax = lattice.elements[0].alphax
+                cox = lattice.elements[0].closed_orbit[0]
+                cop = lattice.elements[0].closed_orbit[1]
+                self.aperture[i, 3] = cox
+            except Unstable:
+                if self.verbose:
+                    print(f'Cannot find closed orbit at delta={delta*100:.2f}%.')
+                self.aperture[i, 1] = np.nan
+                self.aperture[i, 2] = np.nan
+                self.aperture[i, 3] = np.nan
+                continue
+            if self.verbose:
+                print(f'Start searching delta={delta*100:.2f}% ......')
+            r = self.__search_delta(cox, 0, self.r_max, self.n_points, self.n_splits, n_turns, lattice, delta)
+            self.aperture[i, 1] = r + cox
+            r = self.__search_delta(cox, 0, -self.r_max, self.n_points, self.n_splits, n_turns, lattice, delta)
+            self.aperture[i, 2] = r + cox
+
+    def __search_delta(self, cox, x0, x_max, nx, n_splits, n_turns, lattice, dp):
+        x = np.linspace(x0, x_max, nx+1)
+        for i in range(nx):
+            try:
+                symplectic_track([cox + x[i + 1], 0.0, 1e-6, 0, 0, dp], lattice, n_turns, record=False)
+            except ParticleLost:
+                x0 = x[i]
+                nx = int(1 / self.split_fraction)
+                x_max = x[i+1]
+                if n_splits > 0:
+                    return self.__search_delta(cox, x0, x_max, nx, n_splits - 1, n_turns, lattice, dp)
+                else:
+                    if self.verbose:
+                        print(f'    Particle lost at {x_max * 1e3:.1f} mm.')
+                    return x0
+        if self.verbose:
+            print('    Particle survived.')
+        return x_max
+    
+    def show(self, ax: plt.Axes=None):
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
+        ax.plot(self.aperture[:, 0] * 100, self.aperture[:, 1] * 1000, c='k')
+        ax.plot(self.aperture[:, 0] * 100, self.aperture[:, 2] * 1000, c='k')
+        ax.plot(self.aperture[:, 0] * 100, self.aperture[:, 3] * 1000, c='C1')
+        ax.grid('on')
+        ax.set_xlabel('$\\delta$ [%]', fontsize=15)
+        ax.set_ylabel('$x$ [mm]', fontsize=15)
+        # plt.legend(fontsize=ticksize)
+        ax.xaxis.set_tick_params(labelsize=15)
+        ax.yaxis.set_tick_params(labelsize=15)
+        if ax is None:
+            plt.tight_layout()
+            plt.show()
+
+    def save(self, filename=None, header=None):
+        """
+        Save the calculated dynamic aperture data to a file.
+
+        Args:
+            filename (str, optional): The name of the file to save the data. If None, it defaults to 'HorizontalDynamicAperture.csv'.
+            header (str, optional): String that will be written at the beginning of the file.
+
+        Note:
+            The header: String that will be written at the beginning of the file.
+        """
+        filename = 'HorizontalDynamicAperture.csv' if filename is None else filename
+        if header is None:
+            header = ''
+        else:
+            header += '\n'
+        header += f'search range: {self.r_max}, n_points: {self.n_points}, number of split: {self.n_splits}, split fraction: {self.split_fraction}\n'
+        header += f'delta,  xmax,  xmin,  xco'
+        np.savetxt(filename, self.aperture, delimiter=',', fmt='%10.6f', comments='#', header=header)
 
 
 class LocalMomentumAperture(object):

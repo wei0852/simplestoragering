@@ -18,4 +18,4 @@ from .functions import output_opa_file, output_elegant_file, chromaticity_correc
 from .line_matrix import line_matrix
 from .track import symplectic_track, track_4d_closed_orbit
 from .exceptions import ParticleLost, Unstable
-from .DynamicAperture import XYGrid, NLine, XDeltaGrid, LocalMomentumAperture, DynamicAperturePolyhedron
+from .DynamicAperture import XYGrid, NLine, XDeltaGrid, LocalMomentumAperture, DynamicAperturePolyhedron, XDeltaLines
