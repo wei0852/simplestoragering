@@ -268,7 +268,6 @@ def plot_RDTs_along_ring(lattice: CSLattice, RDT_type='f', show=True) -> dict[np
     assert RDT_type == 'f' or RDT_type == 'h', 'RDT_type should be "f" or "h".'
     label_size = 15
     tick_size = 12
-    num_elements = len(lattice.elements)
     betax = []
     betay = []
     psix = []
@@ -286,8 +285,8 @@ def plot_RDTs_along_ring(lattice: CSLattice, RDT_type='f', show=True) -> dict[np
             betay.append(elele.betay)
             psix.append(elele.psix)
             psiy.append(elele.psiy)
-            k2l.append(elele.length * (elele.k2 + elele.k3 * elele.closed_orbit[0]) / (1 + lattice.delta))
-            k3l.append(elele.k3 * elele.length / (1 + lattice.delta))
+            k2l.append(elele.length * (elele.k2 + elele.k3 * elele.closed_orbit[0]))
+            k3l.append(elele.k3 * elele.length)
             s.append(elele.s)
     betax = np.array(betax)
     betay = np.array(betay)

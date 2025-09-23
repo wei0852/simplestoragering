@@ -3,6 +3,28 @@ from simplestoragering.objectives import quantify_rdt_fluctuation
 import simplestoragering as ssr
 import numpy as np
 from example_lattice import generate_ring
+import PyNAFF as pnf
+
+
+def track_tunes(ring, xin):
+    ring2 = ring * ring.n_periods
+    ssr.symplectic_track(xin, ring2, 1027)
+    trajectory = ring2.mark['ss'][0].data
+
+    pnf_in = trajectory[:, 0] - np.mean(trajectory[:, 0])
+    pnf_out = pnf.naff(pnf_in, turns=1026, )
+    try:
+        nux = pnf_out[0, 1]
+    except Exception as e:
+        # print(e)
+        nux = np.nan
+    pnf_in = trajectory[:, 2] - np.mean(trajectory[:, 2])
+    try:
+        pnf_out = pnf.naff(pnf_in, turns=1026, )
+        nuy = pnf_out[0, 1]
+    except Exception:
+        nuy = np.nan
+    return nux, nuy
 
 
 if __name__ == '__main__':
@@ -63,9 +85,79 @@ if __name__ == '__main__':
         # plt.show()
     except ssr.Unstable:
         print('unstable')
+        
+    tracked_dnuxdJx = []
+    tracked_dnuydJx = []
+    tracked_dnuxdJy = []
+    tracked_dnuydJy = []
+    
+    dnuxdJx = []
+    dnuydJx = []
+    dnuydJy = []
+    
+    for dp in np.linspace(-0.06, 0.04, 11):
+        ring.off_momentum_optics(delta=dp)
+        betax = ring.elements[0].betax
+        betay = ring.elements[0].betay
+        rdts = ring.driving_terms(verbose=False)
+        
+        nux0 = ring.nux - int(ring.nux)
+        nuy0 = ring.nuy - int(ring.nuy)
+        closed_orbit = ring.elements[0].closed_orbit
+        dJ = 1e-8
+        epsilon = np.array([(2*dJ*betax)**0.5, 0, 1e-9, 0, 0, 0])
+        nux_xp, nuy_xp = track_tunes(ring, closed_orbit + epsilon)
+        nux_xm, nuy_xm = track_tunes(ring, closed_orbit - epsilon)
+    
+        nux_x = (nux_xp + nux_xm) / 2
+        nuy_x = (nuy_xp + nuy_xm) / 2
+        
+        tracked_dnuxdJx.append((nux_x - nux0) / dJ)
+        tracked_dnuydJx.append((nuy_x - nuy0) / dJ)
+    
+        epsilon = np.array([1e-9, 0, (2*dJ*betay)**0.5, 0, 0, 0])
+        nux_yp, nuy_yp = track_tunes(ring, closed_orbit + epsilon)
+        nux_ym, nuy_ym = track_tunes(ring, closed_orbit - epsilon)
+    
+        nux_y = (nux_yp + nux_ym) / 2
+        nuy_y = (nuy_yp + nuy_ym) / 2
+        
+        tracked_dnuxdJy.append((nux_y - nux0) / dJ)
+        tracked_dnuydJy.append((nuy_y - nuy0) / dJ)
+        
+        adts = rdts.adts()
+        
+        dnuxdJx.append(adts[0])
+        dnuydJx.append(adts[1])
+        dnuydJy.append(adts[2])
+    
+    fig = plt.figure(figsize=(12, 4))
+    plt.subplots_adjust(left=0.08, bottom=0.15, right=0.98, top=0.93, wspace=0.3, hspace=0.4)
+    plt.subplot(1, 3, 1)
+    plt.scatter(np.linspace(-6, 4, 11), tracked_dnuxdJx, label='tracked')
+    plt.scatter(np.linspace(-6, 4, 11), dnuxdJx, label='NDT')
+    plt.xlabel('$\\delta$ [%]')
+    plt.ylabel('dnux/dJx')
+    plt.legend()
+    plt.subplot(1, 3, 2)
+    
+    plt.scatter(np.linspace(-6, 4, 11), tracked_dnuydJx, label='tracked')
+    plt.scatter(np.linspace(-6, 4, 11), tracked_dnuxdJy, label='tracked')
+    plt.scatter(np.linspace(-6, 4, 11), dnuydJx, label='NDT')
+    plt.legend()
+    
+    plt.xlabel('$\\delta$ [%]')
+    plt.ylabel('dnux/dJy')
+    plt.subplot(1, 3, 3)
+    plt.scatter(np.linspace(-6, 4, 11), tracked_dnuydJy, label='tracked')
+    plt.scatter(np.linspace(-6, 4, 11), dnuydJy, label='NDT')
+    plt.xlabel('$\\delta$ [%]')
+    plt.ylabel('dnuy/dJy')
+    plt.legend()
+    plt.show()
     
     # !!! twiss parameters in the elements were changed by the method off_momentum_optics(),
-    # so it's importance to re-initialize the data.
+    # so it's important to re-initialize the data.
     ring.linear_optics()
 
     print('\n------------------  adjust chromaticity & tunes ---------------')
@@ -103,7 +195,7 @@ if __name__ == '__main__':
     plt.ylabel('x [mm]')
     plt.show()
 
-    ssr.symplectic_track(particle=[1e-2, 0, 0, 0, 0, 0], lattice=ring, n_turns=100, record=True)
+    ssr.symplectic_track(particle=[1e-3, 0, 0, 0, 0, 0], lattice=ring, n_turns=100, record=True)
     #record = true, the coordinates of particle as it passes through the Mark will be recorded.
     #record = false, faster
     plt.subplot(1, 2, 1)

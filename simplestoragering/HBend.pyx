@@ -410,8 +410,8 @@ cdef class HBend(Element):
         h21000 = h30000 = h10110 = h10020 = h10200 = 0
         h22000 = h11110 = h00220 = h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
         length = self.length / 4
-        b4l = length * self.k3 / 6 / (1 + delta)
-        b3l_0 = length * self.k2 / 2 / (1 + delta)
+        b4l = length * self.k3 / 6
+        b3l_0 = length * self.k2 / 2
         if not b4l and not b3l_0:
             return np.zeros(16)
         bend_slices = self.slice(4)

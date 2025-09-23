@@ -108,8 +108,8 @@ cdef class Octupole(Element):
         n_slices = 4
         length = self.length / n_slices
         sub_slices = max(int(self.n_slices / n_slices), 1)
-        b4l = length * self.k3 / 6 / (1 + delta)
-        b3l_0 = length * self.k2 / 2 / (1 + delta)
+        b4l = length * self.k3 / 6
+        b3l_0 = length * self.k2 / 2
         ele_slice = Octupole(self.name, length, self.k3, sub_slices, self.Ax, self.Ay)
         ele_slice.length = length
         ele_slice.n_slices = sub_slices

@@ -9,7 +9,7 @@ def generate_ring() -> ssr.CSLattice:
     D1A = ssr.Drift('D1A', length=2.475000)
     D1B = ssr.Drift('D1B', length=0.075000)
     D2 = ssr.Drift('D2', length=0.250000)
-    D2A = ssr.Drift('D2A', length=0.075000)
+    D2A = ssr.Drift('D2A', length=0.075000 - 1e-4)
     D2B = ssr.Drift('D2B', length=0.075000)
     D3 = ssr.Drift('D3', length=0.185000)
     D4 = ssr.Drift('D4', length=0.200000)
@@ -24,9 +24,9 @@ def generate_ring() -> ssr.CSLattice:
     Q3 = ssr.Quadrupole('Q3', length=0.140000, k1=6.507626, n_slices=10)
 
     B1 = ssr.HBend('B1', length=0.750000, theta=2.294735 * d2r, k1=0.000000, theta_in=1.147368 * d2r,
-                   theta_out=1.147368 * d2r, n_slices=10)
+                   theta_out=1.147368 * d2r, n_slices=30)
     B2 = ssr.HBend('B2', length=0.890000, theta=4.790311 * d2r, k1=-1.482985, theta_in=2.395155 * d2r,
-                   theta_out=2.395155 * d2r, n_slices=10)
+                   theta_out=2.395155 * d2r, n_slices=40)
     RB = ssr.HBend('RB', length=0.160000, theta=-0.282674 * d2r, k1=6.229233, theta_in=-0.141337 * d2r,
                    theta_out=-0.141337 * d2r, n_slices=8)
 
@@ -39,6 +39,7 @@ def generate_ring() -> ssr.CSLattice:
     SF3 = ssr.Sextupole('SF3', length=0.150000, k2=2 * 304.099000, n_slices=sext_slices)
 
     O1 = ssr.Octupole('O1', length=1e-4, k3=1e8, n_slices=4) 
+#     O1 = ssr.Octupole('O1', length=1e-4, k3=0, n_slices=4) 
     # This lattice originally does not require octupole magnets
 
     ss = ssr.Mark('ss')  # straight section
@@ -48,5 +49,5 @@ def generate_ring() -> ssr.CSLattice:
              SD3, D9, B2, D9, SD3, D8, RB, D6, SF3, D7, RB, D8, SD3, D9]
     RC = [D9, SD3, D8, RB, D7, SF3, D6, RB, D8, SD3, D9, B2, D9, SD3, D8, RB, D7, SF3, D6, RB, D8, SD3, D9, B2, D9, SD3,
           D8,
-          RB, D7, SF2, D6, Q3, D5, SD2, D4, B1, D3, Q2, D2B, SD1, D2A, Q1, D1B, SF1, D1A]
+          RB, D7, SF2, D6, Q3, D5, SD2, D4, B1, D3, Q2, D2B, SD1, D2A, O1, Q1, D1B, SF1, D1A]
     return ssr.CSLattice(CELLH + [B2] + RC, n_periods=14)
