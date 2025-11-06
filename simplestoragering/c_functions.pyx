@@ -17,6 +17,13 @@ cdef symplectic_track_ele(Element ele, double[6] particle):
     else:
         return 0
 
+cdef radiation_track_ele(Element ele, double[6] particle):
+    flag = ele.radiation_track(particle)
+    if flag == -1:
+        return -1
+    else:
+        return 0
+
 cdef track_matrix(Element ele, double[6][6] matrix):
     cdef double precision=3e-8
     cdef double[6] p1 = ele.closed_orbit

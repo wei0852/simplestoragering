@@ -8,7 +8,7 @@ cdef double Cr = 8.846273822420376e-14
 cdef double Cl = 2.1581408349289595e-19
 cdef double c = 299792458.0
 cdef double pi = 3.141592653589793
-cdef double me_MeV = 0.51099895
+cdef double me_MeV = 510.99895069e-3
 
 
 cpdef cq():

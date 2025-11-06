@@ -1,4 +1,5 @@
 from .components import Element, Mark
+from .RFCavity import RFCavity
 from .DrivingTerms import DrivingTerms
 import numpy as np
 
@@ -33,6 +34,7 @@ class CSLattice(object):
     n_periods: int
     elements: list[Element]
     mark: dict[str, list[Mark]]
+    RFCavity: RFCavity
     angle: float
     abs_angle: float
 

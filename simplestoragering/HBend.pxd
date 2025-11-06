@@ -17,6 +17,8 @@ cdef class HBend(Element):
 
     cdef int symplectic4pass(self, double[6] particle)
 
+    cdef int radiation_track(self, double[6] particle)
+
     cdef __radiation_integrals(self,double length,double[7] integrals,double[12] twiss0,double[12] twiss1)
 
     cpdef copy(self)

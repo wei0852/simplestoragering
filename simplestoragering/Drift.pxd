@@ -11,7 +11,7 @@ cdef class Drift(Element):
     cpdef copy(self)
 
     cdef int symplectic_track(self, double[6] particle)
-
+    cdef int radiation_track(self, double[6] particle)
     cpdef linear_optics(self)
 
 cdef drift_matrix(double[6][6] matrix, double length)

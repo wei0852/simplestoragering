@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import matplotlib.pyplot as plt
-from .track import symplectic_track
+from .track import symplectic_track, radiation_track, track_6d_closed_orbit
 from .CSLattice import CSLattice
 from .exceptions import ParticleLost, Unstable
 from .components import Mark
@@ -22,16 +22,17 @@ class XDeltaGrid:
         self.y = y
         self.data = None
 
-    def search(self, lattice: CSLattice, n_turns=100, with_rf=False):
+    def search(self, lattice: CSLattice, n_turns=100, radiation=False):
         """"""
-        if with_rf:
-            raise Exception('Unfinished. 4D tracking only.')
         self.data = np.zeros((len(self.xrange) * len(self.delta_range), 5))
         i = 0
         for dp in self.delta_range:
             for x in self.xrange:
                 try:
-                    symplectic_track([x, 0, self.y, 0, 0, dp], lattice, n_turns, record = False)
+                    if radiation is True:
+                        radiation_track([x, 0, self.y, 0, 0, dp], lattice, n_turns, record = False)
+                    else:
+                        symplectic_track([x, 0, self.y, 0, 0, dp], lattice, n_turns, record = False)
                     self.data[i, :] = [x, dp, 0, np.inf, np.inf]
                     i += 1
                 except ParticleLost as p:
@@ -59,16 +60,17 @@ class XYGrid:
         self.delta = delta
         self.data = None
 
-    def search(self, lattice: CSLattice, n_turns=100, with_rf=False):
+    def search(self, lattice: CSLattice, n_turns=100, radiation=False):
         """"""
-        if with_rf:
-            raise Exception('Unfinished. 4D tracking only.')
         self.data = np.zeros((len(self.xrange) * len(self.yrange), 5))
         i = 0
         for y in self.yrange:
             for x in self.xrange:
                 try:
-                    symplectic_track([x, 0, y, 0, 0, self.delta], lattice, n_turns, record = False)
+                    if radiation is True:
+                        radiation_track([x, 0, y, 0, 0, self.delta], lattice, n_turns, record = False)
+                    else:
+                        symplectic_track([x, 0, y, 0, 0, self.delta], lattice, n_turns, record = False)
                     self.data[i, :] = [x, y, 0, np.inf, np.inf]
                     i += 1
                 except ParticleLost as p:
@@ -130,32 +132,34 @@ class NLine:
         self.delta = delta
         self.verbose = verbose
 
-    def search(self, lattice: CSLattice, n_turns=100, with_rf=False):
-        if with_rf:
-            raise Exception('Unfinished. 4D tracking only.')
+    def search(self, lattice: CSLattice, n_turns=100, radiation=False):
         for i, theta in enumerate(np.linspace(-np.pi / 2, np.pi / 2, self.n_lines)):
             if self.verbose:
                 print(f'start line {i+1}...')
             xy0 = np.zeros(2) + 1e-6
             xymax = np.array([self.xmax * np.sin(theta), self.ymax * np.cos(theta)])
-            self.aperture[i, :] = self._search_line(xy0, xymax, self.nx, self.n_splits, n_turns, lattice)
+            self.aperture[i, :] = self._search_line(xy0, xymax, self.nx, self.n_splits, n_turns, lattice, radiation)
 
         area = 0
         for i in range(self.aperture.shape[0] - 1):
             area += abs(self.aperture[i, 0] * self.aperture[i + 1, 1] - self.aperture[i, 1] * self.aperture[i+1, 0])
         self.area = area / 2
 
-    def _search_line(self, xy0, xymax, nx, n_splits, n_turns, lattice):
+    def _search_line(self, xy0, xymax, nx, n_splits, n_turns, lattice, radiation):
         xy = np.linspace(xy0, xymax, nx + 1)
         for i in range(nx):
             try:
-                symplectic_track([xy[i+1, 0], 0, xy[i+1, 1], 0, 0, self.delta], lattice, n_turns, record=False)
+                if radiation is True:
+                    rin = np.array([xy[i+1, 0], 0, xy[i+1, 1], 0, 0, self.delta])
+                    radiation_track(rin, lattice, n_turns, record=False)
+                else:
+                    symplectic_track([xy[i+1, 0], 0, xy[i+1, 1], 0, 0, self.delta], lattice, n_turns, record=False)
             except ParticleLost as p:
                 xy0 = xy[i, :]
                 nx = int(1 / self.split_fraction)
                 xymax = xy[i+1, :]
                 if n_splits > 0:
-                    return self._search_line(xy0, xymax, nx, n_splits - 1, n_turns, lattice)
+                    return self._search_line(xy0, xymax, nx, n_splits - 1, n_turns, lattice, radiation)
                 else:
                     if self.verbose:
                         print(f'    Particle lost at ({xymax[0]*1e3:.1f}, {xymax[1]*1e3:.1f}) mm.')
@@ -205,7 +209,7 @@ class XDeltaLines:
         self.r_max = xmax
         self.verbose = None
 
-    def search(self, lattice: CSLattice, n_turns=100, verbose=True):
+    def search(self, lattice: CSLattice, n_turns=100, radiation=False, verbose=True):
         """
         Search for the off-momentum horizontal dynamic aperture for each delta value.
 
@@ -233,22 +237,25 @@ class XDeltaLines:
                 continue
             if self.verbose:
                 print(f'Start searching delta={delta*100:.2f}% ......')
-            r = self.__search_delta(cox, 0, self.r_max, self.n_points, self.n_splits, n_turns, lattice, delta)
+            r = self.__search_delta(cox, 0, self.r_max, self.n_points, self.n_splits, n_turns, lattice, delta, radiation)
             self.aperture[i, 1] = r + cox
-            r = self.__search_delta(cox, 0, -self.r_max, self.n_points, self.n_splits, n_turns, lattice, delta)
+            r = self.__search_delta(cox, 0, -self.r_max, self.n_points, self.n_splits, n_turns, lattice, delta, radiation)
             self.aperture[i, 2] = r + cox
 
-    def __search_delta(self, cox, x0, x_max, nx, n_splits, n_turns, lattice, dp):
+    def __search_delta(self, cox, x0, x_max, nx, n_splits, n_turns, lattice, dp, radiation):
         x = np.linspace(x0, x_max, nx+1)
         for i in range(nx):
             try:
-                symplectic_track([cox + x[i + 1], 0.0, 1e-6, 0, 0, dp], lattice, n_turns, record=False)
+                if radiation is True:
+                    radiation_track([cox + x[i + 1], 0.0, 1e-6, 0, 0, dp], lattice, n_turns, record=False)
+                else:
+                    symplectic_track([cox + x[i + 1], 0.0, 1e-6, 0, 0, dp], lattice, n_turns, record=False)
             except ParticleLost:
                 x0 = x[i]
                 nx = int(1 / self.split_fraction)
                 x_max = x[i+1]
                 if n_splits > 0:
-                    return self.__search_delta(cox, x0, x_max, nx, n_splits - 1, n_turns, lattice, dp)
+                    return self.__search_delta(cox, x0, x_max, nx, n_splits - 1, n_turns, lattice, dp, radiation)
                 else:
                     if self.verbose:
                         print(f'    Particle lost at {x_max * 1e3:.1f} mm.')
@@ -348,7 +355,7 @@ class LocalMomentumAperture(object):
         self.max_delta = np.zeros(nums_)
         self.min_delta = np.zeros(nums_)
 
-    def search(self, n_turns=100, parallel=False):
+    def search(self, n_turns=100, radiation=True, parallel=False):
         if parallel:
             pass
         else:
@@ -363,23 +370,26 @@ class LocalMomentumAperture(object):
                     if self.verbose:
                         print(f'Start search MA at s={sub_lattice[0].s:.3f} m ({sub_lattice[0].name})............... {i + 1} / {nums_}')
                     self.min_delta[i] = self._search_one_position(n_turns * self.n_periods, sub_lattice, 
-                                              self.delta_negative_start, self.delta_negative_limit, -self.delta_step, self.n_splits)
+                                              self.delta_negative_start, self.delta_negative_limit, -self.delta_step, self.n_splits, radiation)
                     self.max_delta[i] = self._search_one_position(n_turns * self.n_periods, sub_lattice, 
-                                              self.delta_positive_start, self.delta_positive_limit, self.delta_step, self.n_splits)
+                                              self.delta_positive_start, self.delta_positive_limit, self.delta_step, self.n_splits, radiation)
             self.s[-1] = self.newlattice.elements[-1].s
             self.min_delta[-1] = self.min_delta[0]
             self.max_delta[-1] = self.max_delta[0]
 
 
-    def _search_one_position(self, n_turns, sub_lattice, delta_init, delta_end, delta_step, n_splits):
+    def _search_one_position(self, n_turns, sub_lattice, delta_init, delta_end, delta_step, n_splits, radiation):
         delta_survive = delta_init
         for dp in np.arange(delta_init, delta_end + delta_step, delta_step):
             try:
-                symplectic_track([self.initial_x, 0, self.initial_y, 0, 0, dp], sub_lattice, n_turns, record=False)
+                if radiation is True:
+                    radiation_track([self.initial_x, 0, self.initial_y, 0, 0, dp], sub_lattice, n_turns, record=False)
+                else:
+                    symplectic_track([self.initial_x, 0, self.initial_y, 0, 0, dp], sub_lattice, n_turns, record=False)
                 delta_survive = dp
             except ParticleLost:
                 if n_splits > 0:
-                    return self._search_one_position(n_turns, sub_lattice, delta_survive, dp, delta_step * self.split_fraction, n_splits - 1)
+                    return self._search_one_position(n_turns, sub_lattice, delta_survive, dp, delta_step * self.split_fraction, n_splits - 1, radiation)
                 else:
                     break
         if self.verbose:
@@ -434,7 +444,7 @@ class DynamicAperturePolyhedron:
         self.DA = np.zeros((len(self.delta_list_p) + len(self.delta_list_m), self.n_lines, 3))  # x, px, delta
         self.twiss = np.zeros((len(self.delta_list_p) + len(self.delta_list_m), 4))  # fp_x, fp_px, beta_x, alpha_x
 
-    def search(self, lattice, n_turns=100, verbose=True) -> None:
+    def search(self, lattice, n_turns=100, radiation=True, verbose=True) -> None:
         self.verbose = verbose
         for i, dp in enumerate(np.append(self.delta_list_p, self.delta_list_m)):
             try:
@@ -454,12 +464,12 @@ class DynamicAperturePolyhedron:
                 if self.verbose:
                     print(f'Start searching delta={dp*100:.2f}%, {j+1} of {self.n_lines} lines ......')
                 r = self.__search_normal_line(cox, cop, betax, alphax, 0, self.r_max, phi, self.n_points,
-                                                  self.n_splits, n_turns, lattice, dp)  # r = sqrt(2 Jx beta_x)
+                                                  self.n_splits, n_turns, lattice, dp, radiation)  # r = sqrt(2 Jx beta_x)
                 x = r*np.cos(phi)
                 px = -(r/betax) * (np.sin(phi) + alphax * np.cos(phi))
                 self.DA[i, j, :] = [x + cox, px + cop, dp]
 
-    def __search_normal_line(self, cox, cop, betax, alphax, r0, r_max, phi, nx, n_splits, n_turns, lattice, dp):
+    def __search_normal_line(self, cox, cop, betax, alphax, r0, r_max, phi, nx, n_splits, n_turns, lattice, dp, radiation):
         jx_max = r_max ** 2 / 2 / betax
         jx_0 = r0 ** 2 / 2 / betax
         jx_list = np.linspace(jx_0, jx_max, nx+1)
@@ -467,14 +477,17 @@ class DynamicAperturePolyhedron:
         px = -(2 * jx_list / betax) ** 0.5 * (np.sin(phi) + alphax * np.cos(phi))
         for i in range(nx):
             try:
-                symplectic_track([cox + x[i + 1], cop + px[i + 1], 1e-6, 0, 0, dp], lattice, n_turns, record=False)
+                if radiation is True:
+                    radiation_track([cox + x[i + 1], cop + px[i + 1], 1e-6, 0, 0, dp], lattice, n_turns, record=False)
+                else:
+                    symplectic_track([cox + x[i + 1], cop + px[i + 1], 1e-6, 0, 0, dp], lattice, n_turns, record=False)
             except ParticleLost:
                 r0 = (jx_list[i] * 2 * betax) ** 0.5
                 nx = int(1 / self.split_fraction)
                 r_max = (jx_list[i+1] * 2 * betax) ** 0.5
                 if n_splits > 0:
                     return self.__search_normal_line(cox, cop, betax, alphax, r0, r_max, phi, nx, n_splits - 1,
-                                                         n_turns, lattice, dp)
+                                                         n_turns, lattice, dp, radiation)
                 else:
                     if self.verbose:
                         print(f'    Particle lost at {r_max*1e3:.1f} mm.')

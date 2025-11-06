@@ -50,6 +50,9 @@ cdef class Element():
     cdef int symplectic_track(self, double[6] particle):
         """assuming that the energy is constant, the result is symplectic."""
         pass
+    
+    cdef int radiation_track(self, double[6] particle):
+        return self.symplectic_track(particle)
 
     cpdef copy(self):
         """calculate integral parameters
@@ -154,6 +157,9 @@ cdef class Mark(Element):
             else:
                 self.data = np.vstack((self.data, p))
         return 0
+    
+    cdef int radiation_track(self, double[6] particle):
+        return self.symplectic_track(particle)
 
     def clear(self):
         """clear the particle coordinate data."""
@@ -180,6 +186,9 @@ cdef class LineEnd(Element):
         return [self]
 
     cdef int symplectic_track(self, double[6] particle):
+        return 0
+    
+    cdef int radiation_track(self, double[6] particle):
         return 0
 
     cpdef copy(self):

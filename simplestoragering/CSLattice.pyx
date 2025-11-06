@@ -13,6 +13,7 @@ from .Drift cimport Drift
 from .Quadrupole cimport Quadrupole
 from .Sextupole cimport Sextupole
 from .Octupole cimport Octupole
+from .RFCavity import RFCavity
 from .DrivingTerms import DrivingTerms
 from .exceptions import Unstable
 from libc.math cimport isnan, cos, sin, pow, sqrt, acos, fabs
@@ -58,6 +59,7 @@ class CSLattice(object):
         self.n_periods = n_periods
         self.elements = []
         self.mark = {}
+        self.RFCavity = None
         self.angle = 0
         self.abs_angle = 0
         current_s = 0
@@ -74,6 +76,8 @@ class CSLattice(object):
             if isinstance(ele, HBend):
                 self.angle += ele.theta
                 self.abs_angle += abs(ele.theta)
+            if isinstance(ele, RFCavity):
+                self.RFCavity = ele
             current_s = current_s + ele.length
         last_ele = LineEnd(s=self.length)
         self.elements.append(last_ele)

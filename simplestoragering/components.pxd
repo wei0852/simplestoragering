@@ -86,7 +86,7 @@ cdef class Element():
     cpdef copy(self)
 
     cdef int symplectic_track(self, double[6] particle)
-
+    cdef int radiation_track(self, double[6] particle)
     cpdef linear_optics(self)
 
     cpdef off_momentum_optics(self, delta)
@@ -98,11 +98,12 @@ cdef class Mark(Element):
     cpdef copy(self)
 
     cdef int symplectic_track(self, double[6] particle)
-
+    cdef int radiation_track(self, double[6] particle)
 
 cdef class LineEnd(Element):
     cpdef copy(self)
 
     cdef int symplectic_track(self, double[6] particle)
+    cdef int radiation_track(self, double[6] particle)
 
 cdef assin_twiss(Element ele,double[12] twiss)

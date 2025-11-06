@@ -18,6 +18,16 @@ cdef extern from "BndMPoleSymplectic4Pass.c":
         int FringeBendEntrance, int FringeBendExit,
         double fint1, double fint2, double gap)
 
+cdef extern from "BndMPoleSymplectic4RadPass.c":
+    void BndMPoleSymplectic4RadPass(double *r, double le, double irho, double *A, double *B,
+            int max_order, int num_int_steps,
+            double entrance_angle, double exit_angle,
+            int FringeBendEntrance, int FringeBendExit,
+            double fint1, double fint2, double gap,
+            double gamma, 
+            double *bdiff)
+
+
 cdef class HBend(Element):
     """HBend(name: str = None, length: float = 0, theta: float = 0, theta_in: float = 0, theta_out: float = 0, k1: float = 0, gap: double = 0, fint_in: float = 0.5, fint_out: float = 0.5, n_slices: int = 10, Ax: float = 10, Ay: float = 10)
     
@@ -222,6 +232,74 @@ cdef class HBend(Element):
         r[4] = particle[5]
         BndMPoleSymplectic4Pass(<double *> &r, self.length, self.h, A, B, max_order, self.n_slices,
                                     self.theta_in, self.theta_out, self.edge_method, self.edge_method, self.fint_in, self.fint_out, self.gap)
+        particle[0] = r[0]
+        particle[1] = r[1]
+        particle[2] = r[2]
+        particle[3] = r[3]
+        particle[4] = -r[5]
+        particle[5] = r[4]
+        free(A)
+        free(B)
+        if not (particle[0] / self.Ax) ** 2 + (particle[2] / self.Ay) ** 2 < 1:
+            return -1
+        return 0
+
+    cdef int radiation_track(self, double[6] particle):
+        cdef double[6] r
+        cdef double* A = NULL
+        cdef double* B = NULL
+
+        if self.k3 != 0:
+            A = <double *>malloc(4 * sizeof(double))
+            if not A:
+                raise MemoryError("Unable to allocate memory for array.")
+            B = <double *>malloc(4 * sizeof(double))
+            if not B:
+                raise MemoryError("Unable to allocate memory for array.")
+            A[0] = 0.0
+            A[1] = 0.0
+            A[2] = 0.0
+            A[3] = 0.0
+            B[0] = 0.0
+            B[1] = self.k1
+            B[2] = self.k2 / 2
+            B[3] = self.k3 / 6
+            max_order = 3
+        elif self.k2 != 0:
+            A = <double *>malloc(3 * sizeof(double))
+            if not A:
+                raise MemoryError("Unable to allocate memory for array.")
+            B = <double *>malloc(3 * sizeof(double))
+            if not B:
+                raise MemoryError("Unable to allocate memory for array.")
+            A[0] = 0.0
+            A[1] = 0.0
+            A[2] = 0.0
+            B[0] = 0.0
+            B[1] = self.k1
+            B[2] = self.k2 / 2
+            max_order = 2
+        else:
+            A = <double *>malloc(2 * sizeof(double))
+            if not A:
+                raise MemoryError("Unable to allocate memory for array.")
+            B = <double *>malloc(2 * sizeof(double))
+            if not B:
+                raise MemoryError("Unable to allocate memory for array.")
+            A[0] = 0.0
+            A[1] = 0.0
+            B[0] = 0.0
+            B[1] = self.k1
+            max_order = 1
+        r[0] = particle[0]
+        r[1] = particle[1]
+        r[2] = particle[2]
+        r[3] = particle[3]
+        r[5] = -particle[4]
+        r[4] = particle[5]
+
+        BndMPoleSymplectic4RadPass(<double *> &r, self.length, self.h, A, B, max_order, self.n_slices,
+                                    self.theta_in, self.theta_out, self.edge_method, self.edge_method, self.fint_in, self.fint_out, self.gap, refgamma, <double*>NULL)
         particle[0] = r[0]
         particle[1] = r[1]
         particle[2] = r[2]

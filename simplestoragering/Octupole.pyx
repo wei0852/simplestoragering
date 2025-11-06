@@ -10,11 +10,15 @@ import numpy as np
 cimport numpy as np
 from libc.math cimport sqrt, cos, sin
 
-cdef extern from "BndStrMPoleSymplectic4Pass.c":
-    void BndStrMPoleSymplectic4Pass(double *r, double le, double irho, double *A, double *B,
+cdef extern from "StrMPoleSymplectic4Pass.c":
+    void StrMPoleSymplectic4Pass(double *r, double le, double *A, double *B,
+        int max_order, int num_int_steps)
+
+cdef extern from "StrMPoleSymplectic4RadPass.c":
+    void StrMPoleSymplectic4RadPass(double *r, double le, double *A, double *B,
         int max_order, int num_int_steps,
-        double entrance_angle, double exit_angle,
-        double fint1, double fint2, double gap)
+        double gamma, 
+        double *bdiff)
 
 cdef class Octupole(Element):
     """Octupole(name: str = None, length: float = 0, k3: float = 0, n_slices: int = 1, Ax: float = 10, Ay: float = 10)"""
@@ -70,7 +74,31 @@ cdef class Octupole(Element):
         r[5] = -particle[4]
         r[4] = particle[5]
 
-        BndStrMPoleSymplectic4Pass(<double *> &r, self.length, 0.0, <double *> &A, <double *> &B, 3, self.n_slices, 0.0, 0.0, 0.0, 0.0, 0.0)
+        StrMPoleSymplectic4Pass(<double *> &r, self.length, <double *> &A, <double *> &B, 3, self.n_slices)
+
+        particle[0] = r[0]
+        particle[1] = r[1]
+        particle[2] = r[2]
+        particle[3] = r[3]
+        particle[4] = -r[5]
+        particle[5] = r[4]
+        if not (particle[0] / self.Ax) ** 2 + (particle[2] / self.Ay) ** 2 < 1:
+            return -1
+        return 0
+
+    cdef int radiation_track(self, double[6] particle):
+        cdef double[6] r
+        cdef double[4] A = [0.0, 0.0, 0.0, 0.0]
+        cdef double[4] B = [0.0, 0.0, 0.0, self.k3 / 6]
+
+        r[0] = particle[0]
+        r[1] = particle[1]
+        r[2] = particle[2]
+        r[3] = particle[3]
+        r[5] = -particle[4]
+        r[4] = particle[5]
+
+        StrMPoleSymplectic4RadPass(<double *> &r, self.length, <double *> &A, <double *> &B, 3, self.n_slices, refgamma, <double*>NULL)
 
         particle[0] = r[0]
         particle[1] = r[1]

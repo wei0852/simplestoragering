@@ -1,14 +1,10 @@
-// #include "atconstants.h"
+#include "atconstants.h"
 // #include "atelem.c"
 // #include "atlalib.c"
 #include "atphyslib.c"
 #include "driftkick.c"		/* fastdrift and bndthinkick */
-#include "quadfringe.c"		/* QuadFringePassP, QuadFringePassN */
+// #include "quadfringe.c"		/* QuadFringePassP, QuadFringePassN */
 #include <stdbool.h>
-#define DRIFT1    0.6756035959798286638
-#define DRIFT2   -0.1756035959798286639
-#define KICK1     1.351207191959657328
-#define KICK2    -1.702414383919314656
 
 void BndMPoleSymplectic4Pass(double *r, double le, double irho, double *A, double *B,
         int max_order, int num_int_steps,
@@ -26,8 +22,6 @@ void BndMPoleSymplectic4Pass(double *r, double le, double irho, double *A, doubl
     double K2 = SL*KICK2;
     // bool useLinFrEleEntrance = (fringeIntM0 != NULL && fringeIntP0 != NULL  && FringeQuadEntrance==2);
     // bool useLinFrEleExit = (fringeIntM0 != NULL && fringeIntP0 != NULL  && FringeQuadExit==2);
-    double B0 = B[0];
-    double A0 = A[0];
 
     int m;
     double p_norm, NormL1, NormL2;

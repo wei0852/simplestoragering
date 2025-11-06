@@ -79,6 +79,9 @@ cdef class Drift(Element):
             return -1
         particle[4] = z0 + ds * (1 - (1 + particle[5]) / d1)
         return 0
+    
+    cdef int radiation_track(self, double[6] particle):
+        return self.symplectic_track(particle)
 
     cpdef copy(self):
         return Drift(self.name, self.length, self.Ax, self.Ay)

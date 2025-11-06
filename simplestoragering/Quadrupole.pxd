@@ -13,6 +13,7 @@ cdef class Quadrupole(Element):
     """normal Quadrupole"""
     cdef int symplectic_track(self, double[6] particle)
     cdef int symplectic4pass(self, double[6] particle)
+    cdef int radiation_track(self, double[6] particle)
     cpdef copy(self)
 
     cpdef linear_optics(self)
