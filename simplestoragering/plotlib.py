@@ -12,6 +12,8 @@ from .Octupole import Octupole
 from .components import Element
 from .CSLattice import CSLattice
 from .DrivingTerms import compute_driving_terms
+from .globalvars import refEnergy
+from .functions import track_alpha_c, calculate_eta_from_alpha
 import numpy as np
 
 
@@ -405,4 +407,143 @@ def template():
     cb2 = plt.colorbar(cmp, cax=plt.axes([right + 0.05, bottom, 0.02, top - bottom]))
     cb2.set_label('color', fontsize=label_size)
     cb2.ax.tick_params(labelsize=tick_size, direction='in')
+    plt.show()
+
+
+def plot_rf_bucket(ring: CSLattice, RF_parameters=None, tracking_step_size=1e-3):
+    """
+    Plot RF bucket for a given ring lattice.
+    
+    Args:
+        ring: CSLattice object containing ring parameters
+        RF_parameters: Optional dictionary with RF parameters (harmonic_number, voltage, frequency)
+        tracking_step_size: Step size for tracking momentum compaction factor
+    """
+    label_size = 18
+    tick_size = 15
+
+    E = refEnergy()         # [MeV]
+    U0 = ring.U0            # Energy loss per turn [MeV]
+    
+    # Extract RF parameters
+    if RF_parameters is not None:
+        h = RF_parameters['harmonic_number']
+        V = RF_parameters['voltage']   # MV
+        f_rf = RF_parameters['frequency']  # Hz
+    else:
+        h = ring.RFCavity.harmonic_number
+        V = ring.RFCavity.voltage   # MV
+        f_rf = ring.RFCavity.f_rf  # Hz
+    
+    # Calculate synchronous phase
+    phs = np.pi - np.arcsin(U0 / V)
+    
+    # Calculate unstable fixed point phase
+    ph_ufp = (2 * phs - np.pi) * 299792458 / f_rf / 2 / np.pi
+
+    # Calculate relativistic parameters
+    gamma0 = E / 510.99895069e-3
+    beta0 = np.sqrt(1 - 1 / (gamma0 * gamma0))
+
+    # Track momentum compaction factor
+    alpha_i = track_alpha_c(ring, max_order=4, h=tracking_step_size)
+    print('Please verify the calculated momentum compaction factor:')
+    print('    ', alpha_i)
+    print('If incorrect, adjust the differential step size.')
+    
+    # Calculate slip factor from momentum compaction
+    eta_i = calculate_eta_from_alpha(alpha_i, gamma0)
+
+    # Initialize plot
+    fig, ax = plt.subplots(figsize=(6.4, 4))
+    
+    ph_seq = np.linspace(phs, ph_ufp, 7)[1:6]
+    # ==================== Inner Bucket Trajectories ====================
+    for j in range(len(ph_seq)):
+        delta_1 = 0.0      # Initial relative energy deviation
+        ph_1 = ph_seq[j]   # Initial phase
+        
+        delta = np.zeros(5000)
+        ph = np.zeros(5000)
+        for i in range(5000):
+            if i == 0:
+                delta1 = delta_1
+                ph1 = ph_1
+            else:
+                delta1 = delta2
+                ph1 = ph2
+            
+            delta[i] = delta1
+            ph[i] = ph1
+            
+            # Energy update: δ_{n+1} = δ_n + (1/(β²E)) * [sin(φ_n) - sin(φ_s)]
+            delta2 = delta1 + (V / (beta0 * beta0 * E)) * (np.sin(ph1) - np.sin(phs))
+            
+            # Phase update: φ_{n+1} = φ_n + 2πh * [η₀ + η₁δ_{n+1} + η₂δ_{n+1}²] * δ_{n+1}
+            ph2 = ph1 + 2 * np.pi * h * (eta_i[0] + eta_i[1] * delta2 + eta_i[2] * delta2**2) * delta2
+        
+        ax.plot(ph - phs, 100 * delta, '-k', linewidth=2, alpha=0.7)
+    
+    # ==================== Outer Bucket Trajectories ====================
+    deltat = np.arange(0, 10) * 10e-3  # Energy deviation steps
+    
+    for j in range(len(deltat)):
+        delta_1 = deltat[j]            # Initial relative energy deviation
+        ph_1 = phs - np.pi             # Initial phase
+        
+        delta = np.zeros(5000)
+        ph = np.zeros(5000)
+        for i in range(5000):
+            if i == 0:
+                delta1 = delta_1
+                ph1 = ph_1
+            else:
+                delta1 = delta2
+                ph1 = ph2
+            
+            delta[i] = delta1
+            ph[i] = ph1
+            
+            # Energy update
+            delta2 = delta1 + (V / (beta0 * beta0 * E)) * (np.sin(ph1) - np.sin(phs))
+            
+            # Phase update
+            ph2 = ph1 + 2 * np.pi * h * (eta_i[0] + eta_i[1] * delta2 + eta_i[2] * delta2**2) * delta2
+        
+        ax.plot(ph - phs, 100 * delta, '-k', linewidth=2, alpha=0.5)
+    
+    # ==================== Bucket Separatrix ====================
+
+    delta = np.zeros(5000)
+    ph = np.zeros(5000)
+    for i in range(5000):
+        if i == 0:
+            delta1 = 0.0
+            ph1 = ph_ufp
+        else:
+            delta1 = delta2
+            ph1 = ph2
+        
+        delta[i] = delta1
+        ph[i] = ph1
+        
+        # Energy update
+        delta2 = delta1 + (V / (beta0 * beta0 * E)) * (np.sin(ph1) - np.sin(phs))
+        
+        # Phase update
+        ph2 = ph1 + 2 * np.pi * h * (eta_i[0] + eta_i[1] * delta2 + eta_i[2] * delta2**2) * delta2
+    
+    # Plot separatrix in red
+    ax.plot(ph - phs, 100 * delta, '-r', linewidth=2)
+
+    # ==================== Plot Formatting ====================
+    ax.set_xlabel('$\phi$ [rad]', fontsize=label_size)
+    ax.set_ylabel('$\delta$ [%]', fontsize=label_size)
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(-np.pi, np.pi)
+    ax.set_ylim(min(delta) * 120, max(delta) * 120)
+    ax.tick_params(axis='both', which='major', labelsize=tick_size)
+    
+    # Adjust layout and display
+    plt.subplots_adjust(left=0.15, bottom=0.168, right=0.97, top=0.97)
     plt.show()

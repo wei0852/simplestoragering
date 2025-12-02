@@ -30,6 +30,9 @@ def track_tunes(ring, xin):
 if __name__ == '__main__':
     ring = generate_ring()
     ring.linear_optics()  # the number of periods of cells is 14. calculate the ring data using one cell.
+
+    print(ring, '\n')
+
     ssr.plot_lattice(ring, ['betax', 'betay'])
     
     # slice elements to draw detailed curves.
@@ -47,7 +50,7 @@ if __name__ == '__main__':
     ssr.plot_layout_in_ax(ring.elements, ax1.twinx())
     plt.show()
 
-    print(ring, '\n')
+    ssr.plot_rf_bucket(ring, {'voltage': 0.92, 'frequency': 560 * 299792458 / ring.length, 'harmonic_number': 560})
 
     print('---------   ring.xi_x and ring.xi_y are calculated using linear pass method. --------------')
     print('--------   use ring.track_chromaticity() to get more accurate chromaticities  -------------')

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simplestoragering"
-version = "0.0.2"
+version = "0.0.3"
 authors = [
   { name="Bingfeng WEI", email="wbf2016@mail.ustc.edu.cn" },
 ]
