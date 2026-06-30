@@ -37,12 +37,15 @@ def generate_ring() -> ssr.CSLattice:
     SD3 = ssr.Sextupole('SD3', length=0.150000, k2=-2 * 261.435000, n_slices=15)
     SF3 = ssr.Sextupole('SF3', length=0.150000, k2=2 * 304.099000, n_slices=15)
 
-    ss = ssr.Mark('ss')  # straight section
-
-    CELLH = [ss, D1A, SF1, D1B, Q1, D2A, SD1, D2B, Q2, D3, ss, B1, D4, SD2, D5, Q3,
+    CELLH = [D1A, SF1, D1B, Q1, D2A, SD1, D2B, Q2, D3, B1, D4, SD2, D5, Q3,
              D6, SF2, D7, RB, D8, SD3, D9, B2, D9, SD3, D8, RB, D6, SF3, D7, RB, D8,
              SD3, D9, B2, D9, SD3, D8, RB, D6, SF3, D7, RB, D8, SD3, D9]
     RC = [D9, SD3, D8, RB, D7, SF3, D6, RB, D8, SD3, D9, B2, D9, SD3, D8, RB, D7, SF3, D6, RB, D8, SD3, D9, B2, D9, SD3,
           D8,
           RB, D7, SF2, D6, Q3, D5, SD2, D4, B1, D3, Q2, D2B, SD1, D2A, Q1, D1B, SF1, D1A]
-    return ssr.CSLattice(CELLH + [B2] + RC, n_periods=14)
+    
+    
+    rf = ssr.RFCavity('RFCavity', 0.92, 560 * 299792458 / 336.00, 560, 0.228172292970371)
+    CELL = CELLH + [B2] + RC
+
+    return ssr.CSLattice([ssr.Mark('INJ')]*2 + CELL * 14 + [rf], n_periods=1)
