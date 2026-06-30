@@ -9,4 +9,5 @@ extensions = [
             include_dirs=[np.get_include(), './simplestoragering/atintegrators/'])]
 
 setup(
+    packages=['simplestoragering'],
     ext_modules=cythonize(extensions))

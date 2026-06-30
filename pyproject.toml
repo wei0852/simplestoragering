@@ -37,7 +37,7 @@ pythonpath = ["."]
 
 [tool.cibuildwheel]
 build = "cp39-* cp310-* cp311-* cp312-*"
-skip = "*-musllinux_* pp*"
+skip = "*-musllinux_*"
 test-command = "python -c \"import simplestoragering as ssr; print(ssr.__name__)\""
 
 [tool.cibuildwheel.linux]
