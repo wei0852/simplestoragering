@@ -2,7 +2,7 @@ __all__ = ['TouscheckLifetime']
 
 import numpy as np
 from scipy.constants import physical_constants, speed_of_light
-from scipy.integrate import quad, trapz
+from scipy.integrate import quad
 from scipy.special import iv  # Modified Bessel function of the first kind
 
 
