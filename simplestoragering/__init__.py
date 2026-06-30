@@ -20,3 +20,4 @@ from .line_matrix import line_matrix
 from .track import symplectic_track, track_4d_closed_orbit, track_6d_closed_orbit, radiation_track
 from .exceptions import ParticleLost, Unstable
 from .DynamicAperture import XYGrid, NLine, XDeltaGrid, LocalMomentumAperture, DynamicAperturePolyhedron, XDeltaLines
+from .Touschek_Piwinski import TouscheckLifetime
