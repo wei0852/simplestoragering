@@ -15,6 +15,7 @@ dependencies = [
   "numpy>=1.18,<2",
   "matplotlib>3.4.0",
   "PyNAFF",
+  "scipy",
 ]
 license = {file = "LICENSE"}
 classifiers = [
@@ -34,3 +35,16 @@ Issues = "https://github.com/wei0852/simplestoragering/issues"
 testpaths = ["tests"]
 pythonpath = ["."]
 
+[tool.cibuildwheel]
+build = "cp39-* cp310-* cp311-* cp312-*"
+skip = "*-musllinux_* pp*"
+test-command = "python -c \"import simplestoragering as ssr; print(ssr.__name__)\""
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]

@@ -1,0 +1,138 @@
+name: Publish package
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Where to publish"
+        required: true
+        default: "testpypi"
+        type: choice
+        options:
+          - testpypi
+          - pypi
+
+permissions:
+  contents: read
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x86_64
+            os: ubuntu-latest
+            cibw_archs: x86_64
+          - name: Windows AMD64
+            os: windows-latest
+            cibw_archs: AMD64
+          - name: macOS x86_64
+            os: macos-13
+            cibw_archs: x86_64
+          - name: macOS arm64
+            os: macos-14
+            cibw_archs: arm64
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v3.3.0
+        env:
+          CIBW_ARCHS: ${{ matrix.cibw_archs }}
+
+      - name: Upload wheel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.cibw_archs }}
+          path: wheelhouse/*.whl
+
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --sdist
+
+      - name: Upload sdist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  publish_testpypi:
+    name: Publish to TestPyPI
+    needs:
+      - build_wheels
+      - build_sdist
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'testpypi'
+
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/simplestoragering
+
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*"
+          path: dist
+          merge-multiple: true
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish_pypi:
+    name: Publish to PyPI
+    needs:
+      - build_wheels
+      - build_sdist
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'pypi')
+
+    environment:
+      name: pypi
+      url: https://pypi.org/p/simplestoragering
+
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*"
+          path: dist
+          merge-multiple: true
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

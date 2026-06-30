@@ -1,0 +1,48 @@
+name: Build wheels
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x86_64
+            os: ubuntu-latest
+            cibw_archs: x86_64
+          - name: Windows AMD64
+            os: windows-latest
+            cibw_archs: AMD64
+          - name: macOS x86_64
+            os: macos-13
+            cibw_archs: x86_64
+          - name: macOS arm64
+            os: macos-14
+            cibw_archs: arm64
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v3.3.0
+        env:
+          CIBW_ARCHS: ${{ matrix.cibw_archs }}
+
+      - name: Upload wheel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.cibw_archs }}
+          path: wheelhouse/*.whl
