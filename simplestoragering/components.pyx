@@ -78,7 +78,7 @@ cdef class Element():
         """Slice a component into a list of elements. twiss data will be calculated for each element.
 
         return: ele_list"""
-        pass
+        return [self]
 
     cpdef linear_optics(self):
         twiss0 = np.array(
