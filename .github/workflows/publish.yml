@@ -34,7 +34,7 @@ jobs:
             os: windows-latest
             cibw_archs: AMD64
           - name: macOS x86_64
-            os: macos-13
+            os: macos-15-intel
             cibw_archs: x86_64
           - name: macOS arm64
             os: macos-14
