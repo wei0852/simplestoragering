@@ -137,6 +137,8 @@ cdef class Mark(Element):
         self.name = name
         self.n_slices = 1
         self.data = None
+        self._data_view = None
+        self._record_index = 0
         self.record = 0
 
     @property
@@ -149,13 +151,37 @@ cdef class Mark(Element):
         ele_list = [self]
         return ele_list
 
+    cdef prepare_recording(self, Py_ssize_t n_records):
+        """Allocate the trajectory buffer once before entering the tracking loop."""
+        self.data = np.empty((n_records, 6), dtype=np.float64)
+        self._data_view = self.data
+        self._record_index = 0
+        self.record = 1
+
+    cdef finish_recording(self):
+        """Expose only coordinates written before tracking stopped."""
+        if self.data is not None and self._record_index != self.data.shape[0]:
+            self.data = self.data[:self._record_index].copy()
+            self._data_view = self.data
+
     cdef int symplectic_track(self, double[6] particle):
+        cdef Py_ssize_t i
+        cdef Py_ssize_t old_capacity
+        cdef np.ndarray new_data
         if self.record:
-            p = np.array([particle[0], particle[1], particle[2], particle[3], particle[4], particle[5]])
-            if self.data is None:
-                self.data = p
-            else:
-                self.data = np.vstack((self.data, p))
+            # prepare_recording() normally provides the exact capacity. Growing
+            # here keeps direct/internal uses safe without reintroducing an
+            # allocation and full copy for every recorded coordinate.
+            if self.data is None or self._record_index >= self.data.shape[0]:
+                old_capacity = 0 if self.data is None else self.data.shape[0]
+                new_data = np.empty((max(1, old_capacity * 2), 6), dtype=np.float64)
+                if old_capacity:
+                    new_data[:old_capacity] = self.data
+                self.data = new_data
+                self._data_view = self.data
+            for i in range(6):
+                self._data_view[self._record_index, i] = particle[i]
+            self._record_index += 1
         return 0
     
     cdef int radiation_track(self, double[6] particle):
@@ -164,6 +190,8 @@ cdef class Mark(Element):
     def clear(self):
         """clear the particle coordinate data."""
         self.data = None
+        self._data_view = None
+        self._record_index = 0
 
     cpdef copy(self):
         return Mark(self.name)

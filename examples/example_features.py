@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from simplestoragering.objectives import quantify_rdt_fluctuation
 import simplestoragering as ssr
 import numpy as np
-from example_lattice import generate_ring
+from example_lattice import generate_ring, generate_ring_6D
 import PyNAFF as pnf
 
 
@@ -214,6 +214,8 @@ if __name__ == '__main__':
     plt.xlabel('x [m]')
     plt.ylabel('px')
     plt.show()
+
+    ring = generate_ring_6D()
 
     DA3d = ssr.DynamicAperturePolyhedron(0.02, 10, 20, 1, 0.1,
                                          delta_list_m=np.linspace(-0.04, -0.1, 7), delta_list_p=np.linspace(0.02, 0.07, 6))

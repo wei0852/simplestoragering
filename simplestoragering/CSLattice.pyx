@@ -195,7 +195,7 @@ class CSLattice(object):
                     mv[i, 5] = (particle5[i] - particle0[i]) / precision
                 for i in range(4):
                     d[i] = particle0[i] - xco[i]
-                dco = np.linalg.inv(np.identity(4) - matrix[:4, :4]).dot(d)
+                dco = np.linalg.solve(np.identity(4) - matrix[:4, :4], d)
                 xco = xco + dco
                 resdl = sum(dco ** 2) ** 0.5
                 iter_times += 1
@@ -222,10 +222,10 @@ class CSLattice(object):
         # solve eta
         sub_matrix_x = matrix[0:2, 0:2]
         matrix_etax = np.array([matrix[0, 5], matrix[1, 5]])
-        self.initial_twiss[4:6] = np.linalg.inv(np.identity(2) - sub_matrix_x).dot(matrix_etax)
+        self.initial_twiss[4:6] = np.linalg.solve(np.identity(2) - sub_matrix_x, matrix_etax)
         sub_matrix_y = matrix[2:4, 2:4]
         matrix_etay = np.array([matrix[2, 5], matrix[3, 5]])
-        self.initial_twiss[6:8] = np.linalg.inv(np.identity(2) - sub_matrix_y).dot(matrix_etay)
+        self.initial_twiss[6:8] = np.linalg.solve(np.identity(2) - sub_matrix_y, matrix_etay)
 
     def set_initial_twiss(self, betax, alphax, betay, alphay, etax, etaxp, etay, etayp):
         """set_initial_twiss(betax, alphax, betay, alphay, etax, etaxp, etay, etayp)
@@ -802,7 +802,7 @@ class CSLattice(object):
                     mv[i, 3] = (particle4[i] - particle0[i]) / precision
                 for i in range(4):
                     d[i] = particle0[i] - xco[i]
-                dco = np.linalg.inv(np.identity(4) - matrix).dot(d)
+                dco = np.linalg.solve(np.identity(4) - matrix, d)
                 xco = xco + dco
                 resdl = sum(dco ** 2) ** 0.5
                 iter_times += 1

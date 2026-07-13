@@ -3,11 +3,39 @@
 from .exceptions import ParticleLost, Unstable
 from .c_functions cimport symplectic_track_ele, radiation_track_ele
 from .CSLattice import CSLattice
+from .components cimport Mark
 from .globalvars cimport refgamma, refbeta, refenergy, pi
 from .c_functions cimport next_twiss
 import numpy as np
 cimport numpy as np
 from libc.math cimport sin, acos, fabs
+
+
+cdef list _prepare_mark_recording(lattice, Py_ssize_t n_turns, bint record):
+    """Configure every Mark once, outside the element-by-element hot loop."""
+    cdef list marks = []
+    cdef Mark mark
+    cdef object mark_group
+    cdef Py_ssize_t n_records = n_turns * lattice.n_periods
+    if n_records < 0:
+        n_records = 0
+
+    for mark_group in lattice.mark.values():
+        for mark in mark_group:
+            marks.append(mark)
+            if record:
+                mark.prepare_recording(n_records)
+            else:
+                mark.clear()
+                mark.record = 0
+    return marks
+
+
+cdef void _finish_mark_recording(list marks, bint record):
+    cdef Mark mark
+    if record:
+        for mark in marks:
+            mark.finish_recording()
 
 
 cpdef symplectic_track(particle, lattice, n_turns: int, record = True):
@@ -20,22 +48,16 @@ cpdef symplectic_track(particle, lattice, n_turns: int, record = True):
     for i in range(6):
         p[i] = particle[i]
     if isinstance(lattice, CSLattice):
-        if record is True:
-            for k in lattice.mark:
-                for m in lattice.mark[k]:
-                    m.clear()
-                    m.record = 1
-        else:
-            for k in lattice.mark:
-                for m in lattice.mark[k]:
-                    m.clear()
-                    m.record = 0
-        for i in range(n_turns):
-            for j in range(lattice.n_periods):
-                for ele in lattice.elements:
-                    flag = symplectic_track_ele(ele, p)
-                    if flag == -1:
-                        raise ParticleLost(ele.s + lattice.length * i + lattice.length * j / lattice.n_periods)
+        marks = _prepare_mark_recording(lattice, n_turns, record is True)
+        try:
+            for i in range(n_turns):
+                for j in range(lattice.n_periods):
+                    for ele in lattice.elements:
+                        flag = symplectic_track_ele(ele, p)
+                        if flag == -1:
+                            raise ParticleLost(ele.s + lattice.length * i + lattice.length * j / lattice.n_periods)
+        finally:
+            _finish_mark_recording(marks, record is True)
     else:
         for i in range(n_turns):
             for ele in lattice:
@@ -50,24 +72,17 @@ cpdef radiation_track(particle, lattice, n_turns: int, record = True):
     for i in range(6):
         p[i] = particle[i]
     if isinstance(lattice, CSLattice):
-        assert lattice.n_periods == 1, 'track one turn.'
         lattice.RFCavity.enable = 1
-        if record is True:
-            for k in lattice.mark:
-                for m in lattice.mark[k]:
-                    m.clear()
-                    m.record = 1
-        else:
-            for k in lattice.mark:
-                for m in lattice.mark[k]:
-                    m.clear()
-                    m.record = 0
-        for i in range(n_turns):
-            for j in range(lattice.n_periods):
-                for ele in lattice.elements:
-                    flag = radiation_track_ele(ele, p)
-                    if flag == -1:
-                        raise ParticleLost(ele.s + lattice.length * i + lattice.length * j / lattice.n_periods)
+        marks = _prepare_mark_recording(lattice, n_turns, record is True)
+        try:
+            for i in range(n_turns):
+                for j in range(lattice.n_periods):
+                    for ele in lattice.elements:
+                        flag = radiation_track_ele(ele, p)
+                        if flag == -1:
+                            raise ParticleLost(ele.s + lattice.length * i + lattice.length * j / lattice.n_periods)
+        finally:
+            _finish_mark_recording(marks, record is True)
     else:
         for i in range(n_turns):
             for ele in lattice:
@@ -138,7 +153,7 @@ cpdef track_4d_closed_orbit(lattice: CSLattice, delta, verbose=True, matrix_prec
             mv[i, 4] = (particle5[i] - particle0[i]) / precision
         for i in range(4):
             d[i] = particle0[i] - xco[i]
-        dco = np.linalg.inv(np.identity(4) - matrix[:4, :4]).dot(d)
+        dco = np.linalg.solve(np.identity(4) - matrix[:4, :4], d)
         xco = xco + dco
         resdl = sum(dco ** 2) ** 0.5
         if verbose:
@@ -230,7 +245,7 @@ cpdef track_6d_closed_orbit(lattice: CSLattice, verbose=True, matrix_precision=1
             mv[i, 5] = (particle6[i] - particle0[i]) / precision
         for i in range(6):
             d[i] = particle0[i] - xco[i]
-        dco = np.linalg.inv(np.identity(6) - matrix).dot(d)
+        dco = np.linalg.solve(np.identity(6) - matrix, d)
         xco = xco + dco
         resdl = sum(dco ** 2) ** 0.5
         if verbose:

@@ -95,8 +95,12 @@ cdef class Element():
 cdef class Mark(Element):
     cdef public np.ndarray data
     cdef public bint record
+    cdef Py_ssize_t _record_index
+    cdef double[:, :] _data_view
     cpdef copy(self)
 
+    cdef prepare_recording(self, Py_ssize_t n_records)
+    cdef finish_recording(self)
     cdef int symplectic_track(self, double[6] particle)
     cdef int radiation_track(self, double[6] particle)
 
