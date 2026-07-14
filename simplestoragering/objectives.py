@@ -14,18 +14,23 @@ def quantify_rdt_fluctuation(rdt: DrivingTerms, w=0.01):
     The coefficient w can be estimated by action of particle at the anticipated DA,
     w ~ (2J_x)^0.5 = x / betax^0.5,  usually 0.01 is OK."""
     natural = rdt.natural_fluctuation()
+    l_diff = np.diff(rdt.s, prepend=0)
     f3rms = 0
     f4rms = 0
     for k in ['f2100', 'f3000', 'f1011', 'f1002', 'f1020']:
-        f3rms += np.average(natural[k] ** 2)  # ** 0.5 ** 2
+        f3rms += np.average(natural[k] ** 2, weights=l_diff)  # ** 0.5 ** 2
     f3rms = f3rms ** 0.5
     for k in ['f3100', 'f4000', 'f2011', 'f1120', 'f2002', 'f2020', 'f0031', 'f0040']:
-        f4rms += np.average(natural[k] ** 2)  # ** 0.5 ** 2
+        f4rms += np.average(natural[k] ** 2, weights=l_diff)  # ** 0.5 ** 2
     f4rms = f4rms ** 0.5
     if w == 0:
         return f3rms, f4rms
     else:
         return f3rms + f4rms * w
+
+
+def ring_averaged_rdt(rdt: DrivingTerms, w=0.01):
+    return quantify_rdt_fluctuation(rdt, w)
 
 
 def compute_h3ring(rdt: DrivingTerms):

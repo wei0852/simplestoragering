@@ -21,3 +21,4 @@ from .track import symplectic_track, track_4d_closed_orbit, track_6d_closed_orbi
 from .exceptions import ParticleLost, Unstable
 from .DynamicAperture import XYGrid, NLine, XDeltaGrid, LocalMomentumAperture, DynamicAperturePolyhedron, XDeltaLines
 from .Touschek_Piwinski import TouscheckLifetime
+from . import objectives
