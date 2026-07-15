@@ -328,7 +328,7 @@ def plot_RDTs_along_ring(lattice: CSLattice, RDT_type='f', show=True) -> dict[np
     betay = (betay[1:] + betay[:-1]) / 2
     psix  = ( psix[1:]  + psix[:-1]) / 2
     psiy  = ( psiy[1:]  + psiy[:-1]) / 2
-    rdts = compute_driving_terms(betax, betay, psix, psiy, k2l[:-1], k3l[:-1], period_phix, period_phiy, verbose=False)
+    rdts = compute_driving_terms(s[1:], betax, betay, psix, psiy, k2l[:-1], k3l[:-1], period_phix, period_phiy, verbose=False)
     if RDT_type == 'f':
         plot_data = rdts.natural_fluctuation()
         for k in plot_data:

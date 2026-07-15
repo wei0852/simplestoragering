@@ -468,6 +468,7 @@ class CSLattice(object):
         cdef complex h12000, h01110, h01200, h01010, h12000j, h01110j, h01200j, h01010j
         cdef complex h31000, h40000, h20110, h11200, h20020, h20200, h00310, h00400, h22000, h11110, h00220
         cdef np.ndarray[dtype=np.complex128_t] h22000s, h11110s, h00220s, h21000s, h30000s, h10110s, h10020s, h10200s, h31000s, h40000s, h20110s, h11200s, h20020s, h20200s, h00310s, h00400s
+        cdef np.ndarray[dtype=np.float64_t] s
 
         num_ele = len(self.elements)
         h21000s = np.zeros(num_ele, dtype='complex_')
@@ -486,6 +487,7 @@ class CSLattice(object):
         h20200s = np.zeros(num_ele, dtype='complex_')
         h00310s = np.zeros(num_ele, dtype='complex_')
         h00400s = np.zeros(num_ele, dtype='complex_')
+        s = np.zeros(num_ele)
         h21000 = h30000 = h10110 = h10020 = h10200 = 0
         h22000 = h11110 = h00220 = h31000 = h40000 = h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = 0
         geo_idx = 0  # k_i != 0, i >= 2
@@ -528,28 +530,31 @@ class CSLattice(object):
                 h00310 += jj * ((h10200 * h01110j - h01110 * rdts[4])
                                 +(h10110 * h01200j - h01200 * rdts[2])) + rdts[14]
                 h00400 += jj * (h10200 * h01200j - h01200 * rdts[4]) + rdts[15]
-                h22000s[geo_idx] = h22000
-                h11110s[geo_idx] = h11110
-                h00220s[geo_idx] = h00220
-                h31000s[geo_idx] = h31000
-                h40000s[geo_idx] = h40000
-                h20110s[geo_idx] = h20110
-                h11200s[geo_idx] = h11200
-                h20020s[geo_idx] = h20020
-                h20200s[geo_idx] = h20200
-                h00310s[geo_idx] = h00310
-                h00400s[geo_idx] = h00400
+
                 h21000 = h21000 + rdts[0]
                 h30000 = h30000 + rdts[1]
                 h10110 = h10110 + rdts[2]
                 h10020 = h10020 + rdts[3]
                 h10200 = h10200 + rdts[4]
-                h21000s[geo_idx] = h21000
-                h30000s[geo_idx] = h30000
-                h10110s[geo_idx] = h10110
-                h10020s[geo_idx] = h10020
-                h10200s[geo_idx] = h10200
-                geo_idx += 1
+
+            s[geo_idx] = ele.s + ele.length
+            h22000s[geo_idx] = h22000
+            h11110s[geo_idx] = h11110
+            h00220s[geo_idx] = h00220
+            h31000s[geo_idx] = h31000
+            h40000s[geo_idx] = h40000
+            h20110s[geo_idx] = h20110
+            h11200s[geo_idx] = h11200
+            h20020s[geo_idx] = h20020
+            h20200s[geo_idx] = h20200
+            h00310s[geo_idx] = h00310
+            h00400s[geo_idx] = h00400
+            h21000s[geo_idx] = h21000
+            h30000s[geo_idx] = h30000
+            h10110s[geo_idx] = h10110
+            h10020s[geo_idx] = h10020
+            h10200s[geo_idx] = h10200
+            geo_idx += 1
         
         phix = ele.psix
         phiy = ele.psiy
@@ -607,12 +612,12 @@ class CSLattice(object):
         n_periods = self.n_periods if n_periods is None else n_periods
         driving_terms = DrivingTerms(n_periods, phix, phiy,
                 f21000, f30000, f10110, f10020, f10200,
-                h22000, h11110, h00220, f31000, f40000, f20110, f11200, f20020, f20200, f00310, f00400, 
-                h21000s[:geo_idx], h30000s[:geo_idx], h10110s[:geo_idx], h10020s[:geo_idx],
-                h10200s[:geo_idx],
-                # h22000s[:geo_idx], h11110s[:geo_idx], h00220s[:geo_idx],
-                h31000s[:geo_idx], h40000s[:geo_idx], h20110s[:geo_idx], h11200s[:geo_idx],
-                h20020s[:geo_idx], h20200s[:geo_idx], h00310s[:geo_idx], h00400s[:geo_idx])
+                h22000, h11110, h00220, f31000, f40000, f20110, f11200, f20020, f20200, f00310, f00400, s, 
+                h21000s, h30000s, h10110s, h10020s,
+                h10200s,
+                # h22000s, h11110s, h00220s,
+                h31000s, h40000s, h20110s, h11200s,
+                h20020s, h20200s, h00310s, h00400s)
         if verbose:
             print(driving_terms)
         return driving_terms

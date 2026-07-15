@@ -26,7 +26,7 @@ class DrivingTerms(object):
 
     def __init__(self, n_periods, phix, phiy,
                  f21000, f30000, f10110, f10020, f10200,
-                 h22000, h11110, h00220, f31000, f40000, f20110, f11200, f20020, f20200, f00310, f00400,
+                 h22000, h11110, h00220, f31000, f40000, f20110, f11200, f20020, f20200, f00310, f00400, s,
                  h21000s, h30000s, h10110s, h10020s, h10200s,
                  h31000s, h40000s, h20110s, h11200s, h20020s, h20200s, h00310s, h00400s):
         self.n_periods = n_periods
@@ -48,6 +48,7 @@ class DrivingTerms(object):
         self.f20200 = f20200
         self.f00310 = f00310
         self.f00400 = f00400
+        self.s = s
         self.h21000s = h21000s
         self.h30000s = h30000s
         self.h10110s = h10110s
@@ -200,6 +201,8 @@ class DrivingTerms(object):
         h20200s = np.zeros(n_periods * geo_num, dtype='complex_')
         h00310s = np.zeros(n_periods * geo_num, dtype='complex_')
         h00400s = np.zeros(n_periods * geo_num, dtype='complex_')
+        s = np.zeros(n_periods * geo_num)
+        s[:geo_num] = self.s
         h21000s[: geo_num] = self.h21000s
         h30000s[: geo_num] = self.h30000s
         h10110s[: geo_num] = self.h10110s
@@ -215,6 +218,7 @@ class DrivingTerms(object):
         h00400s[: geo_num] = self.h00400s
         for j in range(n_periods - 1):
             i = j + 1
+            s[i * geo_num: (i + 1) * geo_num] = self.s + self.s[-1]*i
             h21000s[i * geo_num: (i + 1) * geo_num] = self.f21000 + (self.h21000s - self.f21000) * q21000 ** i
             h30000s[i * geo_num: (i + 1) * geo_num] = self.f30000 + (self.h30000s - self.f30000) * q30000 ** i
             h10110s[i * geo_num: (i + 1) * geo_num] = self.f10110 + (self.h10110s - self.f10110) * q10110 ** i
@@ -283,7 +287,7 @@ class DrivingTerms(object):
                                                                 (self.f10200 * h01200s - f01200 * self.h10200s) * jj - self.f00400) * q00400 ** i
                                     + (f01200 * (self.f10200 - self.h10200s) * q10200 ** i
                                     - (f01200 - h01200s) * self.f10200 * q01200 ** i) * jj)
-        return {'h2100': h21000s, 'h3000': h30000s, 'h1011': h10110s, 'h1002': h10020s,
+        return {'s': s, 'h2100': h21000s, 'h3000': h30000s, 'h1011': h10110s, 'h1002': h10020s,
                 'h1020': h10200s,
                 'h3100': h31000s, 'h4000': h40000s, 'h2011': h20110s, 'h1120': h11200s,
                 'h2002': h20020s, 'h2020': h20200s, 'h0031': h00310s, 'h0040': h00400s}
@@ -456,7 +460,7 @@ class DrivingTerms(object):
         f00310s = (self.h00310s - (self.f10200 * h01110s - f01110 * self.h10200s
                                 +self.f10110 * h01200s - f01200 * self.h10110s) * jj - self.f00310)
         f00400s = (self.h00400s - (self.f10200 * h01200s - f01200 * self.h10200s) * jj - self.f00400)
-        return {'f2100': np.abs(f21000s), 'f3000': np.abs(f30000s), 'f1011': np.abs(f10110s), 'f1002': np.abs(f10020s),
+        return {'s': self.s, 'f2100': np.abs(f21000s), 'f3000': np.abs(f30000s), 'f1011': np.abs(f10110s), 'f1002': np.abs(f10020s),
                 'f1020': np.abs(f10200s),
                 'f3100': np.abs(f31000s), 'f4000': np.abs(f40000s), 'f2011': np.abs(f20110s), 'f1120': np.abs(f11200s),
                 'f2002': np.abs(f20020s), 'f2020': np.abs(f20200s), 'f0031': np.abs(f00310s), 'f0040': np.abs(f00400s)}
@@ -478,7 +482,7 @@ class DrivingTerms(object):
         return text
 
 
-def compute_driving_terms(betax, betay, psix, psiy, k2l, k3l, period_phix, period_phiy, verbose=True):
+def compute_driving_terms(s, betax, betay, psix, psiy, k2l, k3l, period_phix, period_phiy, verbose=True):
     """compute driving terms using twiss parameters and magnet strengths.
     
     !!! Remember to use the average twiss parameters in the magnets."""
@@ -656,7 +660,7 @@ def compute_driving_terms(betax, betay, psix, psiy, k2l, k3l, period_phix, perio
     f00400 = h00400 / (1 - np.exp((4 * phiy) * jj ))
     driving_terms = DrivingTerms(1, phix, phiy,
             f21000, f30000, f10110, f10020, f10200,
-            h22000, h11110, h00220, f31000, f40000, f20110, f11200, f20020, f20200, f00310, f00400, 
+            h22000, h11110, h00220, f31000, f40000, f20110, f11200, f20020, f20200, f00310, f00400, s,
             h21000s, h30000s, h10110s, h10020s,
             h10200s,
             h31000s, h40000s, h20110s, h11200s,
