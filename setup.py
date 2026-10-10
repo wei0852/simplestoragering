@@ -1,4 +1,4 @@
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 from Cython.Build import cythonize
 import numpy as np
 
@@ -9,5 +9,5 @@ extensions = [
             include_dirs=[np.get_include(), './simplestoragering/atintegrators/'])]
 
 setup(
-    packages=['simplestoragering'],
+    packages=find_packages(include=['simplestoragering', 'simplestoragering.*']),
     ext_modules=cythonize(extensions))

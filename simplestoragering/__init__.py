@@ -15,10 +15,13 @@ from .RFCavity import RFCavity
 from .CSLattice import CSLattice
 from .DrivingTerms import DrivingTerms, compute_driving_terms
 from .plotlib import plot_lattice, plot_layout_in_ax, plot_with_background, get_col, plot_resonance_line_in_ax, plot_RDTs_along_ring, plot_rf_bucket
-from .functions import output_opa_file, output_elegant_file, chromaticity_correction, element_index, adjust_tunes, calculate_eta_from_alpha, track_alpha_c
+from .lattice_io import output_opa_file, output_elegant_file
+from .correction import chromaticity_correction, adjust_tunes
+from .longitudinal import calculate_eta_from_alpha, track_alpha_c
+from .lattice_utils import element_index
 from .line_matrix import line_matrix
 from .track import symplectic_track, track_4d_closed_orbit, track_6d_closed_orbit, radiation_track
 from .exceptions import ParticleLost, Unstable
-from .DynamicAperture import XYGrid, NLine, XDeltaGrid, LocalMomentumAperture, DynamicAperturePolyhedron, XDeltaLines
+from .find_aperture import XYGrid, NLine, XDeltaGrid, LocalMomentumAperture, DynamicAperturePolyhedron, XDeltaLines
 from .Touschek_Piwinski import TouscheckLifetime
 from . import objectives

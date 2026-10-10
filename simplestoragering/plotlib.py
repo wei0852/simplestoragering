@@ -13,7 +13,7 @@ from .components import Element
 from .CSLattice import CSLattice
 from .DrivingTerms import compute_driving_terms
 from .globalvars import refEnergy
-from .functions import track_alpha_c, calculate_eta_from_alpha
+from .longitudinal import track_alpha_c, calculate_eta_from_alpha
 import numpy as np
 
 
