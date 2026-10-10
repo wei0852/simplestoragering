@@ -6,7 +6,7 @@ from scipy.integrate import quad
 from scipy.special import iv  # Modified Bessel function of the first kind
 
 
-def TouscheckLifetime(E0, betax, betay, etax, etay, alphax, alphay, etaxp, etayp, dpm, dpp, ele_length, ring_length, Ib, emitx, emity, sigma_e, sigs):
+def TouschekLifetime(E0, betax, betay, etax, etay, alphax, alphay, etaxp, etayp, dpm, dpp, ele_length, ring_length, Ib, emitx, emity, sigma_e, sigs):
 
     e0 = physical_constants['elementary charge'][0]  # 1.60217646e-19 Coulomb
     r0 = physical_constants['classical electron radius'][0]  # 2.817940327e-15 m
