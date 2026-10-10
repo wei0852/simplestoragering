@@ -148,6 +148,10 @@ class CSLattice(object):
             self.tau_y = self.tau0 / self.Jy
             self.alpha = self.I1 * self.f_c / c  # momentum compaction factor
             self.etap = self.alpha - 1 / refgamma ** 2  # phase slip factor
+            if self.RFCavity is not None:
+                self.nuz = (self.RFCavity.voltage * self.RFCavity.f_rf * 2 * pi * fabs(cos(self.RFCavity.phase) * self.etap)
+                                    * self.length / refenergy / 299792458) ** 0.5 / 2 / pi
+                self.sigma_z = self.sigma_e * fabs(self.etap) * self.length / (2 * pi * self.nuz)
 
     def _the_periodic_solution(self, delta=0.0, use_track_matrix=False):
         """compute periodic solution and initialize twiss"""
@@ -913,7 +917,7 @@ class CSLattice(object):
         val += f'\n{str("xi_x ="):11} {self.xi_x:9.2f}'
         val += f'\n{str("xi_y ="):11} {self.xi_y:9.2f}'
         if self.sigma_z is not None:
-            val += ("\nnuz =       " + str(self.nuz))
-            val += ("\nsigma_z =   " + str(self.sigma_z))
+            val += f'\n{"nuz =":11} {self.nuz:9.4f}'
+            val += f'\n{"sigma_z =":11} {self.sigma_z:9.3e} m'
         return val
 
