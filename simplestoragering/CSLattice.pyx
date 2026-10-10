@@ -20,7 +20,7 @@ from libc.math cimport isnan, cos, sin, pow, sqrt, acos, fabs
 
 
 class CSLattice(object):
-    """CSLattice(ele_list: list[Elements], n_periods: int = 1, coupling: float = 0.00)
+    """CSLattice(ele_list: list, n_periods: int = 1)
     lattice object, solve by Courant-Snyder method.
 
     Attributes:
@@ -53,8 +53,8 @@ class CSLattice(object):
         output_twiss(file_name: str = u'twiss_data.txt')
     """
 
-    def __init__(self, ele_list: list, n_periods: int = 1, delta: float = 0):
-        self.delta = delta
+    def __init__(self, ele_list: list, n_periods: int = 1):
+        self.delta = 0.0
         self.length = 0
         self.n_periods = n_periods
         self.elements = []
@@ -393,7 +393,7 @@ class CSLattice(object):
         pi_nux = ele_list[current_ind-1].psix / 2
         pi_nuy = ele_list[current_ind-1].psiy / 2
         if sin(pi_nux) == 0 or sin(3 * pi_nux) == 0 or sin(pi_nux + 2 * pi_nuy) == 0 or sin(pi_nux - 2 * pi_nuy) == 0:
-            nonlinear_terms = {'Qxx': 1e60, 'Qxy': 1e60, 'Qyy': 1e60}
+            nonlinear_terms = {'dQxx': np.nan, 'dQxy': np.nan, 'dQyy': np.nan}
             if verbose:
                 print('\n on resonance line.')
             return nonlinear_terms

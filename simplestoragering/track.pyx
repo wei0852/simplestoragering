@@ -181,10 +181,9 @@ cpdef track_4d_closed_orbit(lattice: CSLattice, delta, verbose=True, matrix_prec
 
 cpdef track_6d_closed_orbit(lattice: CSLattice, verbose=True, matrix_precision=1e-9, resdl_limit=1e-12):
     """track_6d_closed_orbit(lattice: CSLattice, verbose=True, matrix_precision=1e-9, resdl_limit=1e-12)
-    4D track to compute closed orbit with energy deviation.
+    6D tracking to compute the closed orbit.
     
     Args:
-        delta: the momentum deviation.
         matrix_precision: the small deviation to calculate transfer matrix by tracking.
         resdl_limit: the limit to judge if the orbit is closed.
     
