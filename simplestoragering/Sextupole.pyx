@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
 # cython: profile=False
-from .components cimport Element, assin_twiss
+from .components cimport Element, assign_twiss
 from .globalvars cimport Cr, refgamma, refbeta
 from .Drift cimport drift_matrix
 from .exceptions import ParticleLost
@@ -49,7 +49,7 @@ cdef class Sextupole(Element):
         closed_orbit = self.closed_orbit
         for i in range(n_slices):
             ele = Sextupole(self.name, length, self.k2, self.k3, sub_slices, self.Ax, self.Ay)
-            assin_twiss(ele, twiss0)
+            assign_twiss(ele, twiss0)
             ele.closed_orbit = closed_orbit
             ele.s = current_s
             # drift_matrix(matrix, length)
@@ -230,7 +230,7 @@ cdef class Sextupole(Element):
         ele_slice = Sextupole(self.name, length, self.k2, self.k3, sub_slices, self.Ax, self.Ay)
         closed_orbit = self.closed_orbit
         for i in range(4):
-            assin_twiss(ele_slice, twiss0)
+            assign_twiss(ele_slice, twiss0)
             ele_slice.closed_orbit = closed_orbit
             xco = closed_orbit[0]
             track_matrix(ele_slice, matrix)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
 # cython: profile=False
-from .components cimport Element, assin_twiss
+from .components cimport Element, assign_twiss
 from .globalvars cimport Cr, refgamma, refbeta
 from .Drift cimport drift_matrix
 from .exceptions import ParticleLost
@@ -44,7 +44,7 @@ cdef class Octupole(Element):
         kick_slices = max(int(self.n_slices / n_slices), 1)
         for i in range(n_slices):
             ele = Octupole(self.name, length, self.k3, kick_slices, self.Ax, self.Ay)
-            assin_twiss(ele, twiss0)
+            assign_twiss(ele, twiss0)
             ele.s = current_s
             ele.closed_orbit = closed_orbit
             # drift_matrix(matrix, length)
@@ -143,7 +143,7 @@ cdef class Octupole(Element):
         ele_slice.n_slices = sub_slices
         closed_orbit = self.closed_orbit
         for i in range(4):
-            assin_twiss(ele_slice, twiss0)
+            assign_twiss(ele_slice, twiss0)
             ele_slice.closed_orbit = closed_orbit
             xco = closed_orbit[0]
             track_matrix(ele_slice, matrix)

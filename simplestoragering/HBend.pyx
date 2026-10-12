@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
-from .components cimport Element, assin_twiss
+from .components cimport Element, assign_twiss
 from .globalvars cimport Cr, pi, refbeta, refgamma
 from .c_functions cimport next_twiss, track_matrix
 from .exceptions import ParticleLost
@@ -427,7 +427,7 @@ cdef class HBend(Element):
         if n_slices == 1:
             ele = HBend(self.name, self.length, self.theta, self.theta_in, self.theta_out, self.k1, self.gap, self.fint_in, self.fint_out, self.n_slices, self.k2, self.k3, self.edge_method, self.Ax, self.Ay)
             ele.s = current_s
-            assin_twiss(ele, twiss0)
+            assign_twiss(ele, twiss0)
             return [ele]
         length = self.length / n_slices
         sub_slices = max(int(self.n_slices / n_slices), 1)
@@ -437,7 +437,7 @@ cdef class HBend(Element):
         ele.theta_out = 0.0
         ele.fint_out = 0.0
         ele.s = current_s
-        assin_twiss(ele, twiss0)
+        assign_twiss(ele, twiss0)
         track_matrix(ele, matrix)
         ele.closed_orbit = closed_orbit
         ele.symplectic_track(closed_orbit)        
@@ -456,7 +456,7 @@ cdef class HBend(Element):
             ele.fint_out = 0.0
             ele.closed_orbit = closed_orbit
             ele.s = current_s
-            assin_twiss(ele, twiss0)
+            assign_twiss(ele, twiss0)
             track_matrix(ele, matrix)
             ele.symplectic_track(closed_orbit)      
             next_twiss(matrix, twiss0, twiss1)
@@ -472,7 +472,7 @@ cdef class HBend(Element):
         ele.fint_in = 0.0
         ele.closed_orbit = closed_orbit
         ele.s = current_s
-        assin_twiss(ele, twiss0)
+        assign_twiss(ele, twiss0)
         ele_list.append(ele)
         return ele_list
 

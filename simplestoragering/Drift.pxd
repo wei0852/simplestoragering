@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
-from .components cimport Element, assin_twiss
+from .components cimport Element, assign_twiss
 from .exceptions import ParticleLost
 from .globalvars cimport refgamma, refbeta, refenergy
 from .c_functions cimport next_twiss

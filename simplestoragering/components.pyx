@@ -223,7 +223,7 @@ cdef class LineEnd(Element):
         return LineEnd(self.s, self.name)
 
 
-cdef assin_twiss(Element ele,double[12] twiss):
+cdef assign_twiss(Element ele,double[12] twiss):
     ele.betax = twiss[0]
     ele.alphax = twiss[1]
     ele.gammax = twiss[2]

@@ -1,4 +1,4 @@
-__all__ = ['TouscheckLifetime']
+__all__ = ['TouschekLifetime']
 
 import numpy as np
 from scipy.constants import physical_constants, speed_of_light

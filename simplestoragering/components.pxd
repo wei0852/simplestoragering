@@ -110,4 +110,4 @@ cdef class LineEnd(Element):
     cdef int symplectic_track(self, double[6] particle)
     cdef int radiation_track(self, double[6] particle)
 
-cdef assin_twiss(Element ele,double[12] twiss)
+cdef assign_twiss(Element ele,double[12] twiss)

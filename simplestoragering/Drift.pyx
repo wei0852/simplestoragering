@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
-from .components cimport Element, assin_twiss
+from .components cimport Element, assign_twiss
 from .globalvars cimport refgamma, refbeta, refenergy
 from .c_functions cimport next_twiss, track_matrix
 import numpy as np
@@ -38,7 +38,7 @@ cdef class Drift(Element):
         for i in range(n_slices):
             ele = Drift(self.name, length, self.Ax, self.Ay)
             ele.s = current_s
-            assin_twiss(ele, twiss0)
+            assign_twiss(ele, twiss0)
             ele.closed_orbit = closed_orbit
             track_matrix(ele, matrix)
             ele.symplectic_track(closed_orbit)
