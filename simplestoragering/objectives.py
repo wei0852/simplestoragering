@@ -82,7 +82,7 @@ def theoretical_minimum_f3rms(ring, variable_sextupole_name_list,
                        chromaticity_sextupole_name_list,
                        corrected_chromaticity=None, n_samples=None,
                        use_tracked_ksi=True, update_k2=False):
-    """Estimate the theoretical minimum of f3rms squared by quadratic fitting.
+    """Estimate the theoretical minimum of f3rms by fitting its square.
 
     Args:
         ring: Ring whose on-momentum optics are used for the RDT calculation.
@@ -100,7 +100,7 @@ def theoretical_minimum_f3rms(ring, variable_sextupole_name_list,
             chromaticity to the same target. Defaults to False.
 
     Returns:
-        (minimum_f3rms_squared, k2_values) from the fitted quadratic form, with
+        (minimum_f3rms, k2_values) from the fitted quadratic form, with
         one absolute sextupole strength per variable group in input order.
         f3rms uses the length weighting in ring_averaged_rdt_metrics(). The
         returned value is a model prediction, not a new evaluation of the ring.
@@ -119,7 +119,7 @@ def theoretical_minimum_f3rms(ring, variable_sextupole_name_list,
     sextupole strengths are restored and linear optics are refreshed on exit.
     Failures during sampling or application restore the original strengths.
     """
-    from .QuadraticFitter import QuadraticFunctionFitter
+    from .QuadraticFunctionFitter import QuadraticFunctionFitter
     from .correction import chromaticity_correction
     from .lattice_utils import element_index
 

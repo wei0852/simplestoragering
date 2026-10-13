@@ -4,13 +4,13 @@ import numpy as np
 import pytest
 
 import simplestoragering as ssr
-from simplestoragering.QuadraticFitter import QuadraticForm, QuadraticFunctionFitter
+from simplestoragering.QuadraticFunctionFitter import QuadraticForm, QuadraticFunctionFitter
 
 
 def test_public_exports():
-    assert ssr.QuadraticForm is QuadraticForm
+    assert not hasattr(ssr, 'QuadraticForm')
     assert ssr.QuadraticFunctionFitter is QuadraticFunctionFitter
-    assert 'QuadraticForm' in ssr.__all__
+    assert 'QuadraticForm' not in ssr.__all__
     assert 'QuadraticFunctionFitter' in ssr.__all__
 
 

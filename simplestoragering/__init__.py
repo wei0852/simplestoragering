@@ -14,7 +14,7 @@ from .Octupole import Octupole
 from .RFCavity import RFCavity
 from .CSLattice import CSLattice
 from .DrivingTerms import DrivingTerms, compute_driving_terms
-from .QuadraticFitter import QuadraticForm, QuadraticFunctionFitter
+from .QuadraticFunctionFitter import QuadraticFunctionFitter
 from .plotlib import plot_lattice, plot_layout_in_ax, plot_with_background, get_col, plot_resonance_line_in_ax, plot_RDTs_along_ring, plot_rf_bucket
 from .lattice_io import output_opa_file, output_elegant_file
 from .correction import chromaticity_correction, adjust_tunes
@@ -41,7 +41,6 @@ __all__ = [
     'CSLattice',
     'DrivingTerms',
     'compute_driving_terms',
-    'QuadraticForm',
     'QuadraticFunctionFitter',
     'plot_lattice',
     'plot_layout_in_ax',

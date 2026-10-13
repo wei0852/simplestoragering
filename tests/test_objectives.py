@@ -66,7 +66,7 @@ def quadratic_objective_ring(monkeypatch):
 def test_theoretical_minimum_f3rms_absolute_strengths_and_restore(
         quadratic_objective_ring, monkeypatch, n, n_samples,
         corrected_chromaticity, update_k2):
-    from simplestoragering.QuadraticFitter import QuadraticFunctionFitter
+    from simplestoragering.QuadraticFunctionFitter import QuadraticFunctionFitter
 
     ring = quadratic_objective_ring
     original = [ele.k2 for ele in ring.elements]
@@ -106,7 +106,7 @@ def test_theoretical_minimum_f3rms_absolute_strengths_and_restore(
         use_tracked_ksi=False, update_k2=update_k2)
     assert len(ring.calls) == (n_samples or (n + 1) * (n + 2) // 2 + 10)
     assert methods == ['lhs' if n == 4 else 'uniform']
-    assert value == pytest.approx(2., abs=1e-7)
+    assert value == pytest.approx(np.sqrt(2.), abs=1e-7)
     expected = [-22., 32.] + ([0.25, 90.] if n == 4 else [])
     np.testing.assert_allclose(strengths, expected, atol=1e-7)
     if update_k2:
@@ -190,7 +190,7 @@ def test_theoretical_minimum_restores_on_failure_to_apply(quadratic_objective_ri
     else:
         value, strengths = ssr.theoretical_minimum_f3rms(
             ring, ['SDa'], ['C1', 'C2'], n_samples=8)
-        assert value == pytest.approx(2.)
+        assert value == pytest.approx(np.sqrt(2.))
         np.testing.assert_allclose(strengths, [-14.])
         assert len(calls) == 8
     assert [ele.k2 for ele in ring.elements] == original
