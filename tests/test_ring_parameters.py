@@ -1,6 +1,5 @@
 import numpy as np
 import simplestoragering as ssr
-import PyNAFF as pnf
 import random
 
 

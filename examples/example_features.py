@@ -3,7 +3,7 @@ from simplestoragering.objectives import quantify_rdt_fluctuation
 import simplestoragering as ssr
 import numpy as np
 from example_lattice import generate_ring, generate_ring_6D
-import PyNAFF as pnf
+import nafflib
 
 
 def track_tunes(ring, xin):
@@ -11,17 +11,14 @@ def track_tunes(ring, xin):
     ssr.symplectic_track(xin, ring2, 1027)
     trajectory = ring2.mark['ss'][0].data
 
-    pnf_in = trajectory[:, 0] - np.mean(trajectory[:, 0])
-    pnf_out = pnf.naff(pnf_in, turns=1026, )
     try:
-        nux = pnf_out[0, 1]
-    except Exception as e:
-        # print(e)
+        nux = nafflib.tune(trajectory[:, 0] - np.mean(trajectory[:, 0]),
+                           trajectory[:, 1] - np.mean(trajectory[:, 1])) % 1
+    except Exception:
         nux = np.nan
-    pnf_in = trajectory[:, 2] - np.mean(trajectory[:, 2])
     try:
-        pnf_out = pnf.naff(pnf_in, turns=1026, )
-        nuy = pnf_out[0, 1]
+        nuy = nafflib.tune(trajectory[:, 2] - np.mean(trajectory[:, 2]),
+                           trajectory[:, 3] - np.mean(trajectory[:, 3])) % 1
     except Exception:
         nuy = np.nan
     return nux, nuy

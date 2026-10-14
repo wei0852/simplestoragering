@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from example_features import generate_ring
 import simplestoragering as ssr
-import PyNAFF as pnf
+import nafflib
 
 
 def Bend_slices(length, ring):
@@ -42,17 +42,15 @@ def Sext_slices(length, ring):
 
 
 def frequency_analysis(trajectory):
-    pnf_in = trajectory[:, 0] - np.average(trajectory[:, 0])
-    pnf_out = pnf.naff(pnf_in, turns=516, )
     try:
-        nux = pnf_out[0, 1]
+        nux = nafflib.tune(trajectory[:, 0] - np.mean(trajectory[:, 0]),
+                           trajectory[:, 1] - np.mean(trajectory[:, 1])) % 1
     except Exception as e:
         print(e)
         nux = np.nan
-    pnf_in = trajectory[:, 2] - np.average(trajectory[:, 2])
     try:
-        pnf_out = pnf.naff(pnf_in, turns=516, )
-        nuy = pnf_out[0, 1]
+        nuy = nafflib.tune(trajectory[:, 2] - np.mean(trajectory[:, 2]),
+                           trajectory[:, 3] - np.mean(trajectory[:, 3])) % 1
     except Exception:
         nuy = np.nan
     return nux, nuy
