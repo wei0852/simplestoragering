@@ -64,6 +64,9 @@ class CSLattice(object):
         self.abs_angle = 0
         current_s = 0
         for oe in ele_list:
+            if isinstance(oe, LineEnd):
+                # LineEnd is appended internally at the end of the lattice.
+                continue
             ele = oe.copy()
             ele.s = current_s
             if isinstance(ele, Mark):
@@ -884,7 +887,7 @@ class CSLattice(object):
 
     def __mul__(self, other):
         assert isinstance(other, int), 'can only multiply int.'
-        newlattice = CSLattice(self.elements[:-1] * other)
+        newlattice = CSLattice(self.elements * other)
         return newlattice
         
     def __str__(self):

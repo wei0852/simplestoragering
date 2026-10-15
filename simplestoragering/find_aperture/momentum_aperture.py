@@ -45,7 +45,7 @@ class LocalMomentumAperture(object):
             ele_slices = lattice.slice_elements(ds['Drift'], ds['HBend'], ds['Quadrupole'], ds['Sextupole'], ds['Octupole'])
         else:
             raise Exception("ds: float or a dictionary {'Drift': float, 'HBend': float, 'Quadrupole': float, 'Sextupole': float, 'Octupole': float}")
-        self.newlattice = CSLattice(ele_slices[:-1])
+        self.newlattice = CSLattice(ele_slices)
         self.newlattice.linear_optics()
         self.n_periods = lattice.n_periods
         self.delta_negative_start=delta_negative_start
