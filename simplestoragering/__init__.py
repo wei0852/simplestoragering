@@ -24,6 +24,7 @@ from .line_matrix import line_matrix
 from .track import symplectic_track, track_4d_closed_orbit, track_6d_closed_orbit, radiation_track
 from .exceptions import ParticleLost, Unstable
 from .find_aperture import XYGrid, NLine, XDeltaGrid, LocalMomentumAperture, DynamicAperturePolyhedron, XDeltaLines
+from .tune import TuneScan, tune_analysis, tune_shift, tune_shift_with_x, tune_shift_with_y, tune_shift_with_delta, tune_shift_with_amplitude
 from .Touschek_Piwinski import TouschekLifetime
 from . import objectives
 
@@ -69,6 +70,13 @@ __all__ = [
     'LocalMomentumAperture',
     'DynamicAperturePolyhedron',
     'XDeltaLines',
+    'TuneScan',
+    'tune_analysis',
+    'tune_shift',
+    'tune_shift_with_x',
+    'tune_shift_with_y',
+    'tune_shift_with_delta',
+    'tune_shift_with_amplitude',
     'TouschekLifetime',
     'objectives',
     'RDTMetrics',
