@@ -126,8 +126,12 @@ class CSLattice(object):
         calculate optical functions and storage ring parameters.
 
         periodicity: if True, the periodic solution will be the initial twiss data. Otherwise initial twiss should be set by CSLattice.set_initial_twiss(betax, alphax, betay, alphay, etax, etaxp, etay, etayp)
-        line_mode: if True, the storage ring parameters such as emittance and damping time are not calculated."""
+        line_mode: if True, the storage ring parameters such as emittance and damping time are not calculated.
 
+        The momentum deviation is reset to 0 (on-momentum)."""
+
+        # linear_optics() computes the on-momentum solution.
+        self.delta = 0.0
         if periodicity:
             self._the_periodic_solution()
         else:

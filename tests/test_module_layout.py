@@ -15,6 +15,7 @@ import simplestoragering as ssr
     ("find_aperture.dynamic_aperture", ["XDeltaLines", "XDeltaGrid", "XYGrid", "NLine"]),
     ("find_aperture.momentum_aperture", ["LocalMomentumAperture", "DynamicAperturePolyhedron"]),
     ("tune", ["tune_analysis", "tune_shift", "TuneScan"]),
+    ("normal_form", ["NormalForm", "compute_normal_form"]),
 ])
 def test_public_imports_resolve_to_implementation(module, names):
     implementation = importlib.import_module("simplestoragering." + module)

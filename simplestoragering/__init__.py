@@ -26,6 +26,7 @@ from .exceptions import ParticleLost, Unstable
 from .find_aperture import XYGrid, NLine, XDeltaGrid, LocalMomentumAperture, DynamicAperturePolyhedron, XDeltaLines
 from .tune import TuneScan, tune_analysis, tune_shift, tune_shift_with_x, tune_shift_with_y, tune_shift_with_delta, tune_shift_with_amplitude
 from .Touschek_Piwinski import TouschekLifetime
+from .normal_form import NormalForm, compute_normal_form
 from . import objectives
 
 from .objectives import RDTMetrics, ring_averaged_rdt_metrics, theoretical_minimum_f3rms
@@ -78,6 +79,8 @@ __all__ = [
     'tune_shift_with_delta',
     'tune_shift_with_amplitude',
     'TouschekLifetime',
+    'NormalForm',
+    'compute_normal_form',
     'objectives',
     'RDTMetrics',
     'ring_averaged_rdt_metrics',

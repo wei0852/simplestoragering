@@ -3,6 +3,16 @@ import simplestoragering as ssr
 import random
 
 
+def test_linear_optics_resets_delta(HOA7BA):
+    ring = HOA7BA
+    ring.off_momentum_optics(1e-3)
+    assert ring.delta == 1e-3
+
+    ring.linear_optics()
+    assert ring.delta == 0.0
+    assert ring.I1 is not None
+
+
 def test_tunes(HOA7BA):
     OPA_data = {'nux': 43.299440, 'nuy': 16.298506}
     ELEGANT_data = {'nux': 4.329944e+01, 'nuy': 1.629850e+01}
