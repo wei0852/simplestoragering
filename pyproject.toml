@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simplestoragering"
-version = "0.1.1"
+version = "0.1.2"
 authors = [
   { name="Bingfeng WEI", email="wbf2016@mail.ustc.edu.cn" },
 ]
@@ -47,4 +47,4 @@ archs = ["x86_64"]
 archs = ["AMD64"]
 
 [tool.cibuildwheel.macos]
-archs = ["x86_64", "arm64"]
+archs = ["arm64"]
