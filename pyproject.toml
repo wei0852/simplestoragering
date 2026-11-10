@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools >= 61.0", "wheel", "Cython", "numpy>=1.18,<2"]
+requires = ["setuptools >= 61.0", "wheel", "Cython", "numpy>=2.0,<3"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -12,7 +12,7 @@ description = "simple storage ring for single particle dynamics simulation."
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-  "numpy>=1.18,<2",
+  "numpy>=1.25,<3",
   "matplotlib>3.4.0",
   "nafflib>=2.0; python_version >= '3.10'",
   "scipy",
@@ -24,6 +24,11 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Cython",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 [project.urls]
@@ -36,7 +41,7 @@ testpaths = ["tests"]
 pythonpath = ["."]
 
 [tool.cibuildwheel]
-build = "cp39-* cp310-* cp311-* cp312-*"
+build = "cp39-* cp310-* cp311-* cp312-* cp313-*"
 skip = "*-musllinux_*"
 test-command = "python -c \"import simplestoragering as ssr; print(ssr.__name__)\""
 
