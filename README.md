@@ -47,7 +47,7 @@ A storage ring consists of many magnets to guide electron beam,
 $k_n = \dfrac{q}{P_0} \dfrac{\partial^n B_y}{\partial x^n}$. All the components are child classes of the Element class. 
 
 ### Courant-Snyder lattice
-`CSLattice(ele_list: list[Element], n_periods: int)`, lattice solved by C-S method.
+`CSLattice(ele_list: list[Element], n_periods: int, name: str = 'ring')`, lattice solved by C-S method. `name` is used as the default file name when exporting the lattice.
 
 ## Functions
 

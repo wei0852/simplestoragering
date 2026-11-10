@@ -5,9 +5,10 @@ from ..Octupole import Octupole
 from ..CSLattice import CSLattice
 
 def output_opa_file(lattice: CSLattice, file_name=None):
-    """output .opa file for OPA (https://ados.web.psi.ch/opa/), the suffix '.opa' will be added to the end of the file name."""
+    """output .opa file for OPA (https://ados.web.psi.ch/opa/), the suffix '.opa' will be added to the end of the file name.
+    If file_name is None, the lattice name will be used as the file name."""
 
-    file_name = 'output_opa.opa' if file_name is None else file_name + '.opa'
+    file_name = f'{lattice.name}.opa' if file_name is None else file_name + '.opa'
     with open(file_name, 'w') as file:
         file.write(f'energy = {refEnergy() / 1000: 6f};\r\n')
         file.write('\r\n\r\n{------ table of elements -----------------------------}\r\n\r\n')

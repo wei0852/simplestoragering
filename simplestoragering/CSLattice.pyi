@@ -30,6 +30,7 @@ class CSLattice(object):
     alpha: float  # momentum compaction factor
     etap: float  # phase slip factor
 
+    name: str
     delta: float
     length: float
     n_periods: int
@@ -41,7 +42,7 @@ class CSLattice(object):
 
     initial_twiss: np.ndarray  # betax, alphax, betay, alphay, etax, etaxp, etay, etayp
 
-    def __init__(self, ele_list: list[Element], n_periods: int = 1, delta: float = 0) -> None:...
+    def __init__(self, ele_list: list[Element], n_periods: int = 1, name: str = 'ring') -> None:...
 
     def linear_optics(self, periodicity=True, line_mode=False) -> None:...
 

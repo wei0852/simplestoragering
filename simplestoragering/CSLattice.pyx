@@ -20,10 +20,11 @@ from libc.math cimport isnan, cos, sin, pow, sqrt, acos, fabs
 
 
 class CSLattice(object):
-    """CSLattice(ele_list: list, n_periods: int = 1)
+    """CSLattice(ele_list: list, n_periods: int = 1, name: str = 'ring')
     lattice object, solve by Courant-Snyder method.
 
     Attributes:
+        name: str, name of the lattice, also used as the default exported file name.
         length: float.
         n_periods: int, number of periods.
         angle, abs_angle: float.
@@ -53,7 +54,8 @@ class CSLattice(object):
         output_twiss(file_name: str = u'twiss_data.txt')
     """
 
-    def __init__(self, ele_list: list, n_periods: int = 1):
+    def __init__(self, ele_list: list, n_periods: int = 1, name: str = 'ring'):
+        self.name = name
         self.delta = 0.0
         self.length = 0
         self.n_periods = n_periods
@@ -891,7 +893,7 @@ class CSLattice(object):
 
     def __mul__(self, other):
         assert isinstance(other, int), 'can only multiply int.'
-        newlattice = CSLattice(self.elements * other)
+        newlattice = CSLattice(self.elements * other, name=self.name)
         return newlattice
         
     def __str__(self):

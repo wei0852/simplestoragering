@@ -42,3 +42,16 @@ def test_element_index_groups_repeated_names():
     indices = ssr.element_index(ring)
     assert indices["A"] == [0, 2]
     assert indices["B"] == [1]
+
+
+def test_lattice_name_is_used_for_default_export_file_names(tmp_path, monkeypatch):
+    ssr.set_ref_energy(2200)
+    ring = ssr.CSLattice([ssr.Drift("D", length=1, Ax=0.001, Ay=0.001)], name="test_ring")
+    assert ring.name == "test_ring"
+    assert (ring * 2).name == "test_ring"
+
+    monkeypatch.chdir(tmp_path)
+    ssr.output_opa_file(ring)
+    ssr.output_elegant_file(ring)
+    assert (tmp_path / "test_ring.opa").is_file()
+    assert (tmp_path / "test_ring.lte").is_file()

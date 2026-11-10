@@ -5,10 +5,11 @@ from ..CSLattice import CSLattice
 def output_elegant_file(lattice: CSLattice, filename=None, new_version=True):
     """output .lte file for ELEGANT (https://ops.aps.anl.gov/manuals/elegant_latest/elegant.html)
     the suffix '.lte' will be added to the end of the file name.
+    If filename is None, the lattice name will be used as the file name.
     If new_version (after ELEGANT 2021.1), use N_SLICES parameter, else use N_KICKS.
     """
 
-    filename = 'output_lte.lte' if filename is None else filename + '.lte'
+    filename = f'{lattice.name}.lte' if filename is None else filename + '.lte'
     with open(filename, 'w') as file:
         file.write(f'! output from python code at {time.strftime("%m.%d,%H:%M")}\n')
         file.write(f'\n!------------- table of elements ----------------\n\n')
