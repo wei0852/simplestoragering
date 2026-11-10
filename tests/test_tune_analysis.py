@@ -96,6 +96,113 @@ def test_tune_shift_with_amplitude_replaces_zero():
     assert scan.nux[0] == pytest.approx(ring.nux % 1, abs=1e-3)
 
 
+def test_tune_shift_fixed_offsets_match_explicit_initial():
+    ring = generate_ring()
+    ring.linear_optics()
+    with_offset = ssr.tune_shift_with_delta(ring, delta_list=[0.002], x=1e-4,
+                                            y=2e-4, n_turns=512)
+    explicit = ssr.tune_shift(ring, [0.002], 5,
+                              initial=[1e-4, 0, 2e-4, 0, 0, 0],
+                              n_turns=512)
+    assert with_offset.nux[0] == pytest.approx(explicit.nux[0], abs=1e-12)
+    assert with_offset.nuy[0] == pytest.approx(explicit.nuy[0], abs=1e-12)
+
+
+def test_tune_shift_fixed_action_offset_matches_coordinates():
+    ring = generate_ring()
+    ring.linear_optics()
+    J = 1e-9
+    beta, alpha = ring.elements[0].betax, ring.elements[0].alphax
+    amplitude = np.sqrt(2 * J * beta)
+    angle = -alpha * np.sqrt(2 * J / beta)
+    with_action = ssr.tune_shift_with_delta(ring, [0.0], Jx=J, n_turns=512)
+    with_coords = ssr.tune_shift_with_delta(ring, [0.0], x=amplitude,
+                                            px=angle, n_turns=512)
+    assert with_action.nux[0] == pytest.approx(with_coords.nux[0], abs=1e-12)
+    assert with_action.nuy[0] == pytest.approx(with_coords.nuy[0], abs=1e-12)
+
+
+def test_tune_shift_fixed_offset_changes_tune():
+    ring = generate_ring()
+    ring.linear_optics()
+    base = ssr.tune_shift_with_x(ring, x_list=[1e-4], n_turns=512)
+    shifted = ssr.tune_shift_with_x(ring, x_list=[1e-4], delta=0.005,
+                                    n_turns=512)
+    assert np.isfinite(shifted.nux[0])
+    assert shifted.nux[0] != pytest.approx(base.nux[0], abs=1e-5)
+
+
+def test_tune_shift_with_amplitude_fixed_offsets():
+    ring = generate_ring()
+    ring.linear_optics()
+    J = 1e-10
+    delta = 0.005
+    ring.off_momentum_optics(delta)
+    co = np.array(ring.elements[0].closed_orbit[:4])
+    beta, alpha = ring.elements[0].betax, ring.elements[0].alphax
+    scan = ssr.tune_shift_with_amplitude(ring, J_list=[J], plane='x',
+                                         delta=delta, n_turns=512)
+    explicit = ssr.tune_shift(
+        ring, [delta], 5,
+        initial=[co[0] + np.sqrt(2 * J * beta),
+                 co[1] - alpha * np.sqrt(2 * J / beta),
+                 1e-6, 0, 0, 0],
+        n_turns=512)
+    assert scan.nux[0] == pytest.approx(explicit.nux[0], abs=1e-12)
+    assert scan.nuy[0] == pytest.approx(explicit.nuy[0], abs=1e-12)
+
+
+@pytest.mark.parametrize('delta', [0.005, -0.01])
+def test_tune_shift_with_delta_fixed_action_uses_closed_orbit(delta):
+    ring = generate_ring()
+    ring.linear_optics()
+    J = 1e-9
+    ring.off_momentum_optics(delta)
+    co = np.array(ring.elements[0].closed_orbit[:4])
+    beta, alpha = ring.elements[0].betax, ring.elements[0].alphax
+    with_action = ssr.tune_shift_with_delta(ring, [delta], Jx=J, n_turns=512)
+    explicit = ssr.tune_shift(
+        ring, [delta], 5,
+        initial=[co[0] + np.sqrt(2 * J * beta),
+                 co[1] - alpha * np.sqrt(2 * J / beta),
+                 1e-6, 0, 0, 0],
+        n_turns=512)
+    assert with_action.nux[0] == pytest.approx(explicit.nux[0], abs=1e-12)
+    assert with_action.nuy[0] == pytest.approx(explicit.nuy[0], abs=1e-12)
+
+
+def test_tune_shift_action_offset_does_not_touch_input_ring_optics():
+    ring = generate_ring()
+    ring.linear_optics()
+    delta = ring.delta
+    betax = ring.elements[0].betax
+    ssr.tune_shift_with_x(ring, [1e-4], delta=0.005, Jy=1e-9, n_turns=256)
+    assert ring.delta == delta
+    assert ring.elements[0].betax == betax
+    assert ring.Jx is not None
+
+
+def test_tune_shift_rejects_fixed_offset_on_scanned_coordinate():
+    ring = generate_ring()
+    ring.linear_optics()
+    with pytest.raises(ValueError):
+        ssr.tune_shift_with_x(ring, [1e-4], x=1e-4, n_turns=64)
+    with pytest.raises(ValueError):
+        ssr.tune_shift_with_x(ring, [1e-4], Jx=1e-9, n_turns=64)
+    with pytest.raises(ValueError):
+        ssr.tune_shift_with_amplitude(ring, [1e-10], plane='x', Jx=1e-9,
+                                      n_turns=64)
+
+
+def test_tune_shift_rejects_conflicting_action_offsets():
+    ring = generate_ring()
+    ring.linear_optics()
+    with pytest.raises(ValueError):
+        ssr.tune_shift_with_delta(ring, [0.0], Jx=1e-9, x=1e-4, n_turns=64)
+    with pytest.raises(ValueError):
+        ssr.tune_shift_with_delta(ring, [0.0], Jy=1e-9, py=1e-4, n_turns=64)
+
+
 def test_tune_scan_save(tmp_path):
     ring = generate_ring()
     ring.linear_optics()
