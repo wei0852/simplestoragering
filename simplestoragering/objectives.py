@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from typing import Union
 import numpy as np
 from .DrivingTerms import DrivingTerms
+from .exceptions import ParticleLost
+from .track import radiation_track, symplectic_track
 
 
 def quantify_rdt_fluctuation(rdt: DrivingTerms, w: float = 0.01) -> Union[float, tuple[float, float]]:
@@ -211,3 +213,56 @@ def theoretical_minimum_f3rms(ring, variable_sextupole_name_list,
             for i, k2 in initial_k2.items():
                 ring.elements[i].k2 = k2
             ring.linear_optics()
+
+
+def horizontal_line_search(ring, y, x0, xmax, nx: int, n_turn: int, delta=0.0, radiation=True):
+    """Find the horizontal survival limit between x0 and xmax.
+
+    Particles with initial coordinates [x, 0, y, 0, 0, delta] are tracked on a
+    coarse grid of nx steps from x0 towards xmax. The first tracked point is
+    x0 + dx, so x0 itself is assumed to be inside the aperture. When a particle
+    is lost, the last surviving interval is refined with 10 smaller steps.
+
+    Args:
+        ring: Lattice to track through.
+        y: Vertical amplitude in meters.
+        x0: Starting horizontal amplitude in meters.
+        xmax: Ending horizontal amplitude in meters. It may be smaller than x0,
+            in which case the search runs in the negative direction.
+        nx: Number of coarse steps from x0 to xmax.
+        n_turn: Number of turns tracked for each trial.
+        delta: Momentum deviation.
+        radiation: If True, use radiation tracking; otherwise use symplectic
+            tracking. Defaults to True.
+
+    Returns:
+        The largest tested horizontal amplitude that survived, in meters. If
+        all coarse points survive, this is xmax.
+
+    Raises:
+        ValueError: If nx is not a positive integer.
+    """
+
+    track = radiation_track if radiation else symplectic_track
+    dx = (xmax - x0) / nx
+    x_survive = x0
+    lost = False
+    for _ in range(nx):
+        try:
+            track([x_survive + dx, 0, y, 0, 0, delta], ring, n_turn, record=False)
+        except ParticleLost:
+            lost = True
+            break
+        x_survive += dx
+    if not lost:
+        return xmax
+
+    dx = dx / 10
+    for _ in range(10):
+        try:
+            track([x_survive + dx, 0, y, 0, 0, delta], ring, n_turn, record=False)
+        except ParticleLost:
+            break
+        x_survive += dx
+    return x_survive
+
