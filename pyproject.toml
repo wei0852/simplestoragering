@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simplestoragering"
-version = "0.1.2"
+version = "0.2.1"
 authors = [
-  { name="Bingfeng WEI", email="wbf2016@mail.ustc.edu.cn" },
+  { name="Bingfeng WEI", email="weibf@ustc.edu.cn" },
 ]
 description = "simple storage ring for single particle dynamics simulation."
 readme = "README.md"
