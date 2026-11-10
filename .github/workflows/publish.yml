@@ -34,7 +34,7 @@ jobs:
             os: windows-latest
             cibw_archs: AMD64
           - name: macOS arm64
-            os: macos-14
+            os: macos-15
             cibw_archs: arm64
 
     steps:
