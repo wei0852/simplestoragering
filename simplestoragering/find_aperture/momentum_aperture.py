@@ -23,7 +23,6 @@ class LocalMomentumAperture(object):
         delta_step = 0.01,
         n_splits: int = 1,
         split_fraction=0.5,
-        verbose=True, print details.
         initial_x=1e-6,
         initial_y=1e-6.
 
@@ -35,7 +34,7 @@ class LocalMomentumAperture(object):
 
     def __init__(self, lattice: CSLattice, ds=None,
             delta_negative_start=0, delta_positive_start=0, delta_negative_limit=-0.1, delta_positive_limit=0.1, delta_step=0.01,
-            n_splits=1, split_fraction=0.5, verbose=True, initial_x=1e-6, initial_y=1e-6):
+            n_splits=1, split_fraction=0.5, initial_x=1e-6, initial_y=1e-6):
         if ds is None:
             ds = 0.1
             ele_slices = lattice.slice_elements(ds, ds, ds, ds, ds)
@@ -57,13 +56,20 @@ class LocalMomentumAperture(object):
         self.delta_step=delta_step
         self.n_splits=n_splits
         self.split_fraction=split_fraction
-        self.verbose=verbose
         nums_ = len(self.newlattice.elements)
         self.s = np.zeros(nums_)
         self.max_delta = np.zeros(nums_)
         self.min_delta = np.zeros(nums_)
 
-    def search(self, n_turns=100, radiation=True, parallel=False):
+    def search(self, n_turns=100, radiation=True, parallel=False, verbose=True):
+        """Search the local momentum aperture.
+
+        Args:
+            n_turns (int, optional): The number of turns to track. Defaults to 100.
+            radiation (bool, optional): Whether to include radiation damping. Defaults to True.
+            parallel (bool, optional): Placeholder for parallel search. Defaults to False.
+            verbose (bool, optional): Whether to print detailed information during the search. Defaults to True.
+        """
         if parallel:
             pass
         else:
@@ -75,18 +81,18 @@ class LocalMomentumAperture(object):
                     self.min_delta[i] = self.min_delta[i-1]
                     self.max_delta[i] = self.max_delta[i-1]
                 else:
-                    if self.verbose:
+                    if verbose:
                         print(f'Start search MA at s={sub_lattice[0].s:.3f} m ({sub_lattice[0].name})............... {i + 1} / {nums_}')
                     self.min_delta[i] = self._search_one_position(n_turns * self.n_periods, sub_lattice,
-                                              self.delta_negative_start, self.delta_negative_limit, -self.delta_step, self.n_splits, radiation)
+                                              self.delta_negative_start, self.delta_negative_limit, -self.delta_step, self.n_splits, radiation, verbose)
                     self.max_delta[i] = self._search_one_position(n_turns * self.n_periods, sub_lattice,
-                                              self.delta_positive_start, self.delta_positive_limit, self.delta_step, self.n_splits, radiation)
+                                              self.delta_positive_start, self.delta_positive_limit, self.delta_step, self.n_splits, radiation, verbose)
             self.s[-1] = self.newlattice.elements[-1].s
             self.min_delta[-1] = self.min_delta[0]
             self.max_delta[-1] = self.max_delta[0]
 
 
-    def _search_one_position(self, n_turns, sub_lattice, delta_init, delta_end, delta_step, n_splits, radiation):
+    def _search_one_position(self, n_turns, sub_lattice, delta_init, delta_end, delta_step, n_splits, radiation, verbose):
         delta_survive = delta_init
         for dp in np.arange(delta_init, delta_end + delta_step, delta_step):
             try:
@@ -97,10 +103,10 @@ class LocalMomentumAperture(object):
                 delta_survive = dp
             except ParticleLost:
                 if n_splits > 0:
-                    return self._search_one_position(n_turns, sub_lattice, delta_survive, dp, delta_step * self.split_fraction, n_splits - 1, radiation)
+                    return self._search_one_position(n_turns, sub_lattice, delta_survive, dp, delta_step * self.split_fraction, n_splits - 1, radiation, verbose)
                 else:
                     break
-        if self.verbose:
+        if verbose:
             print(f'    Particle survived at delta={delta_survive * 100:.2f}%.')
         return delta_survive
 
@@ -146,14 +152,20 @@ class DynamicAperturePolyhedron:
         self.n_splits = n_splits
         self.split_fraction = split_fraction
         self.r_max = x_max
-        self.verbose = None
         self.delta_list_p = delta_list_p
         self.delta_list_m = delta_list_m
         self.DA = np.zeros((len(self.delta_list_p) + len(self.delta_list_m), self.n_lines, 3))  # x, px, delta
         self.twiss = np.zeros((len(self.delta_list_p) + len(self.delta_list_m), 4))  # fp_x, fp_px, beta_x, alpha_x
 
     def search(self, lattice, n_turns=100, radiation=True, verbose=True) -> None:
-        self.verbose = verbose
+        """Search the dynamic aperture polyhedron.
+
+        Args:
+            lattice (CSLattice): The lattice to track through.
+            n_turns (int, optional): The number of turns to track. Defaults to 100.
+            radiation (bool, optional): Whether to include radiation damping. Defaults to True.
+            verbose (bool, optional): Whether to print detailed information during the search. Defaults to True.
+        """
         for i, dp in enumerate(np.append(self.delta_list_p, self.delta_list_m)):
             try:
                 lattice.off_momentum_optics(delta=dp)
@@ -169,15 +181,15 @@ class DynamicAperturePolyhedron:
                 continue
 
             for j, phi in enumerate(np.linspace(0, 2*np.pi, self.n_lines+1)[:-1]):
-                if self.verbose:
+                if verbose:
                     print(f'Start searching delta={dp*100:.2f}%, {j+1} of {self.n_lines} lines ......')
                 r = self.__search_normal_line(cox, cop, betax, alphax, 0, self.r_max, phi, self.n_points,
-                                                  self.n_splits, n_turns, lattice, dp, radiation)  # r = sqrt(2 Jx beta_x)
+                                                  self.n_splits, n_turns, lattice, dp, radiation, verbose)  # r = sqrt(2 Jx beta_x)
                 x = r*np.cos(phi)
                 px = -(r/betax) * (np.sin(phi) + alphax * np.cos(phi))
                 self.DA[i, j, :] = [x + cox, px + cop, dp]
 
-    def __search_normal_line(self, cox, cop, betax, alphax, r0, r_max, phi, nx, n_splits, n_turns, lattice, dp, radiation):
+    def __search_normal_line(self, cox, cop, betax, alphax, r0, r_max, phi, nx, n_splits, n_turns, lattice, dp, radiation, verbose):
         jx_max = r_max ** 2 / 2 / betax
         jx_0 = r0 ** 2 / 2 / betax
         jx_list = np.linspace(jx_0, jx_max, nx+1)
@@ -195,12 +207,12 @@ class DynamicAperturePolyhedron:
                 r_max = (jx_list[i+1] * 2 * betax) ** 0.5
                 if n_splits > 0:
                     return self.__search_normal_line(cox, cop, betax, alphax, r0, r_max, phi, nx, n_splits - 1,
-                                                         n_turns, lattice, dp, radiation)
+                                                         n_turns, lattice, dp, radiation, verbose)
                 else:
-                    if self.verbose:
+                    if verbose:
                         print(f'    Particle lost at {r_max*1e3:.1f} mm.')
                     return r0
-        if self.verbose:
+        if verbose:
             print('    Particle survived.')
         return r_max
 

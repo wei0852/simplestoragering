@@ -99,7 +99,6 @@ class NLine:
         n_splits: int = 0,
         split_fraction=0.5,
         delta=0, momentum deviation.
-        verbose=True, print details.
 
     Attributes:
         aperture, np.ndarray, (n_lines, 2) shape.
@@ -111,7 +110,6 @@ class NLine:
         xmax
         ymax
         delta
-        verbose
     """
     def __init__(self,
                  n_lines: int = 5,
@@ -120,8 +118,7 @@ class NLine:
                  n_points: int = 10,
                  n_splits: int = 0,
                  split_fraction=0.5,
-                 delta=0,
-                 verbose=True) -> None:
+                 delta=0) -> None:
         assert n_lines >= 3, 'n_lines at least 5.'
         self.aperture = np.zeros((n_lines, 2))
         self.area = 0
@@ -132,22 +129,29 @@ class NLine:
         self.xmax = xmax
         self.ymax = ymax
         self.delta = delta
-        self.verbose = verbose
 
-    def search(self, lattice: CSLattice, n_turns=100, radiation=False):
+    def search(self, lattice: CSLattice, n_turns=100, radiation=False, verbose=True):
+        """Search the dynamic aperture along the lines.
+
+        Args:
+            lattice (CSLattice): The lattice to track through.
+            n_turns (int, optional): The number of turns to track. Defaults to 100.
+            radiation (bool, optional): Whether to include radiation damping. Defaults to False.
+            verbose (bool, optional): Whether to print detailed information during the search. Defaults to True.
+        """
         for i, theta in enumerate(np.linspace(-np.pi / 2, np.pi / 2, self.n_lines)):
-            if self.verbose:
+            if verbose:
                 print(f'start line {i+1}...')
             xy0 = np.zeros(2) + 1e-6
             xymax = np.array([self.xmax * np.sin(theta), self.ymax * np.cos(theta)])
-            self.aperture[i, :] = self._search_line(xy0, xymax, self.nx, self.n_splits, n_turns, lattice, radiation)
+            self.aperture[i, :] = self._search_line(xy0, xymax, self.nx, self.n_splits, n_turns, lattice, radiation, verbose)
 
         area = 0
         for i in range(self.aperture.shape[0] - 1):
             area += abs(self.aperture[i, 0] * self.aperture[i + 1, 1] - self.aperture[i, 1] * self.aperture[i+1, 0])
         self.area = area / 2
 
-    def _search_line(self, xy0, xymax, nx, n_splits, n_turns, lattice, radiation):
+    def _search_line(self, xy0, xymax, nx, n_splits, n_turns, lattice, radiation, verbose):
         xy = np.linspace(xy0, xymax, nx + 1)
         for i in range(nx):
             try:
@@ -161,12 +165,12 @@ class NLine:
                 nx = int(1 / self.split_fraction)
                 xymax = xy[i+1, :]
                 if n_splits > 0:
-                    return self._search_line(xy0, xymax, nx, n_splits - 1, n_turns, lattice, radiation)
+                    return self._search_line(xy0, xymax, nx, n_splits - 1, n_turns, lattice, radiation, verbose)
                 else:
-                    if self.verbose:
+                    if verbose:
                         print(f'    Particle lost at ({xymax[0]*1e3:.1f}, {xymax[1]*1e3:.1f}) mm.')
                     return xy0
-        if self.verbose:
+        if verbose:
             print('    Particle survived.')
         return xymax
 
@@ -222,7 +226,6 @@ class XDeltaLines:
         self.n_points = n_points
         self.split_fraction = split_fraction
         self.r_max = xmax
-        self.verbose = None
 
     def search(self, lattice: CSLattice, n_turns=100, radiation=False, verbose=True):
         """
@@ -233,7 +236,6 @@ class XDeltaLines:
             n_turns (int, optional): The number of turns to track the particle. Defaults to 100.
             verbose (bool, optional): Whether to print detailed information during the search. Defaults to True.
         """
-        self.verbose = verbose
         for i, delta in enumerate(self.delta_list):
             self.aperture[i, 0] = delta
             try:
@@ -244,20 +246,20 @@ class XDeltaLines:
                 cop = lattice.elements[0].closed_orbit[1]
                 self.aperture[i, 3] = cox
             except Unstable:
-                if self.verbose:
+                if verbose:
                     print(f'Cannot find closed orbit at delta={delta*100:.2f}%.')
                 self.aperture[i, 1] = np.nan
                 self.aperture[i, 2] = np.nan
                 self.aperture[i, 3] = np.nan
                 continue
-            if self.verbose:
+            if verbose:
                 print(f'Start searching delta={delta*100:.2f}% ......')
-            r = self.__search_delta(cox, 0, self.r_max, self.n_points, self.n_splits, n_turns, lattice, delta, radiation)
+            r = self.__search_delta(cox, 0, self.r_max, self.n_points, self.n_splits, n_turns, lattice, delta, radiation, verbose)
             self.aperture[i, 1] = r + cox
-            r = self.__search_delta(cox, 0, -self.r_max, self.n_points, self.n_splits, n_turns, lattice, delta, radiation)
+            r = self.__search_delta(cox, 0, -self.r_max, self.n_points, self.n_splits, n_turns, lattice, delta, radiation, verbose)
             self.aperture[i, 2] = r + cox
 
-    def __search_delta(self, cox, x0, x_max, nx, n_splits, n_turns, lattice, dp, radiation):
+    def __search_delta(self, cox, x0, x_max, nx, n_splits, n_turns, lattice, dp, radiation, verbose):
         x = np.linspace(x0, x_max, nx+1)
         for i in range(nx):
             try:
@@ -270,12 +272,12 @@ class XDeltaLines:
                 nx = int(1 / self.split_fraction)
                 x_max = x[i+1]
                 if n_splits > 0:
-                    return self.__search_delta(cox, x0, x_max, nx, n_splits - 1, n_turns, lattice, dp, radiation)
+                    return self.__search_delta(cox, x0, x_max, nx, n_splits - 1, n_turns, lattice, dp, radiation, verbose)
                 else:
-                    if self.verbose:
+                    if verbose:
                         print(f'    Particle lost at {x_max * 1e3:.1f} mm.')
                     return x0
-        if self.verbose:
+        if verbose:
             print('    Particle survived.')
         return x_max
 
