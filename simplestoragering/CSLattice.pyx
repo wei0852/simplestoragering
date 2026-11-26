@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # cython: language_level=3
 # cython: profile=False
+import warnings
 import numpy as np
 cimport numpy as np
 cimport cython
@@ -369,11 +370,23 @@ class CSLattice(object):
         """adts(self, verbose=True) -> dict
         compute ADTS terms. 
 
+        .. warning::
+            This function does NOT take into account the ``k2`` (combined-function /
+            sextupole component) of HBend and Quadrupole elements, so the result may be
+            wrong for lattices containing such elements. This method is deprecated and
+            will be removed in a future release; use ``driving_terms(verbose=False).adts()``
+            instead.
+
         Return:
             {'dQxx': , 'dQxy': , 'dQyy':}
 
         references:
         1. The Sextupole Scheme for the SLS: An Analytic Approach, SLS Note 09/97, Johan Bengtsson"""
+        warnings.warn(
+            "CSLattice.adts() does not consider the k2 of HBend and Quadrupole elements, "
+            "so its result may be wrong. This method is deprecated and will be removed "
+            "in a future release. Use driving_terms(verbose=False).adts() instead.",
+            DeprecationWarning, stacklevel=2)
         
         cdef double b3l_i, b4l, beta_xi, mu_ix, mu_iy, beta_yi
         cdef double b3l, beta_xj, beta_xij, beta_yj, mu_jx, mu_ijx, mu_jy, mu_ijy, Qxx, Qxy, Qyy, pi_nux, pi_nuy

@@ -113,15 +113,11 @@ class DrivingTerms(object):
         f01200 = self.f10020.conjugate()
         f01020 = self.f10200.conjugate()
 
-        h22000 += jj * (3 * self.f21000 * f12000 * (q21000 - q12000)
-                        +(q30000 - q03000) * self.f30000.conjugate() * self.f30000 * 9)
-        h11110 += jj * ((q21000 - q01110) * f01110 * self.f21000 * 2
-                        -(q12000 - q10110) * self.f10110 * f12000 * 2
-                        -(q10020 - q01200) * f01200 * self.f10020 * 4
-                        +(q10200 - q01020) * f01020 * self.f10200 * 4)
-        h00220 += jj * ((q10020 - q01200) * f01200 * self.f10020
-                        +(q10200 - q01020) * f01020 * self.f10200
-                        +(q10110 - q01110) * f01110 * self.f10110)
+        # CSLattice.driving_terms already adds this first-order interference
+        # (periodic-closure) contribution to self.h22000, self.h11110 and
+        # self.h00220 before constructing DrivingTerms.  Adding it again here
+        # makes the ADTS depend on the arbitrary start of the element list and,
+        # for n_periods=1, cancels the closure entirely.  Do not add it here.
         h31000 += jj * 6 * (q30000 - q12000) * f12000 * self.f30000
         h40000 += jj * 3 * (q30000 - q21000) * self.f21000 * self.f30000
         h20110 += jj * ((q30000 - q01110) * f01110 * self.f30000 * 3 
