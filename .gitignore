@@ -62,3 +62,10 @@ ENV/
 .DS_Store
 Thumbs.db
 
+# Private test material (no trailing slash, so a symlink matches too).
+# Not packaged: MANIFEST.in only ships simplestoragering/.
+local_tests
+
+# Private scratch material (task briefs, one-off inputs) — machine-local only.
+local_inbox
+
